@@ -1,0 +1,32 @@
+ABS_TOP_SRCDIR := @abs_top_srcdir@
+
+ifeq ($(ABS_TOP_SRCDIR),$(shell pwd))
+all-dev: build install
+
+install:
+	./Setup.hs install
+
+build: configure-dev
+	./Setup.hs build
+
+configure-dev: config.status
+
+config.status: vision.cabal configure
+	./Setup.hs configure --user
+
+configure: configure.ac
+	autoconf
+
+clean:
+	./Setup.hs clean
+
+.PHONY: all-dev install build configure-dev clean
+else
+all-dev:
+	$(MAKE) -C $(ABS_TOP_SRCDIR) $@
+
+clean:
+	$(MAKE) -C $(ABS_TOP_SRCDIR) $@
+
+.PHONY: all-dev clean
+endif
