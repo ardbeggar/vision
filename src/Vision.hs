@@ -23,5 +23,21 @@ module Main
 import Handler
 
 
-main =
+main = do
+  hh <- mkHandler
+  let onHH = modifyHandler hh
+
+  i1 <- AddHandler `onHH` (putStrLn . ("1 " ++))
+  i2 <- AddHandler `onHH` (putStrLn . ("2 " ++))
+
+  invoke hh "zopa"
+
+  modifyHandler hh RemoveHandler i1
+
+  invoke hh "pesda"
+
+  modifyHandler hh RemoveHandler i2
+
+  invoke hh "khooy"
+
   return ()

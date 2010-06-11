@@ -28,4 +28,6 @@ executable vision
                     gtk, containers, mtl, utf8-string,
                     filepath, directory, glib, array,
                     MonadCatchIO-mtl
+  extensions:       TypeFamilies, FlexibleInstances, MultiParamTypeClasses,
+                    TupleSections
   ghc-options:      -W
