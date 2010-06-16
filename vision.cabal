@@ -29,5 +29,7 @@ executable vision
                     filepath, directory, glib, array,
                     MonadCatchIO-mtl
   extensions:       TypeFamilies, FlexibleInstances, MultiParamTypeClasses,
-                    TupleSections
+                    TupleSections, RankNTypes, NoMonomorphismRestriction,
+                    FlexibleContexts, ScopedTypeVariables, FunctionalDependencies,
+                    TypeSynonymInstances, UndecidableInstances
   ghc-options:      -W

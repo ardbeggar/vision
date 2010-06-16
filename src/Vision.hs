@@ -29,15 +29,16 @@ main = do
 
   i1 <- AddHandler `onHH` (putStrLn . ("1 " ++))
   i2 <- AddHandler `onHH` (putStrLn . ("2 " ++))
+  i3 <- AddHandler `onHH` (putStrLn . ("3 " ++))
 
-  invoke hh "zopa"
+  InvokeHandler `onHH` "zopa"
 
-  modifyHandler hh RemoveHandler i1
+  RemoveHandler `onHH` i1
 
-  invoke hh "pesda"
+  InvokeHandler `onHH` "pesda"
 
-  modifyHandler hh RemoveHandler i2
+  RemoveHandler `onHH` i2
 
-  invoke hh "khooy"
+  InvokeHandler `onHH` "khooy"
 
   return ()

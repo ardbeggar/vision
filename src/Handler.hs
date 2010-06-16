@@ -21,10 +21,12 @@ module Handler
   ( Handler
   , mkHandler
   , invoke
-  , modifyHandler
   , AddHandler (..)
   , RemoveHandler (..)
+  , InvokeHandler (..)
   , HandlerId
+  , HandlerModClass (..)
+  , mk
   ) where
 
 import Control.Applicative
@@ -36,42 +38,31 @@ import Data.Unique
 import Data.IORef
 
 
-class HandlerClass h where
-  type Args h
-  applyHandler :: h -> Args h -> IO ()
+class HandlerClass h a | h -> a where
+  applyHandler :: h -> a -> IO ()
 
-instance HandlerClass (a -> IO ()) where
-  type Args (a -> IO ()) = a
+instance HandlerClass (a -> IO ()) a where
   applyHandler = ($)
 
-instance HandlerClass (a -> b -> IO ()) where
-  type Args (a -> b -> IO ()) = (a, b)
+instance HandlerClass (a -> b -> IO ()) (a, b) where
   applyHandler h = uncurry h
 
 
-newtype (HandlerClass h) => Handler h = Handler (IORef (Seq (Unique, h)))
+data Handler h = Handler (IORef (Seq (Unique, h)))
 
-mkHandler :: (HandlerClass h) => IO (Handler h)
 mkHandler = Handler <$> newIORef Seq.empty
 
-invoke :: (HandlerClass h) => Handler h -> Args h -> IO ()
 invoke (Handler r) a = F.mapM_ (flip applyHandler a . snd) =<< readIORef r
 
+class HandlerModClass h o a r | h o -> a, h o -> r where
+  modifyHandler :: Handler h -> o -> a -> IO r
 
-class (HandlerClass h) => HandlerModClass h o where
-  type Arg h o
-  type Res h o
-  modifyHandler :: Handler h -> o -> Arg h o -> IO (Res h o)
-
-
-data (HandlerClass h) => HandlerId h = HandlerId Unique
+data HandlerId h = HandlerId Unique
 
 
 data AddHandler = AddHandler
 
-instance (HandlerClass h) => HandlerModClass h AddHandler where
-  type Arg h AddHandler = h
-  type Res h AddHandler = HandlerId h
+instance (HandlerClass h a) => HandlerModClass h AddHandler h (HandlerId h) where
   modifyHandler (Handler r) AddHandler f = do
     u <- newUnique
     atomicModifyIORef r $ (, ()) . (|> (u, f))
@@ -79,8 +70,15 @@ instance (HandlerClass h) => HandlerModClass h AddHandler where
 
 data RemoveHandler = RemoveHandler
 
-instance (HandlerClass h) => HandlerModClass h RemoveHandler where
-  type Arg h RemoveHandler = HandlerId h
-  type Res h RemoveHandler = ()
+instance (HandlerClass h a) => HandlerModClass h RemoveHandler (HandlerId h) () where
   modifyHandler (Handler r) RemoveHandler (HandlerId u) =
-    atomicModifyIORef r $ (, ()) . Seq.filter ((== u) . fst)
+    atomicModifyIORef r $ (, ()) . Seq.filter ((/= u) . fst)
+
+data InvokeHandler = InvokeHandler
+
+instance (HandlerClass h a) => HandlerModClass h InvokeHandler a () where
+  modifyHandler h InvokeHandler a = invoke h a
+
+mk = do
+  h <- mkHandler
+  return $ modifyHandler h
