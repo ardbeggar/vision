@@ -21,7 +21,7 @@ module Main
   where
 
 import Handler
-import Control.Concurrent.MVar
+import Utils
 
 main = do
   h <- newMVar make
