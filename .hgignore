@@ -3,4 +3,5 @@
 ^config\.(log|status)$
 ^dist/
 \.orig$
+~$
 
