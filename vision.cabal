@@ -28,8 +28,4 @@ executable vision
                     gtk, containers, mtl, utf8-string,
                     filepath, directory, glib, array,
                     MonadCatchIO-mtl
-  extensions:       TypeFamilies, FlexibleInstances, MultiParamTypeClasses,
-                    TupleSections, RankNTypes, NoMonomorphismRestriction,
-                    FlexibleContexts, ScopedTypeVariables, FunctionalDependencies,
-                    TypeSynonymInstances, UndecidableInstances
   ghc-options:      -W

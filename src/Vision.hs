@@ -25,7 +25,7 @@ import Control.Concurrent.MVar
 
 main = do
   h <- newMVar make
-  let onH = withHandler (modifyMVar h)
+  let onH = modifyMVar h
   id <- onH . add . ever $ print
   onH . add . ever $ putStrLn  . ("zopa: " ++) . show
   onH $ invoke 10
