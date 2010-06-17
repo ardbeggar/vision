@@ -21,24 +21,22 @@ module Main
   where
 
 import Handler
-
+import Control.Concurrent.MVar
 
 main = do
-  hh <- mkHandler
-  let onHH = modifyHandler hh
-
-  i1 <- AddHandler `onHH` (putStrLn . ("1 " ++))
-  i2 <- AddHandler `onHH` (putStrLn . ("2 " ++))
-  i3 <- AddHandler `onHH` (putStrLn . ("3 " ++))
-
-  InvokeHandler `onHH` "zopa"
-
-  RemoveHandler `onHH` i1
-
-  InvokeHandler `onHH` "pesda"
-
-  RemoveHandler `onHH` i2
-
-  InvokeHandler `onHH` "khooy"
-
+  h <- newMVar make
+  let onH = withHandler (modifyMVar h)
+  id <- onH . add . ever $ print
+  onH . add . ever $ putStrLn  . ("zopa: " ++) . show
+  onH $ invoke 10
+  onH $ invoke 20
+  onH $ invoke 30
+  onH $ remove id
+  onH $ invoke 10
+  onH . add . once $ \v -> do
+    putStr "pesda: "
+    print v
+  onH . add . ever . const $ print "here we are"
+  onH $ invoke 20
+  onH $ invoke 30
   return ()

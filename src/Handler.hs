@@ -18,67 +18,78 @@
 --
 
 module Handler
-  ( Handler
-  , mkHandler
+  ( Id
+  , Handler
+  , make
+  , add
+  , remove
   , invoke
-  , AddHandler (..)
-  , RemoveHandler (..)
-  , InvokeHandler (..)
-  , HandlerId
-  , HandlerModClass (..)
-  , mk
+  , withHandler
+  , once
+  , ever
+  , keep
   ) where
 
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+import Data.Foldable
 import Control.Applicative
 
-import Data.Sequence (Seq, (|>))
-import qualified Data.Sequence as Seq
-import qualified Data.Foldable as F
-import Data.Unique
-import Data.IORef
 
+data Id m a = Id Int
 
-class HandlerClass h a | h -> a where
-  applyHandler :: h -> a -> IO ()
+type Entry m a = (Int, a -> m Bool)
+type Entries m a = IntMap (Entry m a)
 
-instance HandlerClass (a -> IO ()) a where
-  applyHandler = ($)
+data Handler m a
+  = Handler { nextId  :: Id m a
+            , entries :: Entries m a
+            }
 
-instance HandlerClass (a -> b -> IO ()) (a, b) where
-  applyHandler h = uncurry h
+make :: Handler m a
+make = Handler { nextId = Id 0, entries = IntMap.empty }
 
+add :: (a -> m Bool) -> Handler m a -> (Handler m a, Id m a)
+add f Handler { nextId = id@(Id n), entries = h } = (handler, id)
+  where handler = Handler { nextId   = Id $ succ n
+                          , entries = IntMap.insert n (n, f) h
+                          }
 
-data Handler h = Handler (IORef (Seq (Unique, h)))
+remove :: Id m a -> Handler m a -> Handler m a
+remove (Id n) h = h { entries = IntMap.delete n $ entries h }
 
-mkHandler = Handler <$> newIORef Seq.empty
+invoke :: Monad m => a -> Handler m a -> m (Handler m a)
+invoke a handler@Handler { entries = e } = do
+  e' <- foldlM (invoke' a) e e
+  return handler { entries = e' }
 
-invoke (Handler r) a = F.mapM_ (flip applyHandler a . snd) =<< readIORef r
+invoke' :: Monad m => a -> Entries m a -> (Entry m a) -> m (Entries m a)
+invoke' a e (i, f) = do
+  p <- f a
+  if p
+    then return e
+    else return $ IntMap.delete i e
 
-class HandlerModClass h o a r | h o -> a, h o -> r where
-  modifyHandler :: Handler h -> o -> a -> IO r
+class HandlerSource m a b s | s a m -> b where
+  handler :: s -> m (Handler m a, b)
 
-data HandlerId h = HandlerId Unique
+instance Monad m => HandlerSource m a b (Handler m a, b) where
+  handler = return
 
+instance Monad m => HandlerSource m a () (Handler m a) where
+  handler = return . (, ())
 
-data AddHandler = AddHandler
+instance (Functor m) => HandlerSource m a () (m (Handler m a)) where
+  handler s = (, ()) <$> s
 
-instance (HandlerClass h a) => HandlerModClass h AddHandler h (HandlerId h) where
-  modifyHandler (Handler r) AddHandler f = do
-    u <- newUnique
-    atomicModifyIORef r $ (, ()) . (|> (u, f))
-    return $ HandlerId u
+withHandler :: HandlerSource m a b s => ((Handler m a -> m (Handler m a, b)) -> m b) -> (Handler m a -> s) -> m b
+withHandler with f = with  (handler . f)
 
-data RemoveHandler = RemoveHandler
+once :: Monad m => (a -> m b) -> a -> m Bool
+once = keep False
 
-instance (HandlerClass h a) => HandlerModClass h RemoveHandler (HandlerId h) () where
-  modifyHandler (Handler r) RemoveHandler (HandlerId u) =
-    atomicModifyIORef r $ (, ()) . Seq.filter ((/= u) . fst)
+ever :: Monad m => (a -> m b) -> a -> m Bool
+ever = keep True
 
-data InvokeHandler = InvokeHandler
-
-instance (HandlerClass h a) => HandlerModClass h InvokeHandler a () where
-  modifyHandler h InvokeHandler a = invoke h a
-
-mk = do
-  h <- mkHandler
-  return $ modifyHandler h
+keep :: Monad m => Bool -> (a -> m b) -> a -> m Bool
+keep r f a = f a >> return r
