@@ -23,12 +23,16 @@ module Utils
   , takeMVar
   , putMVar
   , modifyMVar
+  , on
   ) where
 
 import Control.Monad.CatchIO
 import Control.Monad.Trans
+import Control.Monad.Reader
 import Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
+
+import qualified Graphics.UI.Gtk as Gtk
 
 
 newMVar :: MonadIO m => a -> m (MVar a)
@@ -48,3 +52,24 @@ modifyMVar v m =
     (a', b) <- unblock (m a) `onException` putMVar v a
     putMVar v a'
     return b
+
+
+class ToIO t where
+  io :: t a -> t (IO a)
+
+instance ToIO IO where
+  io = return
+
+instance (Monad m, ToIO m) => ToIO (ReaderT r m) where
+  io a = do
+    r <- ask
+    lift $ io (runReaderT a r)
+
+on :: (ToIO m, MonadIO m) =>
+      object
+      -> Gtk.Signal object (IO a)
+      -> m a
+      -> m (Gtk.ConnectId object)
+on o s c = do
+  c' <- io c
+  liftIO $ Gtk.on o s c'
