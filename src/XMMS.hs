@@ -31,6 +31,7 @@ import Graphics.UI.Gtk
 import XMMS2.Client
 import XMMS2.Client.Glib
 
+import Environment
 import Handler
 import Utils
 import Env
@@ -59,15 +60,16 @@ initEnv = do
   xmms           <- init "Vision"
   onConnected    <- makeHandlerMVar
   onDisconnected <- makeHandlerMVar
-  return $ makeEnv XMMS { xXMMS           = xmms
-                        , xOnConnected    = onConnected
-                        , xOnDisconnected = onDisconnected }
+  return $ augmentEnv
+    XMMS { xXMMS           = xmms
+         , xOnConnected    = onConnected
+         , xOnDisconnected = onDisconnected }
 
 scheduleTryConnect = timeoutAdd tryConnect
 
 tryConnect = do
   putStr "connecting... "
-  success <- connect xmms Nothing
+  success <- connect xmms xmmsPath
   if success
     then do
     putStrLn "connected!"

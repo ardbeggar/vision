@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 11 Jun. 2010
+--  Created: 18 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,40 +17,33 @@
 --  General Public License for more details.
 --
 
-module Main
-  where
+module Environment
+  ( initEnvironment
+  , homeDir
+  , xmmsPath
+  , maybeGetEnv
+  ) where
 
-import Graphics.UI.Gtk
+import qualified System.Environment as SE
+import Control.Applicative
 
-import Environment
-import XMMS
+import Env
 
-main = do
-  initGUI
 
-  env <- initEnvironment
-  let ?env = env
+data Environment
+  = Environment { eHomeDir   :: Maybe String
+                , eXMMSPath  :: Maybe String }
 
-  env <- initXMMS
-  let ?env = env
+homeDir   = eHomeDir getEnv
+xmmsPath  = eXMMSPath getEnv
 
-  mainGUI
 
-{-
-  h <- newMVar make
-  let onH = modifyMVar h
-  id <- onH . add . ever $ print
-  onH . add . ever $ putStrLn  . ("zopa: " ++) . show
-  onH $ invoke 10
-  onH $ invoke 20
-  onH $ invoke 30
-  onH $ remove id
-  onH $ invoke 10
-  onH . add . once $ \v -> do
-    putStr "pesda: "
-    print v
-  onH . add . ever . const $ print "here we are"
-  onH $ invoke 20
-  onH $ invoke 30
-  return ()
--}
+initEnvironment = do
+  homeDir  <- maybeGetEnv "HOME"
+  xmmsPath <- maybeGetEnv "XMMS_PATH"
+  return $ makeEnv Environment { eHomeDir   = homeDir
+                               , eXMMSPath  = xmmsPath }
+
+
+maybeGetEnv var =
+  (Just <$> SE.getEnv var) `catch` \_ -> return Nothing

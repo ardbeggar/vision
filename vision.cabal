@@ -21,7 +21,7 @@ extra-tmp-files:    config.status, config.log, autom4te.cache
 
 executable vision
   main-is:          Vision.hs
-  other-modules:    Handler, Utils, Env, XMMS
+  other-modules:    Handler, Utils, Env, XMMS, Environment
   hs-source-dirs:   src
   build-depends:    base, xmms2-client >= 0.0.3.6,
                     xmms2-client-glib >= 0.0.3.6,
