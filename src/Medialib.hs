@@ -21,6 +21,7 @@ module Medialib
   ( Stamp
   , MediaInfo
   , initMedialib
+  , requestInfo
   , onMediaInfo
   ) where
 
@@ -32,6 +33,8 @@ import Data.Map (Map)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Maybe
+
+import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
@@ -86,6 +89,20 @@ initMedialib = do
       return True
 
   return ?env
+
+requestInfo id = do
+  modifyMVar_ cache $ \cache ->
+    let id'     = fromIntegral id
+        entries = cEntries cache in
+    case IntMap.lookup id' entries of
+      Nothing -> do
+        medialibGetInfo xmms id >>* handleInfo id'
+        return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
+      Just (CEReady s i) -> do
+        idleAdd (onMediaInfo (invoke (s, i)) >> return False) priorityHighIdle
+        return cache
+      _ ->
+        return cache
 
 
 initEnv = do
