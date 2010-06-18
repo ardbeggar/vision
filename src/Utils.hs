@@ -18,43 +18,17 @@
 --
 
 module Utils
-  ( MVar
-  , newMVar
-  , takeMVar
-  , putMVar
-  , modifyMVar
-  , HandlerMVar
+  ( HandlerMVar
   , makeHandlerMVar
   , onHandler
   ) where
 
-import Control.Monad.CatchIO hiding (Handler)
-import Control.Monad.Trans
-import Control.Concurrent.MVar (MVar)
-import qualified Control.Concurrent.MVar as MVar
+import Control.Concurrent.MVar
 
 import Handler
 
 
-newMVar :: MonadIO m => a -> m (MVar a)
-newMVar = liftIO . MVar.newMVar
-
-takeMVar :: MonadIO m => MVar a -> m a
-takeMVar = liftIO . MVar.takeMVar
-
-putMVar :: MonadIO m => MVar a -> a -> m ()
-putMVar v a = liftIO $ MVar.putMVar v a
-
-{-# INLINE modifyMVar #-}
-modifyMVar :: MonadCatchIO m => MVar a -> (a -> m (a, b)) -> m b
-modifyMVar v m =
-  block $ do
-    a       <- takeMVar v
-    (a', b) <- unblock (m a) `onException` putMVar v a
-    putMVar v a'
-    return b
-
-type HandlerMVar a = MVar (Handler IO ())
+type HandlerMVar a = MVar (Handler IO a)
 
 makeHandlerMVar = newMVar make
 
