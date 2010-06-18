@@ -23,16 +23,17 @@ module Utils
   , takeMVar
   , putMVar
   , modifyMVar
-  , on
+  , HandlerMVar
+  , makeHandlerMVar
+  , onHandler
   ) where
 
-import Control.Monad.CatchIO
+import Control.Monad.CatchIO hiding (Handler)
 import Control.Monad.Trans
-import Control.Monad.Reader
 import Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
 
-import qualified Graphics.UI.Gtk as Gtk
+import Handler
 
 
 newMVar :: MonadIO m => a -> m (MVar a)
@@ -53,23 +54,8 @@ modifyMVar v m =
     putMVar v a'
     return b
 
+type HandlerMVar a = MVar (Handler IO ())
 
-class ToIO t where
-  io :: t a -> t (IO a)
+makeHandlerMVar = newMVar make
 
-instance ToIO IO where
-  io = return
-
-instance (Monad m, ToIO m) => ToIO (ReaderT r m) where
-  io a = do
-    r <- ask
-    lift $ io (runReaderT a r)
-
-on :: (ToIO m, MonadIO m) =>
-      object
-      -> Gtk.Signal object (IO a)
-      -> m a
-      -> m (Gtk.ConnectId object)
-on o s c = do
-  c' <- io c
-  liftIO $ Gtk.on o s c'
+onHandler = modifyMVar
