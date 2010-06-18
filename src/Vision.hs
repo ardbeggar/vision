@@ -20,8 +20,9 @@
 module Main
   where
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (add)
 
+import Handler
 import Environment
 import XMMS
 import Medialib
@@ -38,23 +39,8 @@ main = do
   env <- initMedialib
   let ?env = env
 
-  mainGUI
+  onMediaInfo . add . ever $ print
+  onConnected . add . ever . const $
+    mapM_ requestInfo [123, 124, 125]
 
-{-
-  h <- newMVar make
-  let onH = modifyMVar h
-  id <- onH . add . ever $ print
-  onH . add . ever $ putStrLn  . ("zopa: " ++) . show
-  onH $ invoke 10
-  onH $ invoke 20
-  onH $ invoke 30
-  onH $ remove id
-  onH $ invoke 10
-  onH . add . once $ \v -> do
-    putStr "pesda: "
-    print v
-  onH . add . ever . const $ print "here we are"
-  onH $ invoke 20
-  onH $ invoke 30
-  return ()
--}
+  mainGUI
