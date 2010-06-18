@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 11 Jun. 2010
+--  Created: 18 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,36 +17,34 @@
 --  General Public License for more details.
 --
 
-module Main
-  where
+{-# LANGUAGE MultiParamTypeClasses,
+             FlexibleInstances,
+             OverlappingInstances,
+             TypeOperators #-}
 
-import Graphics.UI.Gtk
+module Env
+  ( makeEnv
+  , augmentEnv
+  , getEnv
+  ) where
 
-import XMMS
+infixr 9 :*
+data a :* b = a :* b
+data Nil = Nil
 
-main = do
-  initGUI
+class Env e c where
+  env :: c -> e
 
-  env <- initXMMS
-  let ?env = env
+instance Env e (e :* b) where
+  env (e :* _) = e
 
-  mainGUI
+instance Env e b => Env e (a :* b) where
+  env (_ :* b) = env b
 
-{-
-  h <- newMVar make
-  let onH = modifyMVar h
-  id <- onH . add . ever $ print
-  onH . add . ever $ putStrLn  . ("zopa: " ++) . show
-  onH $ invoke 10
-  onH $ invoke 20
-  onH $ invoke 30
-  onH $ remove id
-  onH $ invoke 10
-  onH . add . once $ \v -> do
-    putStr "pesda: "
-    print v
-  onH . add . ever . const $ print "here we are"
-  onH $ invoke 20
-  onH $ invoke 30
-  return ()
--}
+makeEnv :: e -> e :* Nil
+makeEnv e = e :* Nil
+
+augmentEnv :: (?env :: e1) => e2 -> e2 :* e1
+augmentEnv e = e :* ?env
+
+getEnv = env ?env
