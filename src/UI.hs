@@ -39,12 +39,11 @@ window = uWindow getEnv
 initUI ::
   (?env :: e1, EnvironmentEnvClass e1) =>
      FilePath
-  -> ((?env :: EnvType UI e1) => Builder -> IO b)
+  -> (EnvType UI e1 -> Builder -> IO b)
   -> IO b
 initUI file cont = do
   builder <- builderNew
   builderAddFromFile builder $ uiFilePath file
   window <- builderGetObject builder castToWindow "window"
 
-  let ?env = augmentEnv UI { uWindow = window }
-  cont builder
+  cont (augmentEnv UI { uWindow = window }) builder

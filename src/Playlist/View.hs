@@ -17,32 +17,48 @@
 --  General Public License for more details.
 --
 
-module Playlist.Model
-  ( initModel
-  , playlistStore
+module Playlist.View
+  ( initView
+  , playlistView
   ) where
-
-import Data.Int
 
 import Graphics.UI.Gtk
 
 import Env
+import UI
+
+import Playlist.Model
 
 
-data Model
-  = Model { mStore :: ListStore Int32 }
+data View
+  = View { vView :: TreeView }
 
-playlistStore = mStore getEnv
+playlistView  = vView getEnv
 
 
-initModel = do
-  env <- initEnv
+initView env builder = do
+  env <- initEnv env builder
   let ?env = env
+
+  window `onDestroy` mainQuit
+
+  treeViewSetModel playlistView playlistStore
+
+  column <- treeViewColumnNew
+  treeViewInsertColumn playlistView column 0
+
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
+    [n] <- treeModelGetPath playlistStore iter
+    mid <- listStoreGetValue playlistStore n
+    cell `set` [ cellText := show mid ]
 
   return ?env
 
 
-initEnv = do
-  store <- listStoreNewDND [] Nothing Nothing
+initEnv env builder = do
+  let ?env = env
+  view <- builderGetObject builder castToTreeView "playlist-view"
   return $ augmentEnv
-    Model { mStore = store }
+    View { vView = view }

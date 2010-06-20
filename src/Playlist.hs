@@ -23,23 +23,17 @@ module Playlist
 
 import Graphics.UI.Gtk
 
-import Env
 import UI
 
 import Playlist.Model
+import Playlist.View
 
 
 showPlaylist = do
   env <- initModel
   let ?env = env
 
-  env <- initUI "playlist" testUICont
+  env <- initUI "playlist" initView
   let ?env = env
 
-  putStrLn getEnv
   widgetShowAll window
-
-
-testUICont _ = do
-  window `onDestroy` mainQuit
-  return $ augmentEnv "zopa"
