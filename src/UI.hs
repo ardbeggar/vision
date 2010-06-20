@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 11 Jun. 2010
+--  Created: 20 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,40 +17,34 @@
 --  General Public License for more details.
 --
 
-module Main
-  where
+{-# LANGUAGE RankNTypes #-}
+
+module UI
+  ( initUI
+  , window
+  ) where
 
 import Graphics.UI.Gtk
 
 import Env
 import Environment
-import XMMS
-import Medialib
-import UI
 
 
-main = do
-  initGUI
+data UI
+  = UI { uWindow :: Window }
 
-  env <- initEnvironment
-  let ?env = env
-
-  env <- initXMMS
-  let ?env = env
-
-  env <- initMedialib
-  let ?env = env
-
-  env <- initUI "playlist" testUICont
-  let ?env = env
-
-  putStrLn getEnv
-  widgetShowAll window
-
-  mainGUI
+window = uWindow getEnv
 
 
+initUI ::
+  (?env :: e1, EnvironmentEnvClass e1) =>
+     FilePath
+  -> ((?env :: EnvType UI e1) => Builder -> IO b)
+  -> IO b
+initUI file cont = do
+  builder <- builderNew
+  builderAddFromFile builder $ uiFilePath file
+  window <- builderGetObject builder castToWindow "window"
 
-testUICont _ = do
-  window `onDestroy` mainQuit
-  return $ augmentEnv "zopa"
+  let ?env = augmentEnv UI { uWindow = window }
+  cont builder

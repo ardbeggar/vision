@@ -17,8 +17,11 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE UndecidableInstances #-}
+
 module Environment
-  ( initEnvironment
+  ( EnvironmentEnvClass
+  , initEnvironment
   , homeDir
   , dataDir
   , uiFilePath
@@ -40,6 +43,9 @@ data Environment
                 , eDataDir  :: FilePath
                 , eXMMSPath :: Maybe String }
 
+class (EnvClass Environment c) => EnvironmentEnvClass c where {}
+instance (EnvClass Environment c) => EnvironmentEnvClass c
+
 homeDir   = eHomeDir getEnv
 dataDir   = eDataDir getEnv
 xmmsPath  = eXMMSPath getEnv
@@ -57,5 +63,5 @@ initEnvironment = do
 maybeGetEnv var =
   (Just <$> SE.getEnv var) `catch` \_ -> return Nothing
 
-uiFilePath name = dataDir </> "ui" </> name <.> "xml"
+uiFilePath name = dataDir </> "ui" </> name <.> "glade"
 

@@ -23,28 +23,36 @@
              TypeOperators #-}
 
 module Env
-  ( makeEnv
+  ( EnvClass
+  , EnvType
+  , makeEnv
   , augmentEnv
   , getEnv
   ) where
+
 
 infixr 9 :*
 data a :* b = a :* b
 data Nil = Nil
 
-class Env e c where
+class EnvClass e c where
   env :: c -> e
 
-instance Env e (e :* b) where
+instance EnvClass e (e :* b) where
   env (e :* _) = e
 
-instance Env e b => Env e (a :* b) where
+instance EnvClass e b => EnvClass e (a :* b) where
   env (_ :* b) = env b
 
-makeEnv :: e -> e :* Nil
+
+type EnvType a b = a :* b
+
+
+makeEnv :: e -> EnvType e Nil
 makeEnv e = e :* Nil
 
-augmentEnv :: (?env :: e1) => e2 -> e2 :* e1
+augmentEnv :: (?env :: e1) => e2 -> EnvType e2 e1
 augmentEnv e = e :* ?env
 
+getEnv :: (?env :: c, EnvClass e c) => e
 getEnv = env ?env
