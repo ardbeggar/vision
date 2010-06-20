@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 11 Jun. 2010
+--  Created: 20 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,29 +17,24 @@
 --  General Public License for more details.
 --
 
-module Main
-  where
+module Playlist
+  ( showPlaylist
+  ) where
 
 import Graphics.UI.Gtk
 
-import Environment
-import XMMS
-import Medialib
-import Playlist
+import Env
+import UI
 
 
-main = do
-  initGUI
-
-  env <- initEnvironment
+showPlaylist = do
+  env <- initUI "playlist" testUICont
   let ?env = env
 
-  env <- initXMMS
-  let ?env = env
+  putStrLn getEnv
+  widgetShowAll window
 
-  env <- initMedialib
-  let ?env = env
 
-  showPlaylist
-
-  mainGUI
+testUICont _ = do
+  window `onDestroy` mainQuit
+  return $ augmentEnv "zopa"
