@@ -27,6 +27,7 @@ import UI
 
 import Playlist.Model
 import Playlist.View
+import Playlist.Update
 
 
 showPlaylist = do
@@ -35,5 +36,7 @@ showPlaylist = do
 
   env <- initUI "playlist" initView
   let ?env = env
+
+  setupUpdate
 
   widgetShowAll window

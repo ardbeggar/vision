@@ -17,36 +17,32 @@
 --  General Public License for more details.
 --
 
-module Playlist.Model
-  ( initModel
-  , clearModel
-  , playlistStore
+module Playlist.Update
+  ( setupUpdate
   ) where
 
-import Data.Int
+import Control.Monad.Trans
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (add)
 
-import Env
+import XMMS2.Client
 
+import XMMS
+import Handler
 
-data Model
-  = Model { mStore :: ListStore Int32 }
-
-playlistStore = mStore getEnv
-
-
-initModel = do
-  env <- initEnv
-  let ?env = env
-
-  return ?env
-
-clearModel =
-  listStoreClear playlistStore
+import Playlist.Model
 
 
-initEnv = do
-  store <- listStoreNewDND [] Nothing Nothing
-  return $ augmentEnv
-    Model { mStore = store }
+setupUpdate = do
+  onConnected . add . ever . const $ requestPlaylist
+  onDisconnected . add . ever . const $ clearModel
+
+requestPlaylist =
+  playlistListEntries xmms Nothing >>* handlePlaylist
+
+handlePlaylist = do
+  ids <- result
+  liftIO $ do
+    clearModel
+    mapM_ (listStoreAppend playlistStore) ids
+  return False
