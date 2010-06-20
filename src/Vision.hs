@@ -22,7 +22,6 @@ module Main
 
 import Graphics.UI.Gtk hiding (add)
 
-import Handler
 import Environment
 import XMMS
 import Medialib
@@ -38,9 +37,5 @@ main = do
 
   env <- initMedialib
   let ?env = env
-
-  onMediaInfo . add . ever $ print
-  onConnected . add . ever . const $
-    mapM_ requestInfo [123, 124, 125]
 
   mainGUI
