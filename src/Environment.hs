@@ -20,30 +20,42 @@
 module Environment
   ( initEnvironment
   , homeDir
+  , dataDir
+  , uiFilePath
   , xmmsPath
   , maybeGetEnv
   ) where
 
 import qualified System.Environment as SE
+import System.FilePath
 import Control.Applicative
 
 import Env
 
+import Paths_vision
+
 
 data Environment
-  = Environment { eHomeDir   :: Maybe String
-                , eXMMSPath  :: Maybe String }
+  = Environment { eHomeDir  :: Maybe FilePath
+                , eDataDir  :: FilePath
+                , eXMMSPath :: Maybe String }
 
 homeDir   = eHomeDir getEnv
+dataDir   = eDataDir getEnv
 xmmsPath  = eXMMSPath getEnv
 
 
 initEnvironment = do
   homeDir  <- maybeGetEnv "HOME"
+  dataDir  <- getDataDir
   xmmsPath <- maybeGetEnv "XMMS_PATH"
-  return $ makeEnv Environment { eHomeDir   = homeDir
-                               , eXMMSPath  = xmmsPath }
-
+  return $ makeEnv Environment { eHomeDir  = homeDir
+                               , eDataDir  = dataDir
+                               , eXMMSPath = xmmsPath
+                               }
 
 maybeGetEnv var =
   (Just <$> SE.getEnv var) `catch` \_ -> return Nothing
+
+uiFilePath name = dataDir </> "ui" </> name <.> "xml"
+
