@@ -17,29 +17,22 @@
 --  General Public License for more details.
 --
 
-module Playlist
-  ( showPlaylist
+module Playlist.Model
+  ( initModel
   ) where
 
-import Graphics.UI.Gtk
-
 import Env
-import UI
-
-import Playlist.Model
 
 
-showPlaylist = do
-  env <- initModel
+data Model
+  = Model {}
+
+initModel = do
+  env <- initEnv
   let ?env = env
 
-  env <- initUI "playlist" testUICont
-  let ?env = env
-
-  putStrLn getEnv
-  widgetShowAll window
+  return ?env
 
 
-testUICont _ = do
-  window `onDestroy` mainQuit
-  return $ augmentEnv "zopa"
+initEnv = do
+  return $ augmentEnv Model {}
