@@ -21,7 +21,10 @@ module Playlist.Update
   ( setupUpdate
   ) where
 
+import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans
+import Data.Maybe
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -29,16 +32,28 @@ import XMMS2.Client
 
 import XMMS
 import Handler
-
 import Playlist.Model
+import Playlist.View
 
 
 setupUpdate = do
-  onConnected . add . ever . const $ requestPlaylist
-  onDisconnected . add . ever . const $ clearModel
+  onConnected . add . ever . const $
+    playlistCurrentActive xmms >>* do
+      name <- result
+      liftIO $ do
+        setPlaylistName $ Just name
+        updateWindowTitle
+        requestPlaylist name
+        broadcastPlaylistChanged xmms >>* handleChange
+      return False
 
-requestPlaylist =
-  playlistListEntries xmms Nothing >>* handlePlaylist
+  onDisconnected . add . ever . const $ do
+    setPlaylistName Nothing
+    updateWindowTitle
+    clearModel
+
+requestPlaylist name =
+  playlistListEntries xmms (Just name) >>* handlePlaylist
 
 handlePlaylist = do
   ids <- result
@@ -46,3 +61,24 @@ handlePlaylist = do
     clearModel
     mapM_ (listStoreAppend playlistStore) ids
   return False
+
+handleChange = do
+  change <- result
+  liftIO $ do
+    name <- fromMaybe "" <$> getPlaylistName
+    when (name == playlist change) $
+      case change of
+        PlaylistRemove { position = p } ->
+          listStoreRemove playlistStore p
+        PlaylistAdd { mlibId = id } ->
+          listStoreAppend playlistStore id >> return ()
+        PlaylistInsert { mlibId = id, position = n } ->
+          listStoreInsert playlistStore n id
+        PlaylistMove { mlibId = id, position = o, newPosition = n } -> do
+          listStoreRemove playlistStore o
+          listStoreInsert playlistStore n id
+        PlaylistClear {} ->
+          clearModel
+        _ ->
+          requestPlaylist name
+  return True

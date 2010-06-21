@@ -20,6 +20,7 @@
 module Playlist.View
   ( initView
   , playlistView
+  , updateWindowTitle
   ) where
 
 import Graphics.UI.Gtk
@@ -56,6 +57,14 @@ initView env builder = do
 
   return ?env
 
+
+updateWindowTitle = do
+  maybeName <- getPlaylistName
+  case maybeName of
+    Nothing   ->
+      setWindowTitle "Playlist - Vision"
+    Just name ->
+      setWindowTitle $ "Playlist: " ++ name ++ " - Vision"
 
 initEnv env builder = do
   let ?env = env

@@ -21,7 +21,11 @@ module Playlist.Model
   ( initModel
   , clearModel
   , playlistStore
+  , getPlaylistName
+  , setPlaylistName
   ) where
+
+import Control.Concurrent.MVar
 
 import Data.Int
 
@@ -30,10 +34,21 @@ import Graphics.UI.Gtk
 import Env
 
 
+data State
+  = State { sName :: Maybe String }
+
 data Model
-  = Model { mStore :: ListStore Int32 }
+  = Model { mStore :: ListStore Int32
+          , mState :: MVar State
+          }
 
 playlistStore = mStore getEnv
+
+state = mState getEnv
+
+getPlaylistName      = withMVar state (return . sName)
+setPlaylistName name = modifyMVar_ state $ \s ->
+  return s { sName = name }
 
 
 initModel = do
@@ -48,5 +63,12 @@ clearModel =
 
 initEnv = do
   store <- listStoreNewDND [] Nothing Nothing
+  state <- newMVar makeState
   return $ augmentEnv
-    Model { mStore = store }
+    Model { mStore = store
+          , mState = state
+          }
+
+makeState =
+  State { sName = Nothing }
+
