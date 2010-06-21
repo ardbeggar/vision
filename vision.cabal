@@ -23,7 +23,7 @@ data-files:         ui/*.glade
 executable vision
   main-is:          Vision.hs
   other-modules:    Handler, Utils, Env, XMMS, Environment, Medialib,
-                    UI, Atoms, Playback, Playlist, Playlist.Model,
+                    UI, Atoms, Config, Playback, Playlist, Playlist.Model,
                     Playlist.View, Playlist.Update, Playlist.DnD,
                     Playlist.Index
   hs-source-dirs:   src
@@ -31,7 +31,7 @@ executable vision
                     xmms2-client-glib >= 0.0.3.6,
                     gtk, containers, mtl, utf8-string,
                     filepath, directory, glib, array,
-                    MonadCatchIO-mtl
+                    MonadCatchIO-mtl, json
   extensions:       ImplicitParams, NoMonomorphismRestriction,
                     FlexibleContexts, FlexibleInstances
   ghc-options:      -W
