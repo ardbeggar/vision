@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 20 Jun. 2010
+--  Created: 21 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,28 +17,16 @@
 --  General Public License for more details.
 --
 
-module Playlist
-  ( showPlaylist
+module Atoms
+  ( xmms2PosList
+  , xmms2MlibId
+  , mlibIdClipboard
   ) where
 
 import Graphics.UI.Gtk
-
-import UI
-
-import Playlist.Model
-import Playlist.View
-import Playlist.Update
-import Playlist.DnD
+import System.IO.Unsafe
 
 
-showPlaylist = do
-  env <- initModel
-  let ?env = env
-
-  env <- initUI "playlist" initView
-  let ?env = env
-
-  setupUpdate
-  setupDnD
-
-  widgetShowAll window
+xmms2PosList    = unsafePerformIO $ atomNew "application/x-xmms2poslist"
+xmms2MlibId     = unsafePerformIO $ atomNew "application/x-xmms2mlibid"
+mlibIdClipboard = unsafePerformIO $ atomNew "_VISION_MEDIAID_CLIPBOARD"

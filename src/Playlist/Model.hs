@@ -23,6 +23,7 @@ module Playlist.Model
   , playlistStore
   , getPlaylistName
   , setPlaylistName
+  , getPlaylistSize
   ) where
 
 import Control.Concurrent.MVar
@@ -49,6 +50,8 @@ state = mState getEnv
 getPlaylistName      = withMVar state (return . sName)
 setPlaylistName name = modifyMVar_ state $ \s ->
   return s { sName = name }
+
+getPlaylistSize = listStoreGetSize playlistStore
 
 
 initModel = do

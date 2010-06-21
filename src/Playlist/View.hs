@@ -45,6 +45,9 @@ initView env builder = do
 
   treeViewSetModel playlistView playlistStore
 
+  sel <- treeViewGetSelection playlistView
+  treeSelectionSetMode sel SelectionMultiple
+
   column <- treeViewColumnNew
   treeViewInsertColumn playlistView column 0
 
