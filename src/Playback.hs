@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 11 Jun. 2010
+--  Created: 20 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,33 +17,40 @@
 --  General Public License for more details.
 --
 
-module Main
-  where
+module Playback
+  ( initPlayback
+  ) where
 
-import Graphics.UI.Gtk
+import Control.Concurrent.MVar
 
-import Environment
-import XMMS
-import Medialib
-import Playback
-import Playlist
+import XMMS2.Client
+
+import Env
 
 
-main = do
-  initGUI
+data State
+  = State { sCurrentTrack :: Maybe (Int, String)
+          , sStatus       :: Maybe PlaybackStatus
+          }
 
-  env <- initEnvironment
+data Playback
+  = Playback { pState :: MVar State }
+
+
+initPlayback = do
+  env <- initEnv
   let ?env = env
 
-  env <- initXMMS
-  let ?env = env
+  return ?env
 
-  env <- initMedialib
-  let ?env = env
 
-  env <- initPlayback
-  let ?env = env
+initEnv = do
+  state <- newMVar makeState
+  return $ augmentEnv
+    Playback { pState = state }
 
-  showPlaylist
+makeState =
+  State { sCurrentTrack = Nothing
+        , sStatus       = Nothing
+        }
 
-  mainGUI
