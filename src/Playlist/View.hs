@@ -25,9 +25,11 @@ module Playlist.View
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client
+
 import Env
 import UI
-
+import Playback
 import Playlist.Model
 import Playlist.Index
 
@@ -51,6 +53,20 @@ initView env builder = do
 
   column <- treeViewColumnNew
   treeViewInsertColumn playlistView column 0
+
+  cell <- cellRendererPixbufNew
+  cell `set` [ cellWidth := 30 ]
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributeFunc column cell playlistStore $ \_iter -> do
+    --[n]        <- treeModelGetPath playlistStore iter
+    cell `set` [ cellPixbufStockId :=> do
+                    maybeStatus <- getPlaybackStatus
+                    case maybeStatus of
+                      Just StatusPlay  -> return stockMediaPlay
+                      Just StatusPause -> return stockMediaPause
+                      Just StatusStop  -> return stockMediaStop
+                      _                -> return ""
+               ]
 
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
