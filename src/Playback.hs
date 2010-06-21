@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Playback
   ( initPlayback
   , onPlaybackStatus
@@ -25,9 +27,12 @@ module Playback
   , getCurrentTrack
   ) where
 
+import Prelude hiding (catch)
+
 import Control.Concurrent.MVar
 import Control.Applicative
 import Control.Monad.Trans
+import Control.Monad.CatchIO
 
 import XMMS2.Client
 
@@ -109,9 +114,9 @@ requestStatus =
 
 requestPos =
   playlistCurrentPos xmms Nothing >>* do
-    new <- mapFst fromIntegral <$> result
+    new <- (Just . mapFst fromIntegral <$> result) `catch` \(_ :: XMMSException) -> return Nothing
     liftIO $ do
       old <- modifyMVar state $ \state ->
-        return (state { sCurrentTrack = Just new }, sCurrentTrack state)
+        return (state { sCurrentTrack = new }, sCurrentTrack state)
       onCurrentTrack $ invoke old
     return False
