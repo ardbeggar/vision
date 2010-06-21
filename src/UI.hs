@@ -22,6 +22,7 @@
 module UI
   ( initUI
   , window
+  , setWindowTitle
   ) where
 
 import Graphics.UI.Gtk
@@ -47,3 +48,5 @@ initUI file cont = do
   window <- builderGetObject builder castToWindow "window"
 
   cont (augmentEnv UI { uWindow = window }) builder
+
+setWindowTitle = windowSetTitle window
