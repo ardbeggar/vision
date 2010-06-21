@@ -22,9 +22,24 @@ data-files:         ui/*.glade
 
 executable vision
   main-is:          Vision.hs
-  other-modules:    Handler, Utils, Env, XMMS, Environment, Medialib,
-                    UI, Atoms, Config, Playback, Playlist, Playlist.Model,
-                    Playlist.View, Playlist.Update, Playlist.DnD,
+  other-modules:    Handler,
+                    Utils,
+                    Env,
+                    XMMS,
+                    Environment,
+                    Medialib,
+                    UI,
+                    Atoms,
+                    Config,
+                    Properties,
+                    Properties.Property,
+                    Properties.Model,
+                    Playback,
+                    Playlist,
+                    Playlist.Model,
+                    Playlist.View,
+                    Playlist.Update,
+                    Playlist.DnD,
                     Playlist.Index
   hs-source-dirs:   src
   build-depends:    base, xmms2-client >= 0.0.3.6,

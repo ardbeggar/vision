@@ -27,29 +27,17 @@ module Properties
   , propertyStore
   , property
   , propertyList
-  , onPropertyAdded
-  , onPropertyDeleted
-  , makePropertiesView
   ) where
 
 import Prelude hiding (lookup)
 
 import Properties.Property
 import Properties.Model
-import Properties.View
-import Properties.Manager
-import Properties.Editor
-import Properties.Impex
-
-import Debug.Trace
 
 
 initProperties = do
-  properties <- trace "  init model" initModel
-  let ?properties = properties
+  env <- initModel
+  let ?env = env
 
-  trace "  setup manager" setupManager
-  trace "  setup editor"setupEditor
-  trace "  setup impex" setupImpex
+  return ?env
 
-  trace "  all done" $ return ?properties

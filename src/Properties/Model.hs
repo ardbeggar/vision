@@ -24,105 +24,61 @@ module Properties.Model
   , property
   , propertyList
   , propertyMap
-  , addProperty
-  , delProperty
-  , onPropertyAdded
-  , onPropertyDeleted
-  , selectIds
-  , getSelectedIds
-  , onIdsSelected
   ) where
 
 import Prelude hiding (lookup)
 
-import Control.Monad
+import Control.Concurrent.MVar
 
-import Data.Int
-import Data.IORef
 import Data.Map (Map)
 import qualified Data.Map as Map
 
 import Graphics.UI.Gtk
 
+import Env
 import Config
-import Callbacks
 
 import Properties.Property
 
 
 data Properties
-  = Properties { propsStore     :: ListStore Property
-               , propsMap       :: IORef (Map String Property)
-               , propsOnDeleted :: Callbacks (Property -> IO ())
-               , propsOnAdded   :: Callbacks (Property -> IO ())
-               , pSelectedIds   :: IORef [Int32]
-               , pOnIdsSelected :: Callbacks ([Int32] -> IO ()) }
+  = Properties { pStore :: ListStore Property
+               , pMap   :: MVar (Map String Property)
+               }
 
-getSelectedIds = readIORef $ pSelectedIds ?properties
-
-selectIds ids = do
-  writeIORef (pSelectedIds ?properties) ids
-  invokeCallbacks (pOnIdsSelected ?properties) ids
-
-onIdsSelected = addCallback (pOnIdsSelected ?properties)
+propertyStore = pStore getEnv
+propertyMap   = pMap getEnv
 
 
 initModel = do
-  store <- listStoreNew []
-  npmap <- newIORef $ Map.fromList $
-           map (\p -> (propName p, p)) builtinProperties
-  onadd <- mkCallbacks
-  ondel <- mkCallbacks
+  env <- initEnv
+  let ?env = env
 
-  selectedIds   <- newIORef []
-  onIdsSelected <- mkCallbacks
-
-  let ?properties = Properties { propsStore     = store
-                               , propsMap       = npmap
-                               , propsOnAdded   = onadd
-                               , propsOnDeleted = ondel
-                               , pSelectedIds   = selectedIds
-                               , pOnIdsSelected = onIdsSelected }
   loadProperties
   updateProperties
-  return ?properties
 
-propertyStore     = propsStore ?properties
-propertyMap       = propsMap   ?properties
+  return ?env
 
-onPropertyAdded = addCallback (propsOnAdded ?properties)
-onPropertyDeleted = addCallback (propsOnDeleted ?properties)
+initEnv = do
+  store <- listStoreNew []
+  npmap <- newMVar $ Map.fromList $ map (\p -> (propName p, p)) builtinProperties
+  return $ augmentEnv
+    Properties { pStore = store
+               , pMap   = npmap
+               }
 
-property name = do
-  map <- readIORef propertyMap
-  return $ Map.lookup name map
+property name =
+  withMVar propertyMap $ return . Map.lookup name
 
-propertyList = liftM Map.elems $ readIORef propertyMap
+propertyList =
+  withMVar propertyMap $ return . Map.elems
 
-updateProperties = do
-  pnmap <- readIORef propertyMap
-  listStoreClear propertyStore
-  mapM_ (\(_, p) -> listStoreAppend propertyStore p) $ Map.toList pnmap
-
-addProperty prop = do
-  modifyIORef propertyMap $ Map.insert (propName prop) prop
-  updateProperties
-  saveProperties
-  invokeCallbacks (propsOnAdded ?properties) prop
-
-delProperty prop = do
-  modifyIORef propertyMap $ Map.delete (propName prop)
-  updateProperties
-  saveProperties
-  invokeCallbacks (propsOnDeleted ?properties) prop
-
-
-saveProperties = do
-  props <- listStoreToList propertyStore
-  writeConfig "properties.conf" $ filter propCustom props
-  return ()
+updateProperties =
+  withMVar propertyMap $ \m -> do
+    listStoreClear propertyStore
+    mapM_ (\(_, p) -> listStoreAppend propertyStore p) $ Map.toList m
 
 loadProperties = do
   props <- config "properties.conf" []
-  npmap <- readIORef propertyMap
-  writeIORef propertyMap $ Map.union npmap $ Map.fromList $ map (\p -> (propName p, p)) props
+  modifyMVar_ propertyMap $ \m ->
+    return . Map.union m . Map.fromList $ map (\p -> (propName p, p)) props

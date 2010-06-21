@@ -22,9 +22,12 @@ module Utils
   , makeHandlerMVar
   , onHandler
   , mapFst
+  , decodeURL
   ) where
 
 import Control.Concurrent.MVar
+import Data.Char
+import Codec.Binary.UTF8.String
 
 import Handler
 
@@ -36,3 +39,13 @@ makeHandlerMVar = newMVar make
 onHandler = modifyMVar
 
 mapFst f (a, b) = (f a, b)
+
+decodeURL = decodeString . decodeURL'
+decodeURL' []         = []
+decodeURL' ('+' : cs) = ' ' : decodeURL' cs
+decodeURL' ('%' : cs) = let (c, cs') = decodeByte cs in c : decodeURL' cs'
+decodeURL' (c : cs)   = c : decodeURL' cs
+
+decodeByte (d1 : d0 : cs)
+  | isHexDigit d1 && isHexDigit d0 = (chr $ (digitToInt d1) * 16 + (digitToInt d0), cs)
+decodeByte _ = error "invalid URL"

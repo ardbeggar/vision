@@ -23,6 +23,7 @@ module Main
 import Graphics.UI.Gtk
 
 import Environment
+import Properties
 import XMMS
 import Medialib
 import Playback
@@ -33,6 +34,9 @@ main = do
   initGUI
 
   env <- initEnvironment
+  let ?env = env
+
+  env <- initProperties
   let ?env = env
 
   env <- initXMMS
