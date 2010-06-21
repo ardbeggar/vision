@@ -5,5 +5,7 @@ AC_ARG_WITH(compiler, [])
 
 AC_CONFIG_FILES(Makefile
 				src/Makefile
-                src/Playlist/Makefile)
+                src/Properties/Makefile
+                src/Playlist/Makefile
+                src/Playlist/Format/Makefile)
 AC_OUTPUT

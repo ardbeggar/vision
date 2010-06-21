@@ -36,6 +36,7 @@ import UI
 import Playback
 import Playlist.Model
 import Playlist.Index
+import Playlist.Format
 
 
 data View
@@ -81,18 +82,25 @@ initView env builder = do
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
   cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
-    [n] <- treeModelGetPath playlistStore iter
-    mid <- listStoreGetValue playlistStore n
-    rng <- treeViewGetVisibleRange playlistView
-    let force = case rng of
-          ([f], [t]) -> n >= f && t >= n
-          _          -> False
-    maybeInfo <- getInfo mid force
-    case maybeInfo of
-      Nothing -> cell `set` [ cellTextMarkup := Just "<i>retrieving</i>"]
-      Just _  -> cell `set` [ cellTextMarkup := Just $ "<i>some info for</i>\n" ++ show mid ]
+    info <- getInfoIfNeeded iter
+    cell `set` trackInfoAttrs info
+
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
+    info <- getInfoIfNeeded iter
+    cell `set` [ cellText := trackInfoDuration info ]
 
   return ?env
+
+
+getInfoIfNeeded iter = do
+  [n] <- treeModelGetPath playlistStore iter
+  mid <- listStoreGetValue playlistStore n
+  rng <- treeViewGetVisibleRange playlistView
+  getInfo mid $ case rng of
+    ([f], [t]) -> n >= f && t >= n
+    _          -> False
 
 
 updateWindowTitle = do

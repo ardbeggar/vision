@@ -33,12 +33,13 @@ import Medialib
 import Env
 import Handler
 import Playlist.Model
+import Playlist.Format
 
 
 data IndexEntry
   = IENone
   | IERetrieving
-  | IEReady Stamp MediaInfo
+  | IEReady Stamp MediaInfo TrackInfo
 
 data Index
   = Index { iTable :: MVar (IntMap (IndexEntry, [TreeRowReference])) }
@@ -70,14 +71,14 @@ handleInfo (id, stamp, info) = do
 updateIndex ix id stamp info old list =
   if upd
   then do
+    ti <- makeTrackInfo info
     mapM_ touch list
-    return $ IntMap.insert id (new, list) ix
+    return $ IntMap.insert id (IEReady stamp info ti, list) ix
   else
     return ix
-  where new = IEReady stamp info
-        upd = case old of
-          IEReady oldStamp _ -> stamp /= oldStamp
-          _                  -> True
+  where upd = case old of
+          IEReady oldStamp _ _ -> stamp /= oldStamp
+          _                    -> True
 
 touch ref = do
   path <- treeRowReferenceGetPath ref
@@ -89,7 +90,7 @@ getInfo id force = do
   let id' = fromIntegral id
   modifyMVar index $ \ix ->
     case IntMap.lookup id' ix of
-      Just (IEReady _ info, _) ->
+      Just (IEReady _ _ info, _) ->
         return (ix, Just info)
       Just (IENone, list) | force -> do
         requestInfo id

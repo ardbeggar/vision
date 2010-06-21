@@ -40,13 +40,17 @@ executable vision
                     Playlist.View,
                     Playlist.Update,
                     Playlist.DnD,
-                    Playlist.Index
+                    Playlist.Index,
+                    Playlist.Format,
+                    Playlist.Format.Format,
+                    Playlist.Format.Parser
   hs-source-dirs:   src
   build-depends:    base, xmms2-client >= 0.0.3.6,
                     xmms2-client-glib >= 0.0.3.6,
                     gtk, containers, mtl, utf8-string,
                     filepath, directory, glib, array,
-                    MonadCatchIO-mtl, json
+                    MonadCatchIO-mtl, json, parsec >= 3.0.1
   extensions:       ImplicitParams, NoMonomorphismRestriction,
-                    FlexibleContexts, FlexibleInstances
+                    FlexibleContexts, FlexibleInstances,
+                    TupleSections
   ghc-options:      -W

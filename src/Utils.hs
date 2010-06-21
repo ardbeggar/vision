@@ -23,6 +23,8 @@ module Utils
   , onHandler
   , mapFst
   , decodeURL
+  , trd
+  , trim
   ) where
 
 import Control.Concurrent.MVar
@@ -49,3 +51,7 @@ decodeURL' (c : cs)   = c : decodeURL' cs
 decodeByte (d1 : d0 : cs)
   | isHexDigit d1 && isHexDigit d0 = (chr $ (digitToInt d1) * 16 + (digitToInt d0), cs)
 decodeByte _ = error "invalid URL"
+
+trd (_, _, c) = c
+
+trim = f . f where f = reverse . dropWhile isSpace

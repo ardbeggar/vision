@@ -27,6 +27,7 @@ import UI
 
 import Playlist.Model
 import Playlist.Index
+import Playlist.Format
 import Playlist.View
 import Playlist.Update
 import Playlist.DnD
@@ -34,6 +35,9 @@ import Playlist.DnD
 
 showPlaylist = do
   env <- initModel
+  let ?env = env
+
+  env <- initFormat
   let ?env = env
 
   env <- initIndex

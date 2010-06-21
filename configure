@@ -1648,7 +1648,7 @@ if test "${with_compiler+set}" = set; then :
 fi
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/Playlist/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile src/Properties/Makefile src/Playlist/Makefile src/Playlist/Format/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -2350,7 +2350,9 @@ do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+    "src/Properties/Makefile") CONFIG_FILES="$CONFIG_FILES src/Properties/Makefile" ;;
     "src/Playlist/Makefile") CONFIG_FILES="$CONFIG_FILES src/Playlist/Makefile" ;;
+    "src/Playlist/Format/Makefile") CONFIG_FILES="$CONFIG_FILES src/Playlist/Format/Makefile" ;;
 
   *) as_fn_error "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
