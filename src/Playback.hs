@@ -20,10 +20,13 @@
 module Playback
   ( initPlayback
   , onPlaybackStatus
+  , onCurrentTrack
   , getPlaybackStatus
+  , getCurrentTrack
   ) where
 
 import Control.Concurrent.MVar
+import Control.Applicative
 import Control.Monad.Trans
 
 import XMMS2.Client
@@ -41,15 +44,19 @@ data State
 
 data Playback
   = Playback { pState            :: MVar State
-             , pOnPlaybackStatus :: HandlerMVar () }
+             , pOnPlaybackStatus :: HandlerMVar ()
+             , pOnCurrentTrack   :: HandlerMVar (Maybe (Int, String)) }
 
 state = pState getEnv
 
 onPlaybackStatus = onHandler (pOnPlaybackStatus getEnv)
+onCurrentTrack = onHandler (pOnCurrentTrack getEnv)
 
 getPlaybackStatus =
   withMVar state $ return . sStatus
 
+getCurrentTrack =
+  withMVar state $ return . sCurrentTrack
 
 
 initPlayback = do
@@ -61,6 +68,10 @@ initPlayback = do
       liftIO requestStatus
       return True
     requestStatus
+    broadcastPlaylistCurrentPos xmms >>* do
+      liftIO $ requestPos
+      return True
+    requestPos
 
   onDisconnected . add . ever . const $
     resetState
@@ -71,9 +82,11 @@ initPlayback = do
 initEnv = do
   state <- newMVar makeState
   onPlaybackStatus <- makeHandlerMVar
+  onCurrentTrack <- makeHandlerMVar
   return $ augmentEnv
     Playback { pState = state
-             , pOnPlaybackStatus = onPlaybackStatus }
+             , pOnPlaybackStatus = onPlaybackStatus
+             , pOnCurrentTrack = onCurrentTrack }
 
 makeState =
   State { sCurrentTrack = Nothing
@@ -83,9 +96,10 @@ makeState =
 resetState =
   modifyMVar_ state $ const $ return makeState
 
-setStatus s =
+setStatus s = do
   modifyMVar_ state $ \state ->
     return state { sStatus = s }
+  onPlaybackStatus $ invoke ()
 
 requestStatus =
   playbackStatus xmms >>* do
@@ -93,3 +107,11 @@ requestStatus =
     liftIO . setStatus $ Just status
     return False
 
+requestPos =
+  playlistCurrentPos xmms Nothing >>* do
+    new <- mapFst fromIntegral <$> result
+    liftIO $ do
+      old <- modifyMVar state $ \state ->
+        return (state { sCurrentTrack = Just new }, sCurrentTrack state)
+      onCurrentTrack $ invoke old
+    return False

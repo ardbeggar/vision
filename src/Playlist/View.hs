@@ -23,6 +23,10 @@ module Playlist.View
   , updateWindowTitle
   ) where
 
+import Control.Applicative
+
+import Data.Maybe
+
 import Graphics.UI.Gtk
 
 import XMMS2.Client
@@ -57,15 +61,21 @@ initView env builder = do
   cell <- cellRendererPixbufNew
   cell `set` [ cellWidth := 30 ]
   treeViewColumnPackStart column cell False
-  cellLayoutSetAttributeFunc column cell playlistStore $ \_iter -> do
-    --[n]        <- treeModelGetPath playlistStore iter
-    cell `set` [ cellPixbufStockId :=> do
-                    maybeStatus <- getPlaybackStatus
-                    case maybeStatus of
-                      Just StatusPlay  -> return stockMediaPlay
-                      Just StatusPause -> return stockMediaPause
-                      Just StatusStop  -> return stockMediaStop
-                      _                -> return ""
+  cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
+    [n] <- treeModelGetPath playlistStore iter
+    maybeCT <- getCurrentTrack
+    name <- fromMaybe "" <$> getPlaylistName
+    cell `set` [ cellPixbufStockId :=>
+                 case maybeCT of
+                   Just (cp, cname) | cp == n && cname == name -> do
+                     maybeStatus <- getPlaybackStatus
+                     case maybeStatus of
+                       Just StatusPlay  -> return stockMediaPlay
+                       Just StatusPause -> return stockMediaPause
+                       Just StatusStop  -> return stockMediaStop
+                       _                -> return ""
+                   _ ->
+                     return ""
                ]
 
   cell <- cellRendererTextNew

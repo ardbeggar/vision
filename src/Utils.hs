@@ -21,6 +21,7 @@ module Utils
   ( HandlerMVar
   , makeHandlerMVar
   , onHandler
+  , mapFst
   ) where
 
 import Control.Concurrent.MVar
@@ -33,3 +34,5 @@ type HandlerMVar a = MVar (Handler IO a)
 makeHandlerMVar = newMVar make
 
 onHandler = modifyMVar
+
+mapFst f (a, b) = (f a, b)

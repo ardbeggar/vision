@@ -32,6 +32,7 @@ import XMMS2.Client
 
 import XMMS
 import Handler
+import Playback
 import Playlist.Model
 import Playlist.Index
 import Playlist.View
@@ -51,6 +52,31 @@ setupUpdate = do
     setPlaylistName Nothing
     updateWindowTitle
     clearModel
+
+  onPlaybackStatus . add . ever . const $ do
+    maybeCT <- getCurrentTrack
+    name    <- fromMaybe "" <$> getPlaylistName
+    size    <- getPlaylistSize
+    case maybeCT of
+      Just (ct, cname) | cname == name && ct < size ->
+        touchPlaylist ct
+      _ ->
+        return ()
+
+  onCurrentTrack . add . ever $ \old -> do
+    name <- fromMaybe "" <$> getPlaylistName
+    size <- getPlaylistSize
+    case old of
+      Just (ot, oname) | oname == name && ot < size ->
+        touchPlaylist ot
+      _ ->
+        return ()
+    new <- getCurrentTrack
+    case new of
+      Just (nt, nname) | nname == name && nt < size ->
+        touchPlaylist nt
+      _ ->
+        return ()
 
 setupPlaylist = do
   name <- result
