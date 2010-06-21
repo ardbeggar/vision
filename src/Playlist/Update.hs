@@ -37,20 +37,26 @@ import Playlist.View
 
 
 setupUpdate = do
-  onConnected . add . ever . const $
+  onConnected . add . ever . const $ do
     playlistCurrentActive xmms >>* do
-      name <- result
-      liftIO $ do
-        setPlaylistName $ Just name
-        updateWindowTitle
-        requestPlaylist name
-        broadcastPlaylistChanged xmms >>* handleChange
+      setupPlaylist
+      liftIO $ broadcastPlaylistChanged xmms >>* handleChange
       return False
+    broadcastPlaylistLoaded xmms >>* do
+      setupPlaylist
+      return True
 
   onDisconnected . add . ever . const $ do
     setPlaylistName Nothing
     updateWindowTitle
     clearModel
+
+setupPlaylist = do
+  name <- result
+  liftIO $ do
+    setPlaylistName $ Just name
+    updateWindowTitle
+    requestPlaylist name
 
 requestPlaylist name =
   playlistListEntries xmms (Just name) >>* handlePlaylist
