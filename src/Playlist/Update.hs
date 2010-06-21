@@ -33,6 +33,7 @@ import XMMS2.Client
 import XMMS
 import Handler
 import Playlist.Model
+import Playlist.Index
 import Playlist.View
 
 
@@ -65,8 +66,12 @@ handlePlaylist = do
   ids <- result
   liftIO $ do
     clearModel
-    mapM_ (listStoreAppend playlistStore) ids
+    mapM_ addToPlaylist ids
   return False
+
+addToPlaylist id = do
+  n <- listStoreAppend playlistStore id
+  addToIndex id n
 
 handleChange = do
   change <- result
@@ -78,11 +83,13 @@ handleChange = do
           listStoreRemove playlistStore p
         PlaylistAdd { mlibId = id } ->
           listStoreAppend playlistStore id >> return ()
-        PlaylistInsert { mlibId = id, position = n } ->
+        PlaylistInsert { mlibId = id, position = n } -> do
           listStoreInsert playlistStore n id
+          addToIndex id n
         PlaylistMove { mlibId = id, position = o, newPosition = n } -> do
           listStoreRemove playlistStore o
           listStoreInsert playlistStore n id
+          addToIndex id n
         PlaylistClear {} ->
           clearModel
         _ ->

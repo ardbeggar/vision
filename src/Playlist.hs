@@ -26,6 +26,7 @@ import Graphics.UI.Gtk
 import UI
 
 import Playlist.Model
+import Playlist.Index
 import Playlist.View
 import Playlist.Update
 import Playlist.DnD
@@ -33,6 +34,9 @@ import Playlist.DnD
 
 showPlaylist = do
   env <- initModel
+  let ?env = env
+
+  env <- initIndex
   let ?env = env
 
   env <- initUI "playlist" initView

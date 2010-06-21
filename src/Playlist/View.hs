@@ -29,6 +29,7 @@ import Env
 import UI
 
 import Playlist.Model
+import Playlist.Index
 
 
 data View
@@ -56,7 +57,14 @@ initView env builder = do
   cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
     [n] <- treeModelGetPath playlistStore iter
     mid <- listStoreGetValue playlistStore n
-    cell `set` [ cellText := show mid ]
+    rng <- treeViewGetVisibleRange playlistView
+    let force = case rng of
+          ([f], [t]) -> n >= f && t >= n
+          _          -> False
+    maybeInfo <- getInfo mid force
+    case maybeInfo of
+      Nothing -> cell `set` [ cellTextMarkup := Just "<i>retrieving</i>"]
+      Just _  -> cell `set` [ cellTextMarkup := Just $ "<i>some info for</i>\n" ++ show mid ]
 
   return ?env
 

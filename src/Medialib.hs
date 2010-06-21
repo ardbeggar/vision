@@ -66,7 +66,7 @@ emptyCache =
 
 data MLib
   = MLib { mCache       :: MVar Cache
-         , mOnMediaInfo :: HandlerMVar (Stamp, MediaInfo)
+         , mOnMediaInfo :: HandlerMVar (MediaId, Stamp, MediaInfo)
          }
 
 cache = mCache getEnv
@@ -99,7 +99,7 @@ requestInfo id = do
         medialibGetInfo xmms id >>* handleInfo id'
         return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
       Just (CEReady s i) -> do
-        idleAdd (onMediaInfo (invoke (s, i)) >> return False) priorityHighIdle
+        idleAdd (onMediaInfo (invoke (id, s, i)) >> return False) priorityHighIdle
         return cache
       _ ->
         return cache
@@ -122,5 +122,5 @@ handleInfo id = do
           entry   = CEReady stamp info in
       return (Cache { cEntries   = IntMap.insert id entry entries
                     , cNextStamp = succ stamp }, stamp)
-    onMediaInfo $ invoke (stamp, info)
+    onMediaInfo $ invoke (fromIntegral id, stamp, info)
   return False

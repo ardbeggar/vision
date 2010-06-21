@@ -24,7 +24,7 @@ executable vision
   main-is:          Vision.hs
   other-modules:    Handler, Utils, Env, XMMS, Environment, Medialib,
                     UI, Atoms, Playlist, Playlist.Model, Playlist.View,
-                    Playlist.Update, Playlist.DnD
+                    Playlist.Update, Playlist.DnD, Playlist.Index
   hs-source-dirs:   src
   build-depends:    base, xmms2-client >= 0.0.3.6,
                     xmms2-client-glib >= 0.0.3.6,
