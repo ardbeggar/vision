@@ -75,7 +75,7 @@ setupUI = do
             actionSetVisible pause False
             actionSetSensitive stop False
   onPlaybackStatus . add . ever . const $ setupPPS
-  setupPPS
+  timeoutAdd (setupPPS >> return False) 0
 
   uiManagerAddUiFromFile uim $ uiFilePath "playlist"
 
