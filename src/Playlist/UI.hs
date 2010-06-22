@@ -30,6 +30,7 @@ import XMMS2.Client
 
 import UI
 import Environment
+import XMMS
 import Handler
 import Playback
 import Playlist.View
@@ -44,6 +45,8 @@ setupUI = do
   actionGroupAddActions uiAG uiActions
 
   srvAG <- actionGroupNew "server"
+  onConnected . add . ever . const $ actionGroupSetSensitive srvAG True
+  onDisconnected . add . ever . const $ actionGroupSetSensitive srvAG False
   uiManagerInsertActionGroup uim srvAG 1
 
   let addA name text stockId accel func = do
