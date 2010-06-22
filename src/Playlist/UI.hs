@@ -21,15 +21,30 @@ module Playlist.UI
   ( setupUI
   ) where
 
+import Control.Applicative
+import Data.Maybe
+
 import Graphics.UI.Gtk
 
 import UI
+import Environment
 import Playlist.View
 
 
 setupUI = do
+  uim <- uiManagerNew
+  windowAddAccelGroup window =<< uiManagerGetAccelGroup uim
+
+  uiAG <- actionGroupNew "ui"
+  actionGroupAddActions uiAG uiActions
+  uiManagerInsertActionGroup uim uiAG 1
+  uiManagerAddUiFromFile uim $ uiFilePath "playlist"
+
   box <- vBoxNew False 0
   containerAdd window box
+
+  menubar <- castToMenuBar . fromJust <$> uiManagerGetWidget uim "ui/menubar"
+  boxPackStart box menubar PackNatural 0
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
@@ -37,3 +52,31 @@ setupUI = do
   boxPackStartDefaults box scroll
 
   window `onDestroy` mainQuit
+
+
+uiActions =
+  [ ActionEntry
+    { actionEntryName        = "menubar"
+    , actionEntryLabel       = ""
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "music"
+    , actionEntryLabel       = "_Music"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "quit"
+    , actionEntryLabel       = "_Quit"
+    , actionEntryStockId     = Just "gtk-quit"
+    , actionEntryAccelerator = Just "<Control>q"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = mainQuit
+    }
+  ]

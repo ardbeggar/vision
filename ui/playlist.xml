@@ -1,0 +1,10 @@
+<ui>
+  <menubar name="menubar">
+    <placeholder name="entries">
+      <menu name="music" action="music">
+        <separator/>
+        <menuitem name="quit" action="quit"/>
+      </menu>
+    </placeholder>
+  </menubar>
+</ui>
