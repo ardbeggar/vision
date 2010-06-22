@@ -34,6 +34,7 @@ import XMMS2.Client
 import Env
 import UI
 import Playback
+import XMMS
 import Playlist.Model
 import Playlist.Index
 import Playlist.Format
@@ -90,6 +91,11 @@ initView = do
   cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
     info <- getInfoIfNeeded iter
     cell `set` [ cellText := trackInfoDuration info ]
+
+  playlistView `onRowActivated` \[n] _ -> do
+    playlistSetNext xmms $ fromIntegral n
+    startPlayback
+    return ()
 
   return ?env
 
