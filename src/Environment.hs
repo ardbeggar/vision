@@ -63,5 +63,5 @@ initEnvironment = do
 maybeGetEnv var =
   (Just <$> SE.getEnv var) `catch` \_ -> return Nothing
 
-uiFilePath name = dataDir </> "ui" </> name <.> "glade"
+uiFilePath name = dataDir </> "ui" </> name <.> "xml"
 
