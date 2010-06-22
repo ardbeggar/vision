@@ -34,6 +34,7 @@ import XMMS
 import Handler
 import Playback
 import Playtime
+import Volume
 import Playlist.Model
 import Playlist.View
 
@@ -128,6 +129,18 @@ setupUI = do
   toolItemSetExpand seekItem True
   containerAdd seekItem seekView
   toolbarInsert playbar seekItem (-1)
+
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
+
+  volView <- makeVolumeControl
+  volumeItem <- toolItemNew
+  toolItemSetHomogeneous volumeItem False
+  toolItemSetExpand volumeItem False
+  widgetSetSizeRequest volumeItem 100 (-1)
+  containerAdd volumeItem volView
+  toolbarInsert playbar volumeItem (-1)
 
   window `onDestroy` mainQuit
 

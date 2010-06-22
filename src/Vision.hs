@@ -27,6 +27,7 @@ import Properties
 import XMMS
 import Medialib
 import Playback
+import Volume
 import Playtime
 import Playlist
 
@@ -47,6 +48,9 @@ main = do
   let ?env = env
 
   env <- initPlayback
+  let ?env = env
+
+  env <- initVolume
   let ?env = env
 
   env <- initPlaytime
