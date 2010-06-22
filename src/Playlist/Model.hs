@@ -25,6 +25,7 @@ module Playlist.Model
   , setPlaylistName
   , getPlaylistSize
   , touchPlaylist
+  , onPlaylistUpdated
   ) where
 
 import Control.Concurrent.MVar
@@ -34,18 +35,21 @@ import Data.Int
 import Graphics.UI.Gtk
 
 import Env
+import Handler
+import Utils
 
 
 data State
   = State { sName :: Maybe String }
 
 data Model
-  = Model { mStore :: ListStore Int32
-          , mState :: MVar State
+  = Model { mStore             :: ListStore Int32
+          , mOnPlaylistUpdated :: HandlerMVar ()
+          , mState             :: MVar State
           }
 
 playlistStore = mStore getEnv
-
+onPlaylistUpdated = onHandler (mOnPlaylistUpdated getEnv)
 state = mState getEnv
 
 getPlaylistName      = withMVar state (return . sName)
@@ -70,11 +74,13 @@ clearModel =
 
 
 initEnv = do
-  store <- listStoreNewDND [] Nothing Nothing
-  state <- newMVar makeState
+  store             <- listStoreNewDND [] Nothing Nothing
+  onPlaylistUpdated <- makeHandlerMVar
+  state             <- newMVar makeState
   return $ augmentEnv
-    Model { mStore = store
-          , mState = state
+    Model { mStore             = store
+          , mOnPlaylistUpdated = onPlaylistUpdated
+          , mState             = state
           }
 
 makeState =

@@ -93,6 +93,7 @@ handlePlaylist = do
   liftIO $ do
     clearModel
     mapM_ addToPlaylist ids
+    onPlaylistUpdated $ invoke ()
   return False
 
 addToPlaylist id = do
@@ -105,19 +106,25 @@ handleChange = do
     name <- fromMaybe "" <$> getPlaylistName
     when (name == playlist change) $
       case change of
-        PlaylistRemove { position = p } ->
+        PlaylistRemove { position = p } -> do
           listStoreRemove playlistStore p
-        PlaylistAdd { mlibId = id } ->
-          listStoreAppend playlistStore id >> return ()
+          onPlaylistUpdated $ invoke ()
+        PlaylistAdd { mlibId = id } -> do
+          n <- listStoreAppend playlistStore id
+          addToIndex id n
+          onPlaylistUpdated $ invoke ()
         PlaylistInsert { mlibId = id, position = n } -> do
           listStoreInsert playlistStore n id
           addToIndex id n
+          onPlaylistUpdated $ invoke ()
         PlaylistMove { mlibId = id, position = o, newPosition = n } -> do
           listStoreRemove playlistStore o
           listStoreInsert playlistStore n id
           addToIndex id n
-        PlaylistClear {} ->
+          onPlaylistUpdated $ invoke ()
+        PlaylistClear {} -> do
           clearModel
+          onPlaylistUpdated $ invoke ()
         _ ->
           requestPlaylist name
   return True
