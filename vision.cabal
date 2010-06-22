@@ -39,6 +39,7 @@ executable vision
                     Playlist,
                     Playlist.Model,
                     Playlist.View,
+                    Playlist.UI,
                     Playlist.Update,
                     Playlist.DnD,
                     Playlist.Index,

@@ -45,13 +45,13 @@ data View
 playlistView  = vView getEnv
 
 
-initView env builder = do
-  env <- initEnv env builder
+initView = do
+  env <- initEnv
   let ?env = env
 
-  window `onDestroy` mainQuit
-
-  treeViewSetModel playlistView playlistStore
+  treeViewSetRulesHint playlistView True
+  treeViewSetReorderable playlistView True
+  treeViewSetHeadersVisible playlistView False
 
   sel <- treeViewGetSelection playlistView
   treeSelectionSetMode sel SelectionMultiple
@@ -111,8 +111,7 @@ updateWindowTitle = do
     Just name ->
       setWindowTitle $ "Playlist: " ++ name ++ " - Vision"
 
-initEnv env builder = do
-  let ?env = env
-  view <- builderGetObject builder castToTreeView "playlist-view"
+initEnv = do
+  view <- treeViewNewWithModel playlistStore
   return $ augmentEnv
     View { vView = view }

@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 20 Jun. 2010
+--  Created: 22 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,27 +17,23 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE RankNTypes #-}
-
-module UI
-  ( initUI
-  , window
-  , setWindowTitle
+module Playlist.UI
+  ( setupUI
   ) where
 
 import Graphics.UI.Gtk
 
-import Env
+import UI
+import Playlist.View
 
 
-data UI
-  = UI { uWindow :: Window }
+setupUI = do
+  box <- vBoxNew False 0
+  containerAdd window box
 
-window = uWindow getEnv
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  containerAdd scroll playlistView
+  boxPackStartDefaults box scroll
 
-initUI = do
-  window <- windowNew
-  return $ augmentEnv
-    UI { uWindow = window }
-
-setWindowTitle = windowSetTitle window
+  window `onDestroy` mainQuit

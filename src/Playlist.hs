@@ -31,9 +31,13 @@ import Playlist.Format
 import Playlist.View
 import Playlist.Update
 import Playlist.DnD
+import Playlist.UI
 
 
 showPlaylist = do
+  env <- initUI
+  let ?env = env
+
   env <- initModel
   let ?env = env
 
@@ -43,10 +47,11 @@ showPlaylist = do
   env <- initIndex
   let ?env = env
 
-  env <- initUI "playlist" initView
+  env <- initView
   let ?env = env
 
   setupUpdate
   setupDnD
+  setupUI
 
   widgetShowAll window
