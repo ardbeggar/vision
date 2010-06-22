@@ -1,18 +1,22 @@
 <ui>
   <menubar name="menubar">
     <placeholder name="entries">
-      <menu name="music" action="music">
-        <menuitem name="play" action="play"/>
-        <menuitem name="pause" action="pause"/>
-        <menuitem name="stop" action="stop"/>
+      <menu action="music">
+        <menuitem action="prev"/>
+        <menuitem action="play"/>
+        <menuitem action="pause"/>
+        <menuitem action="stop"/>
+        <menuitem action="next"/>
         <separator/>
-        <menuitem name="quit" action="quit"/>
+        <menuitem action="quit"/>
       </menu>
     </placeholder>
   </menubar>
   <toolbar name="playbar">
+    <toolitem action="prev"/>
     <toolitem action="play"/>
     <toolitem action="pause"/>
     <toolitem action="stop"/>
+    <toolitem action="next"/>
   </toolbar>
 </ui>

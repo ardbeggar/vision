@@ -93,6 +93,7 @@ handlePlaylist = do
   liftIO $ do
     clearModel
     mapM_ addToPlaylist ids
+    requestCurrentTrack
     onPlaylistUpdated $ invoke ()
   return False
 

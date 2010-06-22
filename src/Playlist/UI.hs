@@ -33,6 +33,7 @@ import Environment
 import XMMS
 import Handler
 import Playback
+import Playlist.Model
 import Playlist.View
 
 
@@ -57,6 +58,8 @@ setupUI = do
   play  <- addA "play" "_Play" (Just stockMediaPlay) (Just "<Control>space") startPlayback
   pause <- addA "pause" "_Pause" (Just stockMediaPause) (Just "<Control>space") pausePlayback
   stop  <- addA "stop" "_Stop" (Just stockMediaStop) (Just "<Control>s") stopPlayback
+  prev  <- addA "prev" "P_revious track" (Just stockMediaPrevious) (Just "<Control>p") prevTrack
+  next  <- addA "next" "_Next track" (Just stockMediaNext) (Just "<Control>n") nextTrack
   let setupPPS = do
         ps <- getPlaybackStatus
         case ps of
@@ -78,8 +81,24 @@ setupUI = do
             actionSetSensitive pause False
             actionSetVisible pause False
             actionSetSensitive stop False
+      setupPN = do
+        size <- getPlaylistSize
+        name <- getPlaylistName
+        cpos <- getCurrentTrack
+        let (ep, en) = case (name, cpos) of
+              (Just n, Just (ct, cn)) ->
+                (n == cn && ct > 0, n == cn && ct < size - 1)
+              _ ->
+                (False, False)
+        actionSetSensitive prev ep
+        actionSetSensitive next en
   onPlaybackStatus . add . ever . const $ setupPPS
-  timeoutAdd (setupPPS >> return False) 0
+  onCurrentTrack . add . ever . const $ setupPN
+  onPlaylistUpdated . add . ever . const $ setupPN
+  flip timeoutAdd 0 $ do
+    setupPPS
+    setupPN
+    return False
 
   uiManagerAddUiFromFile uim $ uiFilePath "playlist"
 

@@ -28,6 +28,9 @@ module Playback
   , startPlayback
   , pausePlayback
   , stopPlayback
+  , prevTrack
+  , nextTrack
+  , requestCurrentTrack
   ) where
 
 import Prelude hiding (catch)
@@ -77,9 +80,9 @@ initPlayback = do
       return True
     requestStatus
     broadcastPlaylistCurrentPos xmms >>* do
-      liftIO $ requestPos
+      liftIO $ requestCurrentTrack
       return True
-    requestPos
+    requestCurrentTrack
 
   onDisconnected . add . ever . const $
     resetState
@@ -115,7 +118,7 @@ requestStatus =
     liftIO . setStatus $ Just status
     return False
 
-requestPos =
+requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
     new <- (Just . mapFst fromIntegral <$> result) `catch` \(_ :: XMMSException) -> return Nothing
     liftIO $ do
@@ -139,3 +142,13 @@ startPlayback = do
 pausePlayback = playbackPause xmms
 
 stopPlayback = playbackStop xmms
+
+nextTrack = do
+  playlistSetNextRel xmms 1
+  playbackTickle xmms
+  return ()
+
+prevTrack = do
+  playlistSetNextRel xmms (-1)
+  playbackTickle xmms
+  return ()
