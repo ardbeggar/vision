@@ -24,10 +24,14 @@ module Playlist.UI
 import Control.Applicative
 import Data.Maybe
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (add)
+
+import XMMS2.Client
 
 import UI
 import Environment
+import Handler
+import Playback
 import Playlist.View
 
 
@@ -36,8 +40,43 @@ setupUI = do
   windowAddAccelGroup window =<< uiManagerGetAccelGroup uim
 
   uiAG <- actionGroupNew "ui"
-  actionGroupAddActions uiAG uiActions
   uiManagerInsertActionGroup uim uiAG 1
+  actionGroupAddActions uiAG uiActions
+
+  srvAG <- actionGroupNew "server"
+  uiManagerInsertActionGroup uim srvAG 1
+
+  let addA name text stockId accel = do
+        a <- actionNew name text Nothing stockId
+        actionGroupAddActionWithAccel srvAG a accel
+        return a
+  play  <- addA "play" "_Play" (Just stockMediaPlay) (Just "<Control>space")
+  pause <- addA "pause" "_Pause" (Just stockMediaPause) (Just "<Control>space")
+  stop  <- addA "stop" "_Stop" (Just stockMediaStop) (Just "<Control>s")
+  let setupPPS = do
+        ps <- getPlaybackStatus
+        case ps of
+          Just StatusPlay -> do
+            actionSetSensitive play False
+            actionSetVisible play False
+            actionSetSensitive pause True
+            actionSetVisible pause True
+            actionSetSensitive stop True
+          Just StatusPause -> do
+            actionSetSensitive play True
+            actionSetVisible play True
+            actionSetSensitive pause False
+            actionSetVisible pause False
+            actionSetSensitive stop True
+          _ -> do
+            actionSetSensitive play True
+            actionSetVisible play True
+            actionSetSensitive pause False
+            actionSetVisible pause False
+            actionSetSensitive stop False
+  onPlaybackStatus . add . ever . const $ setupPPS
+  setupPPS
+
   uiManagerAddUiFromFile uim $ uiFilePath "playlist"
 
   box <- vBoxNew False 0
@@ -50,6 +89,10 @@ setupUI = do
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   containerAdd scroll playlistView
   boxPackStartDefaults box scroll
+
+  playbar <- castToToolbar . fromJust <$> uiManagerGetWidget uim "ui/playbar"
+  toolbarSetStyle playbar ToolbarIcons
+  boxPackEnd box playbar PackNatural 0
 
   window `onDestroy` mainQuit
 

@@ -2,9 +2,17 @@
   <menubar name="menubar">
     <placeholder name="entries">
       <menu name="music" action="music">
+        <menuitem name="play" action="play"/>
+        <menuitem name="pause" action="pause"/>
+        <menuitem name="stop" action="stop"/>
         <separator/>
         <menuitem name="quit" action="quit"/>
       </menu>
     </placeholder>
   </menubar>
+  <toolbar name="playbar">
+    <toolitem action="play"/>
+    <toolitem action="pause"/>
+    <toolitem action="stop"/>
+  </toolbar>
 </ui>
