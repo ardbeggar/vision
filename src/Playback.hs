@@ -25,6 +25,9 @@ module Playback
   , onCurrentTrack
   , getPlaybackStatus
   , getCurrentTrack
+  , startPlayback
+  , pausePlayback
+  , stopPlayback
   ) where
 
 import Prelude hiding (catch)
@@ -120,3 +123,19 @@ requestPos =
         return (state { sCurrentTrack = new }, sCurrentTrack state)
       onCurrentTrack $ invoke old
     return False
+
+startPlayback = do
+  ps <- getPlaybackStatus
+  case ps of
+    Just StatusPlay ->
+      playbackTickle xmms
+    Just StatusPause -> do
+      playbackTickle xmms
+      playbackStart xmms
+      playbackTickle xmms
+    _ ->
+      playbackStart xmms
+
+pausePlayback = playbackPause xmms
+
+stopPlayback = playbackStop xmms

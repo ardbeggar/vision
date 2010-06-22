@@ -46,13 +46,14 @@ setupUI = do
   srvAG <- actionGroupNew "server"
   uiManagerInsertActionGroup uim srvAG 1
 
-  let addA name text stockId accel = do
+  let addA name text stockId accel func = do
         a <- actionNew name text Nothing stockId
+        a `on` actionActivated $ (func >> return ())
         actionGroupAddActionWithAccel srvAG a accel
         return a
-  play  <- addA "play" "_Play" (Just stockMediaPlay) (Just "<Control>space")
-  pause <- addA "pause" "_Pause" (Just stockMediaPause) (Just "<Control>space")
-  stop  <- addA "stop" "_Stop" (Just stockMediaStop) (Just "<Control>s")
+  play  <- addA "play" "_Play" (Just stockMediaPlay) (Just "<Control>space") startPlayback
+  pause <- addA "pause" "_Pause" (Just stockMediaPause) (Just "<Control>space") pausePlayback
+  stop  <- addA "stop" "_Stop" (Just stockMediaStop) (Just "<Control>s") stopPlayback
   let setupPPS = do
         ps <- getPlaybackStatus
         case ps of
