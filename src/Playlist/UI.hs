@@ -121,7 +121,7 @@ uiActions =
   , ActionEntry
     { actionEntryName        = "quit"
     , actionEntryLabel       = "_Quit"
-    , actionEntryStockId     = Just "gtk-quit"
+    , actionEntryStockId     = Just stockQuit
     , actionEntryAccelerator = Just "<Control>q"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = mainQuit
