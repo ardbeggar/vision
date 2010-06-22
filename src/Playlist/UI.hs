@@ -33,6 +33,7 @@ import Environment
 import XMMS
 import Handler
 import Playback
+import Playtime
 import Playlist.Model
 import Playlist.View
 
@@ -116,6 +117,17 @@ setupUI = do
   playbar <- castToToolbar . fromJust <$> uiManagerGetWidget uim "ui/playbar"
   toolbarSetStyle playbar ToolbarIcons
   boxPackEnd box playbar PackNatural 0
+
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
+
+  seekView <- makeSeekControl
+  seekItem <- toolItemNew
+  toolItemSetHomogeneous seekItem False
+  toolItemSetExpand seekItem True
+  containerAdd seekItem seekView
+  toolbarInsert playbar seekItem (-1)
 
   window `onDestroy` mainQuit
 

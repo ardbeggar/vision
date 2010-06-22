@@ -25,9 +25,12 @@ module Utils
   , decodeURL
   , trd
   , trim
+  , bracket_
   ) where
 
 import Control.Concurrent.MVar
+import Control.Monad.CatchIO hiding (Handler)
+
 import Data.Char
 import Codec.Binary.UTF8.String
 
@@ -55,3 +58,5 @@ decodeByte _ = error "invalid URL"
 trd (_, _, c) = c
 
 trim = f . f where f = reverse . dropWhile isSpace
+
+bracket_ f g = bracket f (const g) . const
