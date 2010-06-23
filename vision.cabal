@@ -44,6 +44,7 @@ executable vision
                     Playlist.Update,
                     Playlist.DnD,
                     Playlist.Index,
+                    Playlist.Search,
                     Playlist.Format,
                     Playlist.Format.Format,
                     Playlist.Format.Parser

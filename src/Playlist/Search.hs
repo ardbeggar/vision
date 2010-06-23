@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 20 Jun. 2010
+--  Created: 23 Jun. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,43 +17,25 @@
 --  General Public License for more details.
 --
 
-module Playlist
-  ( showPlaylist
+module Playlist.Search
+  ( setupSearch
   ) where
+
+import Data.List
+import Data.Char
 
 import Graphics.UI.Gtk
 
-import UI
-
 import Playlist.Model
 import Playlist.Index
-import Playlist.Format
 import Playlist.View
-import Playlist.Search
-import Playlist.Update
-import Playlist.DnD
-import Playlist.UI
+import Playlist.Format
 
 
-showPlaylist = do
-  env <- initUI
-  let ?env = env
-
-  env <- initModel
-  let ?env = env
-
-  env <- initFormat
-  let ?env = env
-
-  env <- initIndex
-  let ?env = env
-
-  env <- initView
-  let ?env = env
-
-  setupSearch
-  setupUpdate
-  setupDnD
-  setupUI
-
-  widgetShowAll window
+setupSearch = do
+  treeViewSetEnableSearch playlistView True
+  treeViewSetSearchEqualFunc playlistView $ Just $ \str iter -> do
+    [n]  <- treeModelGetPath playlistStore iter
+    mid  <- listStoreGetValue playlistStore n
+    info <- getInfo mid True
+    return $ isInfixOf (map toLower str) (trackInfoText info)
