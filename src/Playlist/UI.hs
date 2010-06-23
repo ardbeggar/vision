@@ -21,15 +21,11 @@ module Playlist.UI
   ( setupUI
   ) where
 
-import Control.Applicative
-import Data.Maybe
-
 import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
 
 import UI
-import Environment
 import XMMS
 import Handler
 import Playback
@@ -40,17 +36,12 @@ import Playlist.View
 
 
 setupUI = do
-  uim <- uiManagerNew
-  windowAddAccelGroup window =<< uiManagerGetAccelGroup uim
-
-  uiAG <- actionGroupNew "ui"
-  uiManagerInsertActionGroup uim uiAG 1
-  actionGroupAddActions uiAG uiActions
+  addUIActions uiActions
 
   srvAG <- actionGroupNew "server"
   onConnected . add . ever . const $ actionGroupSetSensitive srvAG True
   onDisconnected . add . ever . const $ actionGroupSetSensitive srvAG False
-  uiManagerInsertActionGroup uim srvAG 1
+  insertActionGroup srvAG 1
 
   let addA name text stockId accel func = do
         a <- actionNew name text Nothing stockId
@@ -102,22 +93,16 @@ setupUI = do
     setupPN
     return False
 
-  uiManagerAddUiFromFile uim $ uiFilePath "playlist"
-
-  box <- vBoxNew False 0
-  containerAdd window box
-
-  menubar <- castToMenuBar . fromJust <$> uiManagerGetWidget uim "ui/menubar"
-  boxPackStart box menubar PackNatural 0
+  addUIFromFile "playlist"
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   containerAdd scroll playlistView
-  boxPackStartDefaults box scroll
+  boxPackStartDefaults contents scroll
 
-  playbar <- castToToolbar . fromJust <$> uiManagerGetWidget uim "ui/playbar"
+  playbar <- getWidget castToToolbar "ui/playbar"
   toolbarSetStyle playbar ToolbarIcons
-  boxPackEnd box playbar PackNatural 0
+  boxPackEnd contents playbar PackNatural 0
 
   sep <- separatorToolItemNew
   separatorToolItemSetDraw sep False
@@ -147,14 +132,6 @@ setupUI = do
 
 uiActions =
   [ ActionEntry
-    { actionEntryName        = "menubar"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
     { actionEntryName        = "music"
     , actionEntryLabel       = "_Music"
     , actionEntryStockId     = Nothing

@@ -22,22 +22,91 @@
 module UI
   ( initUI
   , window
+  , contents
   , setWindowTitle
+  , getWidget
+  , addUIFromFile
+  , insertActionGroup
+  , addUIActions
   ) where
+
+import Control.Applicative
+
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
 import Env
+import Environment
 
 
 data UI
-  = UI { uWindow :: Window }
+  = UI { uWindow      :: Window
+       , uContents    :: VBox
+       , uManager     :: UIManager
+       , uActionGroup :: ActionGroup
+       }
 
-window = uWindow getEnv
+window        = uWindow getEnv
+contents      = uContents getEnv
+uiManager     = uManager getEnv
+uiActionGroup = uActionGroup getEnv
 
 initUI = do
-  window <- windowNew
+  env <- initEnv
+  let ?env = env
+
+  containerAdd window contents
+
+  windowAddAccelGroup window =<< uiManagerGetAccelGroup uiManager
+  insertActionGroup uiActionGroup 1
+  addUIActions uiActions
+  addUIFromFile "common"
+
+  menubar <- getWidget castToMenuBar "ui/menubar"
+  boxPackStart contents menubar PackNatural 0
+
+  maybeToolbar <- maybeGetWidget castToToolbar "ui/toolbar"
+  (flip . maybe) (return ()) maybeToolbar $ \toolbar ->
+    boxPackStart contents toolbar PackNatural 0
+
+  return ?env
+
+
+initEnv = do
+  window        <- windowNew
+  contents      <- vBoxNew False 0
+  uiManager     <- uiManagerNew
+  uiActionGroup <- actionGroupNew "ui"
   return $ augmentEnv
-    UI { uWindow = window }
+    UI { uWindow      = window
+       , uContents    = contents
+       , uManager     = uiManager
+       , uActionGroup = uiActionGroup
+       }
 
 setWindowTitle = windowSetTitle window
+addUIActions = actionGroupAddActions uiActionGroup
+insertActionGroup = uiManagerInsertActionGroup uiManager
+addUIFromFile = uiManagerAddUiFromFile uiManager . uiFilePath
+maybeGetWidget cast name = fmap cast <$> uiManagerGetWidget uiManager name
+getWidget cast name = fromJust <$> maybeGetWidget cast name
+
+uiActions =
+  [ ActionEntry
+    { actionEntryName        = "menubar"
+    , actionEntryLabel       = ""
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "toolbar"
+    , actionEntryLabel       = ""
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  ]
