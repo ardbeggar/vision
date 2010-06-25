@@ -94,7 +94,7 @@ initView = do
 
   playlistView `onRowActivated` \[n] _ -> do
     playlistSetNext xmms $ fromIntegral n
-    startPlayback
+    startPlayback True
     return ()
 
   return ?env

@@ -128,7 +128,9 @@ requestCurrentTrack =
       onCurrentTrack $ invoke old
     return False
 
-startPlayback = do
+startPlayback False =
+  playbackStart xmms
+startPlayback True = do
   ps <- getPlaybackStatus
   case ps of
     Just StatusPlay ->

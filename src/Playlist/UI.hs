@@ -47,7 +47,7 @@ setupUI = do
         a `on` actionActivated $ (func >> return ())
         actionGroupAddActionWithAccel srvAG a accel
         return a
-  play  <- addA "play" "_Play" (Just stockMediaPlay) (Just "<Control>space") startPlayback
+  play  <- addA "play" "_Play" (Just stockMediaPlay) (Just "<Control>space") (startPlayback False)
   pause <- addA "pause" "_Pause" (Just stockMediaPause) (Just "<Control>space") pausePlayback
   stop  <- addA "stop" "_Stop" (Just stockMediaStop) (Just "<Control>s") stopPlayback
   prev  <- addA "prev" "P_revious track" (Just stockMediaPrevious) (Just "<Control>p") prevTrack
