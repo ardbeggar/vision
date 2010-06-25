@@ -78,15 +78,16 @@ initMedialib = do
   env <- initEnv
   let ?env = env
 
-  onConnected . add . ever . const $
-    broadcastMedialibEntryChanged xmms >>* do
-      id <- result
-      let id' = fromIntegral id
-      liftIO $ do
-        withMVar cache $ \cache ->
-          when (isJust . IntMap.lookup id' $ cEntries cache) $
-            medialibGetInfo xmms id >>* handleInfo id'
-      return True
+  onServerConnection . add . ever $ \conn ->
+    when conn $ do
+      broadcastMedialibEntryChanged xmms >>* do
+        id <- result
+        let id' = fromIntegral id
+        liftIO $ do
+          withMVar cache $ \cache ->
+            when (isJust . IntMap.lookup id' $ cEntries cache) $
+              medialibGetInfo xmms id >>* handleInfo id'
+        return True
 
   return ?env
 

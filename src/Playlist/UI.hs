@@ -39,8 +39,7 @@ setupUI = do
   addUIActions uiActions
 
   srvAG <- actionGroupNew "server"
-  onConnected . add . ever . const $ actionGroupSetSensitive srvAG True
-  onDisconnected . add . ever . const $ actionGroupSetSensitive srvAG False
+  onServerConnection . add . ever $ actionGroupSetSensitive srvAG
   insertActionGroup srvAG 1
 
   let addA name text stockId accel func = do

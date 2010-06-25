@@ -41,8 +41,6 @@ import Handler
 import Utils
 import Env
 
-import Debug.Trace
-
 
 data Volume
   = Volume { vAdj :: Adjustment
@@ -55,18 +53,19 @@ initVolume = do
   env <- initEnv
   let ?env = env
 
-  onConnected . add . ever . const $ do
-    playbackVolumeGet xmms >>* do
-      handleVolume
-      lift $ broadcastPlaybackVolumeChanged xmms >>* handleVolume
-      return False
-    signalUnblock cId
+  onServerConnection . add . ever $ \conn ->
+    if conn
+    then do
+      playbackVolumeGet xmms >>* do
+        handleVolume
+        lift $ broadcastPlaybackVolumeChanged xmms >>* handleVolume
+        return False
+      signalUnblock cId
+    else do
+      signalBlock cId
+      withoutVolumeChange $ adjustmentSetValue (adj) 0
 
-  onDisconnected . add . ever . const $ do
-    signalBlock cId
-    withoutVolumeChange $ adjustmentSetValue (adj) 0
-
-  trace "init volume done" $ return ?env
+  return ?env
 
 
 initEnv = do
@@ -85,11 +84,8 @@ makeVolumeControl = do
   widgetSetCanFocus view False
   widgetSetSensitive view False
 
-  cc <- onConnected . add . ever . const $  widgetSetSensitive view True
-  dc <- onDisconnected . add . ever . const $ widgetSetSensitive view False
-  view `onDestroy` do
-    onConnected $ remove cc
-    onDisconnected $ remove dc
+  id <- onServerConnection . add . ever $ widgetSetSensitive view
+  view `onDestroy` do onServerConnection $ remove id
 
   return view
 

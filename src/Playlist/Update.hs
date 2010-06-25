@@ -39,19 +39,20 @@ import Playlist.View
 
 
 setupUpdate = do
-  onConnected . add . ever . const $ do
-    playlistCurrentActive xmms >>* do
-      setupPlaylist
-      liftIO $ broadcastPlaylistChanged xmms >>* handleChange
-      return False
-    broadcastPlaylistLoaded xmms >>* do
-      setupPlaylist
-      return True
-
-  onDisconnected . add . ever . const $ do
-    setPlaylistName Nothing
-    updateWindowTitle
-    clearModel
+  onServerConnection . add . ever $ \conn ->
+    if conn
+    then do
+      playlistCurrentActive xmms >>* do
+        setupPlaylist
+        liftIO $ broadcastPlaylistChanged xmms >>* handleChange
+        return False
+      broadcastPlaylistLoaded xmms >>* do
+        setupPlaylist
+        return True
+    else do
+      setPlaylistName Nothing
+      updateWindowTitle
+      clearModel
 
   onPlaybackStatus . add . ever . const $ do
     maybeCT <- getCurrentTrack

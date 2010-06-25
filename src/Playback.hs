@@ -74,18 +74,19 @@ initPlayback = do
   env <- initEnv
   let ?env = env
 
-  onConnected . add . ever . const $ do
-    broadcastPlaybackStatus xmms >>* do
-      liftIO requestStatus
-      return True
-    requestStatus
-    broadcastPlaylistCurrentPos xmms >>* do
-      liftIO $ requestCurrentTrack
-      return True
-    requestCurrentTrack
-
-  onDisconnected . add . ever . const $
-    resetState
+  onServerConnection . add . ever $ \conn ->
+    if conn
+    then do
+      broadcastPlaybackStatus xmms >>* do
+        liftIO requestStatus
+        return True
+      requestStatus
+      broadcastPlaylistCurrentPos xmms >>* do
+        liftIO $ requestCurrentTrack
+        return True
+      requestCurrentTrack
+    else
+      resetState
 
   return ?env
 

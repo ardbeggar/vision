@@ -35,7 +35,6 @@ import Data.Int
 import Graphics.UI.Gtk
 
 import Env
-import Handler
 import Utils
 
 

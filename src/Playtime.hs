@@ -70,16 +70,17 @@ initPlaytime = do
   env <- initEnv
   let ?env = env
 
-  onConnected . add . ever . const $ do
-    playbackCurrentId xmms >>* handleCurrentId False
-    broadcastPlaybackCurrentId xmms >>* handleCurrentId True
-    playbackPlaytime xmms >>* handlePlaytime 0 False
-    signalPlaybackPlaytime xmms >>* handlePlaytime 1000 True
-
-  onDisconnected . add . ever . const $ do
-    resetState
-    setValue 0
-    resetUpdate (+ 1)
+  onServerConnection . add . ever $ \conn ->
+    if conn
+    then do
+      playbackCurrentId xmms >>* handleCurrentId False
+      broadcastPlaybackCurrentId xmms >>* handleCurrentId True
+      playbackPlaytime xmms >>* handlePlaytime 0 False
+      signalPlaybackPlaytime xmms >>* handlePlaytime 1000 True
+    else do
+      resetState
+      setValue 0
+      resetUpdate (+ 1)
 
   onMediaInfo . add . ever $ handleInfo
 
@@ -189,13 +190,12 @@ makeSeekControl = do
   widgetSetCanFocus view False
   widgetSetSensitive view False
 
-  di <- onDisconnected . add . ever . const $
-    widgetSetSensitive view False
+  ci <- onServerConnection . add . ever $ widgetSetSensitive view
   pi <- onPlaybackStatus . add . ever . const $ do
     s <- getPlaybackStatus
     widgetSetSensitive view $ s == Just StatusPlay
   view `onDestroy` do
-    onDisconnected $ remove di
-    onDisconnected $ remove pi
+    onServerConnection $ remove ci
+    onPlaybackStatus $ remove pi
 
   return view

@@ -20,8 +20,7 @@
 module XMMS
   ( xmms
   , initXMMS
-  , onConnected
-  , onDisconnected
+  , onServerConnection
   ) where
 
 import Prelude hiding (init)
@@ -38,32 +37,29 @@ import Env
 
 
 data XMMS
-  = XMMS { xXMMS           :: Connection
-         , xOnConnected    :: HandlerMVar ()
-         , xOnDisconnected :: HandlerMVar () }
+  = XMMS { xXMMS               :: Connection
+         , xOnServerConnection :: HandlerMVar Bool
+         }
 
-xmms           = xXMMS getEnv
-onConnected    = onHandler (xOnConnected getEnv)
-onDisconnected = onHandler (xOnDisconnected getEnv)
+xmms               = xXMMS getEnv
+onServerConnection = onHandler (xOnServerConnection getEnv)
 
 initXMMS = do
   env <- initEnv
   let ?env = env
 
-  timeoutAdd (onDisconnected (invoke ()) >> return False) 0
   scheduleTryConnect 100
 
   return ?env
 
 
 initEnv = do
-  xmms           <- init "Vision"
-  onConnected    <- makeHandlerMVar
-  onDisconnected <- makeHandlerMVar
+  xmms               <- init "Vision"
+  onServerConnection <- makeHandlerMVar
   return $ augmentEnv
-    XMMS { xXMMS           = xmms
-         , xOnConnected    = onConnected
-         , xOnDisconnected = onDisconnected }
+    XMMS { xXMMS               = xmms
+         , xOnServerConnection = onServerConnection
+         }
 
 scheduleTryConnect = timeoutAdd tryConnect
 
@@ -75,7 +71,7 @@ tryConnect = do
     putStrLn "connected!"
     disconnectCallbackSet xmms disconnectCallback
     mainLoopGMainInit xmms
-    onConnected $ invoke ()
+    onServerConnection $ invoke True
     return False
     else do
     putStrLn "failed."
@@ -84,6 +80,6 @@ tryConnect = do
 
 disconnectCallback = do
   putStrLn "disconnected."
-  onDisconnected $ invoke ()
+  onServerConnection $ invoke False
   scheduleTryConnect 1000
   return ()
