@@ -35,6 +35,7 @@ import Control.Monad.CatchIO
 import qualified Data.Map as Map
 import Data.IORef
 import Data.Word
+import Data.Maybe
 
 import Graphics.UI.Gtk hiding (add, remove)
 
@@ -83,6 +84,9 @@ initPlaytime = do
       resetUpdate (+ 1)
 
   onMediaInfo . add . ever $ handleInfo
+  onPlaybackStatusAdd . ever $ \status ->
+    when (fromMaybe StatusStop status == StatusStop) $
+      setValue 0
 
   return ?env
 
@@ -174,13 +178,14 @@ withoutSeek =
   bracket_ (signalBlock cId) (signalUnblock cId)
 
 handlePlaytime diff ret = do
-  en <- liftIO $ updateEnabled
-  when en $ do
-    oldPt <- liftIO $ getValue
-    newPt <- fromIntegral <$> result
-             `catch` \(_ :: XMMSException) -> return 0
-    when (abs (newPt - oldPt) >= diff) $
-      liftIO $ setValue newPt
+  newPt <- fromIntegral <$> result
+           `catch` \(_ :: XMMSException) -> return 0
+  liftIO $ do
+    en <- updateEnabled
+    ps <- getPlaybackStatus
+    when (en && fromMaybe StatusStop ps /= StatusStop) $ do
+      oldPt <- getValue
+      when (abs (newPt - oldPt) >= diff) $ setValue newPt
   return ret
 
 makeSeekControl = do
@@ -189,13 +194,9 @@ makeSeekControl = do
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False
 
-  ci <- onServerConnectionAdd . ever $ \conn ->
-    unless conn $ widgetSetSensitive view False
-  pi <- onPlaybackStatus . add . ever . const $ do
-    s <- getPlaybackStatus
-    widgetSetSensitive view $ s == Just StatusPlay
+  id <- onPlaybackStatusAdd . ever $
+    widgetSetSensitive view . (Just StatusPlay ==)
   view `onDestroy` do
-    onServerConnection $ remove ci
-    onPlaybackStatus $ remove pi
+    onPlaybackStatus $ remove id
 
   return view
