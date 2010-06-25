@@ -22,6 +22,7 @@
 module Playback
   ( initPlayback
   , onPlaybackStatus
+  , onPlaybackStatusAdd
   , onCurrentTrack
   , getPlaybackStatus
   , getCurrentTrack
@@ -55,12 +56,18 @@ data State
 
 data Playback
   = Playback { pState            :: MVar State
-             , pOnPlaybackStatus :: HandlerMVar ()
-             , pOnCurrentTrack   :: HandlerMVar (Maybe (Int, String)) }
+             , pOnPlaybackStatus :: HandlerMVar (Maybe PlaybackStatus)
+             , pOnCurrentTrack   :: HandlerMVar (Maybe (Int, String))
+             }
 
 state = pState getEnv
 
 onPlaybackStatus = onHandler (pOnPlaybackStatus getEnv)
+onPlaybackStatusAdd f = do
+  id <- onPlaybackStatus . add $ f
+  f =<< getPlaybackStatus
+  return id
+
 onCurrentTrack = onHandler (pOnCurrentTrack getEnv)
 
 getPlaybackStatus =
@@ -92,26 +99,28 @@ initPlayback = do
 
 
 initEnv = do
-  state <- newMVar makeState
+  state            <- newMVar makeState
   onPlaybackStatus <- makeHandlerMVar
-  onCurrentTrack <- makeHandlerMVar
+  onCurrentTrack   <- makeHandlerMVar
   return $ augmentEnv
-    Playback { pState = state
+    Playback { pState            = state
              , pOnPlaybackStatus = onPlaybackStatus
-             , pOnCurrentTrack = onCurrentTrack }
+             , pOnCurrentTrack   = onCurrentTrack
+             }
 
 makeState =
   State { sCurrentTrack = Nothing
         , sStatus       = Nothing
         }
 
-resetState =
+resetState = do
   modifyMVar_ state $ const $ return makeState
+  invokeOnPlaybackStatus
 
 setStatus s = do
   modifyMVar_ state $ \state ->
     return state { sStatus = s }
-  onPlaybackStatus $ invoke ()
+  invokeOnPlaybackStatus
 
 requestStatus =
   playbackStatus xmms >>* do
@@ -155,3 +164,6 @@ prevTrack = do
   playlistSetNextRel xmms (-1)
   playbackTickle xmms
   return ()
+
+invokeOnPlaybackStatus =
+  onPlaybackStatus . invoke =<< getPlaybackStatus
