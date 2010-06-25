@@ -34,12 +34,8 @@ module Playback
   , requestCurrentTrack
   ) where
 
-import Prelude hiding (catch)
-
 import Control.Concurrent.MVar
-import Control.Applicative
 import Control.Monad.Trans
-import Control.Monad.CatchIO
 
 import XMMS2.Client
 
@@ -130,7 +126,7 @@ requestStatus =
 
 requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
-    new <- (Just . mapFst fromIntegral <$> result) `catch` \(_ :: XMMSException) -> return Nothing
+    new <- catchResult Nothing (Just . mapFst fromIntegral)
     liftIO $ do
       old <- modifyMVar state $ \state ->
         return (state { sCurrentTrack = new }, sCurrentTrack state)

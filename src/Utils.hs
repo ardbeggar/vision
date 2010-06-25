@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Utils
   ( HandlerMVar
   , makeHandlerMVar
@@ -26,13 +28,17 @@ module Utils
   , trd
   , trim
   , bracket_
+  , catchResult
   ) where
 
-import Control.Concurrent.MVar
+import Prelude hiding (catch)
 import Control.Monad.CatchIO hiding (Handler)
-
+import Control.Applicative
+import Control.Concurrent.MVar
 import Data.Char
 import Codec.Binary.UTF8.String
+
+import XMMS2.Client
 
 import Handler
 
@@ -60,3 +66,6 @@ trd (_, _, c) = c
 trim = f . f where f = reverse . dropWhile isSpace
 
 bracket_ f g = bracket f (const g) . const
+
+catchResult def conv =
+  (conv <$> result) `catch` \(_ :: XMMSException) -> return def

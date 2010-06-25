@@ -24,13 +24,10 @@ module Playtime
   , makeSeekControl
   ) where
 
-import Prelude hiding (catch)
-
 import Control.Concurrent.MVar
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.CatchIO
 
 import qualified Data.Map as Map
 import Data.IORef
@@ -178,8 +175,7 @@ withoutSeek =
   bracket_ (signalBlock cId) (signalUnblock cId)
 
 handlePlaytime diff ret = do
-  newPt <- fromIntegral <$> result
-           `catch` \(_ :: XMMSException) -> return 0
+  newPt <- catchResult 0 fromIntegral
   liftIO $ do
     en <- updateEnabled
     ps <- getPlaybackStatus

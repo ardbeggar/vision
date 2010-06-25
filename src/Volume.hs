@@ -24,11 +24,7 @@ module Volume
   , makeVolumeControl
   ) where
 
-import Prelude hiding (catch)
-
-import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.CatchIO
 
 import qualified Data.Map as Map
 
@@ -90,15 +86,14 @@ makeVolumeControl = do
 
 
 handleVolume = do
-  vol <- liftM (maximum . Map.elems) result `catch`
-         \(_ :: XMMSException) -> return 0
+  vol <- catchResult 0 (maximum . Map.elems)
   liftIO $ withoutVolumeChange $
     adjustmentSetValue (adj) $ fromIntegral vol
   return True
 
 setVolume vol =
   playbackVolumeGet xmms >>* do
-    vols <- result `catch` \(_ :: XMMSException) -> return Map.empty
+    vols <- catchResult Map.empty id
     lift $ mapM_ ((flip (playbackVolumeSet xmms)) vol) $ Map.keys vols
     return False
 
