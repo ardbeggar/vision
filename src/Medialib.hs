@@ -78,7 +78,7 @@ initMedialib = do
   env <- initEnv
   let ?env = env
 
-  onServerConnection . add . ever $ \conn ->
+  onServerConnectionAdd . ever $ \conn ->
     when conn $ do
       broadcastMedialibEntryChanged xmms >>* do
         id <- result

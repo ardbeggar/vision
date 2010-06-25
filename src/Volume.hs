@@ -53,7 +53,7 @@ initVolume = do
   env <- initEnv
   let ?env = env
 
-  onServerConnection . add . ever $ \conn ->
+  onServerConnectionAdd . ever $ \conn ->
     if conn
     then do
       playbackVolumeGet xmms >>* do
@@ -82,9 +82,8 @@ makeVolumeControl = do
   scaleSetDrawValue view False
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False
-  widgetSetSensitive view False
 
-  id <- onServerConnection . add . ever $ widgetSetSensitive view
+  id <- onServerConnectionAdd . ever $ widgetSetSensitive view
   view `onDestroy` do onServerConnection $ remove id
 
   return view

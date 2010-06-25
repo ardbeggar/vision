@@ -70,7 +70,7 @@ initPlaytime = do
   env <- initEnv
   let ?env = env
 
-  onServerConnection . add . ever $ \conn ->
+  onServerConnectionAdd . ever $ \conn ->
     if conn
     then do
       playbackCurrentId xmms >>* handleCurrentId False
@@ -188,9 +188,9 @@ makeSeekControl = do
   scaleSetDrawValue view False
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False
-  widgetSetSensitive view False
 
-  ci <- onServerConnection . add . ever $ widgetSetSensitive view
+  ci <- onServerConnectionAdd . ever $ \conn ->
+    unless conn $ widgetSetSensitive view False
   pi <- onPlaybackStatus . add . ever . const $ do
     s <- getPlaybackStatus
     widgetSetSensitive view $ s == Just StatusPlay

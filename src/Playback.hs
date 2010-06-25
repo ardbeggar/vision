@@ -74,7 +74,7 @@ initPlayback = do
   env <- initEnv
   let ?env = env
 
-  onServerConnection . add . ever $ \conn ->
+  onServerConnectionAdd . ever $ \conn ->
     if conn
     then do
       broadcastPlaybackStatus xmms >>* do

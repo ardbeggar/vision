@@ -39,7 +39,7 @@ import Playlist.View
 
 
 setupUpdate = do
-  onServerConnection . add . ever $ \conn ->
+  onServerConnectionAdd . ever $ \conn ->
     if conn
     then do
       playlistCurrentActive xmms >>* do
