@@ -18,12 +18,12 @@
 --
 
 module Playlist.Edit
-  ( initEdit
-  , editDelete
+  ( editDelete
   , editCopy
   , editPaste
   , editSelectAll
   , editInvertSelection
+  , editCheckClipboard
   ) where
 
 import Control.Applicative
@@ -35,28 +35,10 @@ import Graphics.UI.Gtk
 import XMMS2.Client
 
 import Atoms
-import Env
 import XMMS
+import Clipboard
 import Playlist.Model
 import Playlist.View
-
-
-data Edit
-  = Edit { eClipboard :: Clipboard }
-
-clipboard = eClipboard getEnv
-
-
-initEdit = do
-  env <- initEnv
-  let ?env = env
-
-  return ?env
-
-initEnv = do
-  clipboard <- clipboardGet selectionClipboard
-  return $ augmentEnv
-    Edit { eClipboard = clipboard }
 
 
 editDelete cut = do
@@ -93,6 +75,9 @@ editInvertSelection = do
   rows <- treeSelectionGetSelectedRows playlistSel
   treeSelectionSelectAll playlistSel
   mapM_ (treeSelectionUnselectPath playlistSel) rows
+
+editCheckClipboard =
+  elem xmms2MlibId <$> getClipboardTargets
 
 copyIds ids _ =
   selectionDataSet selectionTypeInteger ids

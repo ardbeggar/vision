@@ -32,6 +32,7 @@ import Playback
 import Playtime
 import Volume
 import Utils
+import Clipboard
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
@@ -56,8 +57,8 @@ setupUI = do
   next  <- addA "next" "_Next track" (Just stockMediaNext) (Just "<Control>n") nextTrack
   cut    <- addA "cut" "Cu_t" (Just stockCut) (Just "<Control>x") $ editDelete True
   copy   <- addA "copy" "_Copy" (Just stockCopy) (Just "<Control>c") editCopy
-  _paste  <- addA "paste" "_Paste" (Just stockPaste) (Just "<Control>v") $ editPaste False
-  _append <- addA "append" "_Append" (Just stockPaste) (Just "<Control><Shift>v") $ editPaste True
+  paste  <- addA "paste" "_Paste" (Just stockPaste) (Just "<Control>v") $ editPaste False
+  append <- addA "append" "_Append" (Just stockPaste) (Just "<Control><Shift>v") $ editPaste True
   delete <- addA "delete" "_Delete" (Just stockDelete) (Just "Delete") $ editDelete False
   addA "select-all" "_Select all" (Just stockSelectAll) (Just "<Control>a") editSelectAll
   addA "invert-selection" "_Invert selection" (Just stockSelectAll) (Just "<Control><Shift>a") editInvertSelection
@@ -96,14 +97,19 @@ setupUI = do
       setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
         mapM_ (flip actionSetSensitive (n /= 0)) [cut, copy, delete]
+      setupPA = do
+        en <- editCheckClipboard
+        mapM_ (flip actionSetSensitive en) [paste, append]
   onPlaybackStatus . add . ever . const $ setupPPS
   onCurrentTrack . add . ever . const $ setupPN
   onPlaylistUpdated . add . ever . const $ setupPN
+  onClipboardTargets . add . ever . const $ setupPA
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
     setupPPS
     setupPN
     setupSel
+    setupPA
     return False
 
   addUIFromFile "playlist"

@@ -32,7 +32,6 @@ import Playlist.View
 import Playlist.Search
 import Playlist.Update
 import Playlist.DnD
-import Playlist.Edit
 import Playlist.UI
 
 
@@ -50,9 +49,6 @@ showPlaylist = do
   let ?env = env
 
   env <- initView
-  let ?env = env
-
-  env <- initEdit
   let ?env = env
 
   setupSearch
