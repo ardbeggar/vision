@@ -29,4 +29,14 @@
     <toolitem action="stop"/>
     <toolitem action="next"/>
   </toolbar>
+  <popup action="playlist-popup">
+    <menuitem action="cut"/>
+    <menuitem action="copy"/>
+    <menuitem action="paste"/>
+    <menuitem action="append"/>
+    <menuitem action="delete"/>
+    <separator/>
+    <menuitem action="select-all"/>
+    <menuitem action="invert-selection"/>
+  </popup>
 </ui>

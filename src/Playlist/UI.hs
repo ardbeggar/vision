@@ -31,6 +31,7 @@ import Handler
 import Playback
 import Playtime
 import Volume
+import Utils
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
@@ -139,6 +140,9 @@ setupUI = do
   containerAdd volumeItem volView
   toolbarInsert playbar volumeItem (-1)
 
+  popup <- getWidget castToMenu "ui/playlist-popup"
+  setupTreeViewPopup playlistView popup
+
   window `onDestroy` mainQuit
 
 
@@ -162,6 +166,14 @@ uiActions =
   , ActionEntry
     { actionEntryName        = "edit"
     , actionEntryLabel       = "_Edit"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "playlist-popup"
+    , actionEntryLabel       = ""
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
