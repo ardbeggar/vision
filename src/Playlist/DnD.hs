@@ -49,8 +49,7 @@ setupDnD = do
   dragSourceSetTargetList playlistView targetList
 
   playlistView `on` dragDataGet $ \_ _ _ -> do
-    sel  <- liftIO $ treeViewGetSelection playlistView
-    rows <- liftIO $ treeSelectionGetSelectedRows sel
+    rows <- liftIO $ treeSelectionGetSelectedRows playlistSel
     selectionDataSet selectionTypeInteger $ map head rows
     return ()
 
@@ -70,9 +69,8 @@ setupDnD = do
       liftIO $ handleReorder y rows
       liftIO $ dragFinish ctxt True True tstamp
 
-  playlistView `on` dragDataDelete $ \_ -> do
-    sel <- treeViewGetSelection playlistView
-    treeSelectionUnselectAll sel
+  playlistView `on` dragDataDelete $ \_ ->
+    treeSelectionUnselectAll playlistSel
 
 
 handleReorder _ Nothing     = return ()

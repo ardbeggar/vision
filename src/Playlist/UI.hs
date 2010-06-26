@@ -33,6 +33,7 @@ import Playtime
 import Volume
 import Playlist.Model
 import Playlist.View
+import Playlist.Edit
 
 
 setupUI = do
@@ -52,6 +53,13 @@ setupUI = do
   stop  <- addA "stop" "_Stop" (Just stockMediaStop) (Just "<Control>s") stopPlayback
   prev  <- addA "prev" "P_revious track" (Just stockMediaPrevious) (Just "<Control>p") prevTrack
   next  <- addA "next" "_Next track" (Just stockMediaNext) (Just "<Control>n") nextTrack
+  cut    <- addA "cut" "Cu_t" (Just stockCut) (Just "<Control>x") $ editDelete True
+  copy   <- addA "copy" "_Copy" (Just stockCopy) (Just "<Control>c") editCopy
+  _paste  <- addA "paste" "_Paste" (Just stockPaste) (Just "<Control>v") $ editPaste False
+  _append <- addA "append" "_Append" (Just stockPaste) (Just "<Control><Shift>v") $ editPaste True
+  delete <- addA "delete" "_Delete" (Just stockDelete) (Just "Delete") $ editDelete False
+  addA "select-all" "_Select all" (Just stockSelectAll) (Just "<Control>a") editSelectAll
+  addA "invert-selection" "_Invert selection" (Just stockSelectAll) (Just "<Control><Shift>a") editInvertSelection
   let setupPPS = do
         ps <- getPlaybackStatus
         case ps of
@@ -84,12 +92,17 @@ setupUI = do
                 (False, False)
         actionSetSensitive prev ep
         actionSetSensitive next en
+      setupSel = do
+        n <- treeSelectionCountSelectedRows playlistSel
+        mapM_ (flip actionSetSensitive (n /= 0)) [cut, copy, delete]
   onPlaybackStatus . add . ever . const $ setupPPS
   onCurrentTrack . add . ever . const $ setupPN
   onPlaylistUpdated . add . ever . const $ setupPN
+  playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
     setupPPS
     setupPN
+    setupSel
     return False
 
   addUIFromFile "playlist"
@@ -145,5 +158,13 @@ uiActions =
     , actionEntryAccelerator = Just "<Control>q"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = mainQuit
+    }
+  , ActionEntry
+    { actionEntryName        = "edit"
+    , actionEntryLabel       = "_Edit"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
     }
   ]

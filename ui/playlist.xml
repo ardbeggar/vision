@@ -10,6 +10,16 @@
         <separator/>
         <menuitem action="quit"/>
       </menu>
+      <menu action="edit">
+        <menuitem action="cut"/>
+        <menuitem action="copy"/>
+        <menuitem action="paste"/>
+        <menuitem action="append"/>
+        <menuitem action="delete"/>
+        <separator/>
+        <menuitem action="select-all"/>
+        <menuitem action="invert-selection"/>
+      </menu>
     </placeholder>
   </menubar>
   <toolbar name="playbar">

@@ -20,6 +20,7 @@
 module Playlist.View
   ( initView
   , playlistView
+  , playlistSel
   , updateWindowTitle
   ) where
 
@@ -41,9 +42,11 @@ import Playlist.Format
 
 
 data View
-  = View { vView :: TreeView }
+  = View { vView :: TreeView
+         , vSel  :: TreeSelection }
 
-playlistView  = vView getEnv
+playlistView = vView getEnv
+playlistSel  = vSel getEnv
 
 
 initView = do
@@ -54,8 +57,7 @@ initView = do
   treeViewSetReorderable playlistView True
   treeViewSetHeadersVisible playlistView False
 
-  sel <- treeViewGetSelection playlistView
-  treeSelectionSetMode sel SelectionMultiple
+  treeSelectionSetMode playlistSel SelectionMultiple
 
   column <- treeViewColumnNew
   treeViewInsertColumn playlistView column 0
@@ -119,5 +121,7 @@ updateWindowTitle = do
 
 initEnv = do
   view <- treeViewNewWithModel playlistStore
+  sel  <- treeViewGetSelection view
   return $ augmentEnv
-    View { vView = view }
+    View { vView = view
+         , vSel  = sel }

@@ -26,6 +26,7 @@ module Playlist.Model
   , getPlaylistSize
   , touchPlaylist
   , onPlaylistUpdated
+  , playlistGetIds
   ) where
 
 import Control.Concurrent.MVar
@@ -60,6 +61,9 @@ getPlaylistSize = listStoreGetSize playlistStore
 touchPlaylist n = do
   Just iter <- treeModelGetIter playlistStore [n]
   treeModelRowChanged playlistStore [n] iter
+
+playlistGetIds =
+  mapM (listStoreGetValue playlistStore)
 
 
 initModel = do
