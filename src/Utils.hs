@@ -29,14 +29,20 @@ module Utils
   , trim
   , bracket_
   , catchResult
+  , setupTreeViewPopup
   ) where
 
 import Prelude hiding (catch)
 import Control.Monad.CatchIO hiding (Handler)
+
+import Control.Monad
+import Control.Monad.Trans
 import Control.Applicative
 import Control.Concurrent.MVar
 import Data.Char
 import Codec.Binary.UTF8.String
+
+import Graphics.UI.Gtk
 
 import XMMS2.Client
 
@@ -69,3 +75,34 @@ bracket_ f g = bracket f (const g) . const
 
 catchResult def conv =
   (conv <$> result) `catch` \(_ :: XMMSException) -> return def
+
+setupTreeViewPopup view popup = do
+  view `on` popupMenuSignal $ (menuPopup popup Nothing >> return True)
+
+  sel     <- treeViewGetSelection view
+  selMode <- treeSelectionGetMode sel
+  let cond =
+        case selMode of
+          SelectionMultiple ->
+            (2 >) <$> (liftIO $ treeSelectionCountSelectedRows sel)
+          SelectionNone     ->
+            return False
+          _                 ->
+            return True
+      setCursor = do
+        doIt <- cond
+        when doIt $ do
+          (x, y)    <- eventCoordinates
+          maybePath <- liftIO $ treeViewGetPathAtPos view (round x, round y)
+          case maybePath of
+            Just (path, _, _) ->
+              liftIO $ treeViewSetCursor view path Nothing
+            Nothing           ->
+              return ()
+
+  view `on` buttonPressEvent $ tryEvent $ do
+    RightButton <- eventButton
+    SingleClick <- eventClick
+    stamp       <- eventTime
+    setCursor
+    liftIO $ menuPopup popup $ Just (RightButton, stamp)
