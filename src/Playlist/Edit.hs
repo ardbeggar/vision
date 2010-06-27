@@ -37,6 +37,7 @@ import XMMS2.Client
 import Atoms
 import XMMS
 import Clipboard
+import Playback
 import Playlist.Model
 import Playlist.View
 
@@ -48,7 +49,14 @@ editDelete cut = do
     clipboardSetWithData clipboard [(xmms2MlibId, 0)] (copyIds ids) (return ())
     return ()
   name <- getPlaylistName
+  curt <- getCurrentTrack
   mapM_ (playlistRemoveEntry xmms name) $ reverse rows
+  case (name, curt) of
+    (Just pname, Just (ct, cname)) | pname == cname && ct `elem` rows ->
+      playbackTickle xmms >> return ()
+    _ ->
+      return ()
+
 
 editCopy = do
   rows <- map head <$> treeSelectionGetSelectedRows playlistSel
