@@ -22,6 +22,7 @@ module Playlist.View
   , playlistView
   , playlistSel
   , updateWindowTitle
+  , getSelectedTracks
   ) where
 
 import Control.Applicative
@@ -125,3 +126,7 @@ initEnv = do
   return $ augmentEnv
     View { vView = view
          , vSel  = sel }
+
+
+getSelectedTracks =
+  map head <$> treeSelectionGetSelectedRows playlistSel

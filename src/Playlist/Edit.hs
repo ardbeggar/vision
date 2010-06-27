@@ -43,25 +43,18 @@ import Playlist.View
 
 
 editDelete cut = do
-  rows <- map head <$> treeSelectionGetSelectedRows playlistSel
-  when cut $ do
-    ids  <- playlistGetIds rows
-    clipboardSetWithData clipboard [(xmms2MlibId, 0)] (copyIds ids) (return ())
-    return ()
+  tracks <- getSelectedTracks
+  when cut $ copyIds tracks
   name <- getPlaylistName
   curt <- getCurrentTrack
-  mapM_ (playlistRemoveEntry xmms name) $ reverse rows
+  mapM_ (playlistRemoveEntry xmms name) $ reverse tracks
   case (name, curt) of
-    (Just pname, Just (ct, cname)) | pname == cname && ct `elem` rows ->
+    (Just pname, Just (ct, cname)) | pname == cname && ct `elem` tracks ->
       playbackTickle xmms >> return ()
     _ ->
       return ()
 
-
-editCopy = do
-  rows <- map head <$> treeSelectionGetSelectedRows playlistSel
-  ids  <- playlistGetIds rows
-  clipboardSetWithData clipboard [(xmms2MlibId, 0)] (copyIds ids) (return ())
+editCopy = copyIds =<< getSelectedTracks
 
 editPaste append =
   clipboardRequestContents clipboard xmms2MlibId $ do
@@ -87,5 +80,12 @@ editInvertSelection = do
 editCheckClipboard =
   elem xmms2MlibId <$> getClipboardTargets
 
-copyIds ids _ =
-  selectionDataSet selectionTypeInteger ids
+
+copyIds tracks = do
+  ids <- playlistGetIds tracks
+  clipboardSetWithData clipboard
+    [(xmms2MlibId, 0)]
+    (const $ selectionDataSet selectionTypeInteger ids)
+    (return ())
+  return ()
+
