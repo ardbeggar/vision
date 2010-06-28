@@ -20,6 +20,7 @@
 module Location.View
   ( initView
   , locationView
+  , locationEntry
   ) where
 
 import Data.List
@@ -32,9 +33,12 @@ import Location.Model
 
 
 data View
-  = View { vView :: TreeView }
+  = View { vView  :: TreeView
+         , vEntry :: Entry
+         }
 
-locationView = vView getEnv
+locationView  = vView getEnv
+locationEntry = vEntry getEnv
 
 
 initView = do
@@ -68,7 +72,10 @@ initView = do
 
 
 initEnv = do
-  view <- treeViewNewWithModel locationStore
+  view  <- treeViewNewWithModel locationStore
+  entry <- entryNew
   return $ augmentEnv
-    View { vView = view }
+    View { vView  = view
+         , vEntry = entry
+         }
 

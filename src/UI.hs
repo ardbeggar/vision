@@ -67,10 +67,6 @@ initUI = do
   menubar <- getWidget castToMenuBar "ui/menubar"
   boxPackStart contents menubar PackNatural 0
 
-  maybeToolbar <- maybeGetWidget castToToolbar "ui/toolbar"
-  (flip . maybe) (return ()) maybeToolbar $ \toolbar ->
-    boxPackStart contents toolbar PackNatural 0
-
   return ?env
 
 

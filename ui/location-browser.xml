@@ -1,5 +1,5 @@
 <ui>
-  <menubar name="menubar">
+  <menubar action="menubar">
     <placeholder name="entries">
       <menu action="location">
         <menuitem action="close-window"/>
@@ -7,4 +7,6 @@
       </menu>
     </placeholder>
   </menubar>
+  <toolbar action="toolbar">
+  </toolbar>
 </ui>

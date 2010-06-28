@@ -31,6 +31,16 @@ setupUI = do
   addUIActions uiActions
   addUIFromFile "location-browser"
 
+  toolbar <- getWidget castToToolbar "ui/toolbar"
+  toolbarSetStyle toolbar ToolbarIcons
+  boxPackStart contents toolbar PackNatural 0
+
+  item <- toolItemNew
+  toolItemSetHomogeneous item False
+  toolItemSetExpand item True
+  containerAdd item locationEntry
+  toolbarInsert toolbar item (-1)
+
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   containerAdd scroll locationView
