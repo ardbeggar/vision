@@ -114,11 +114,9 @@ getInfoIfNeeded iter = do
 
 updateWindowTitle = do
   maybeName <- getPlaylistName
-  case maybeName of
-    Nothing   ->
-      setWindowTitle "Playlist - Vision"
-    Just name ->
-      setWindowTitle $ "Playlist: " ++ name ++ " - Vision"
+  setWindowTitle $ case maybeName of
+    Nothing   -> "Vision playlist"
+    Just name -> name ++ " - Vision playlist"
 
 initEnv = do
   view <- treeViewNewWithModel playlistStore
