@@ -30,7 +30,9 @@ import Location.Control
 import Location.UI
 
 
-browseLocation _ = do
+browseLocation maybeURL = do
+  let f = browseLocation
+
   env <- initUI
   let ?env = env
 
@@ -40,10 +42,12 @@ browseLocation _ = do
   env <- initView
   let ?env = env
 
-  setupUI
+  setupUI f
 
   widgetShowAll window
-  openLocation
+  case maybeURL of
+    Just url -> loadLocation url
+    Nothing  -> openLocation
 
 
 

@@ -2,7 +2,9 @@
   <menubar action="menubar">
     <placeholder name="entries">
       <menu action="location">
+        <menuitem action="new-window"/>
         <menuitem action="open-location"/>
+        <menuitem action="browse-in-new-window"/>
         <separator/>
         <menuitem action="add-to-playlist"/>
         <menuitem action="replace-playlist"/>

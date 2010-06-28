@@ -35,11 +35,11 @@ import Location.View
 import Location.Control
 
 
-setupUI = do
+setupUI browse = do
   addUIActions uiActions
 
   srvAG <- actionGroupNew "server"
-  actionGroupAddActions srvAG srvActions
+  actionGroupAddActions srvAG $ srvActions browse
   onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
   insertActionGroup srvAG 1
 
@@ -84,7 +84,7 @@ uiActions =
     }
   ]
 
-srvActions =
+srvActions browse =
   [ ActionEntry
     { actionEntryName        = "load"
     , actionEntryLabel       = ""
@@ -99,7 +99,15 @@ srvActions =
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadAtCursor
+    , actionEntryCallback    = loadAtCursor loadLocation
+    }
+  , ActionEntry
+    { actionEntryName        = "new-window"
+    , actionEntryLabel       = "_New window"
+    , actionEntryStockId     = Just stockNew
+    , actionEntryAccelerator = Just "<Control>n"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = browse Nothing
     }
   , ActionEntry
     { actionEntryName        = "open-location"
@@ -108,6 +116,14 @@ srvActions =
     , actionEntryAccelerator = Just "<Control>l"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = openLocation
+    }
+  , ActionEntry
+    { actionEntryName        = "browse-in-new-window"
+    , actionEntryLabel       = "_Browse in new window"
+    , actionEntryStockId     = Just stockNew
+    , actionEntryAccelerator = Just "<Control><Shift>n"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = loadAtCursor (browse . Just)
     }
   , ActionEntry
     { actionEntryName        = "add-to-playlist"
@@ -134,11 +150,11 @@ loadCurrentLocation = do
     _  -> return $ makeURL text
   unless (null url) $ loadLocation url
 
-loadAtCursor = do
+loadAtCursor func = do
   (path, _) <- treeViewGetCursor locationView
   case path of
     [n] -> do
       item <- listStoreGetValue locationStore n
-      when (iIsDir item) $ loadLocation $ iPath item
+      when (iIsDir item) $ func $ iPath item
     _   ->
       return ()
