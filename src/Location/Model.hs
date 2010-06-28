@@ -17,29 +17,49 @@
 --  General Public License for more details.
 --
 
-module Location
-  ( browseLocation
+module Location.Model
+  ( initModel
+  , Item (..)
+  , locationStore
   ) where
+
+import Control.Concurrent.MVar
 
 import Graphics.UI.Gtk
 
-import UI
-import Location.Model
-import Location.View
-import Location.UI
+import Env
 
 
-browseLocation _ = do
-  env <- initUI
+data State
+  = State { sLocation :: Maybe String }
+
+makeState =
+  State { sLocation = Nothing }
+
+data Item
+  = Item { iURL   :: String
+         , iIsDir :: Bool
+         }
+
+data Model
+  = Model { mState :: MVar State
+          , mStore :: ListStore Item
+          }
+
+locationStore = mStore getEnv
+
+
+initModel = do
+  env <- initEnv
   let ?env = env
 
-  env <- initModel
-  let ?env = env
-
-  env <- initView
-  let ?env = env
-
-  setupUI
-  widgetShowAll window
+  return ?env
 
 
+initEnv = do
+  state <- newMVar makeState
+  store <- listStoreNewDND [] Nothing Nothing
+  return $ augmentEnv
+    Model { mState = state
+          , mStore = store
+          }

@@ -24,11 +24,19 @@ module Location.UI
 import Graphics.UI.Gtk
 
 import UI
+import Location.View
 
 
 setupUI = do
   addUIActions uiActions
   addUIFromFile "location-browser"
+
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  containerAdd scroll locationView
+  boxPackStartDefaults contents scroll
+
+  return ()
 
 
 uiActions =

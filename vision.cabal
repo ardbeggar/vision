@@ -39,6 +39,8 @@ executable vision
                     Playtime,
                     Clipboard,
                     Location,
+                    Location.Model,
+                    Location.View,
                     Location.UI,
                     Playlist,
                     Playlist.Model,

@@ -17,29 +17,32 @@
 --  General Public License for more details.
 --
 
-module Location
-  ( browseLocation
+module Location.View
+  ( initView
+  , locationView
   ) where
 
 import Graphics.UI.Gtk
 
-import UI
+import Env
 import Location.Model
-import Location.View
-import Location.UI
 
 
-browseLocation _ = do
-  env <- initUI
+data View
+  = View { vView :: TreeView }
+
+locationView = vView getEnv
+
+
+initView = do
+  env <- initEnv
   let ?env = env
 
-  env <- initModel
-  let ?env = env
+  return ?env
 
-  env <- initView
-  let ?env = env
 
-  setupUI
-  widgetShowAll window
-
+initEnv = do
+  view <- treeViewNewWithModel locationStore
+  return $ augmentEnv
+    View { vView = view }
 
