@@ -26,6 +26,7 @@ import Graphics.UI.Gtk
 import UI
 import Location.Model
 import Location.View
+import Location.Control
 import Location.UI
 
 
@@ -40,7 +41,9 @@ browseLocation _ = do
   let ?env = env
 
   setupUI
+
   widgetShowAll window
+  openLocation
 
 
 

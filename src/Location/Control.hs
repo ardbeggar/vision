@@ -25,6 +25,7 @@ module Location.Control
   , addToPlaylist
   , replacePlaylist
   , updateWindowTitle
+  , openLocation
   ) where
 
 import Prelude hiding (catch)
@@ -101,3 +102,7 @@ updateWindowTitle = do
   setWindowTitle $ case loc of
     [] -> "Vision location browser"
     _  -> loc ++ " - Vision location browser"
+
+openLocation = do
+  widgetGrabFocus locationEntry
+  editableSelectRegion locationEntry 0 (-1)

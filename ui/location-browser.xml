@@ -2,6 +2,8 @@
   <menubar action="menubar">
     <placeholder name="entries">
       <menu action="location">
+        <menuitem action="open-location"/>
+        <separator/>
         <menuitem action="add-to-playlist"/>
         <menuitem action="replace-playlist"/>
         <separator/>

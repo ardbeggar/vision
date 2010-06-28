@@ -102,6 +102,14 @@ srvActions =
     , actionEntryCallback    = loadAtCursor
     }
   , ActionEntry
+    { actionEntryName        = "open-location"
+    , actionEntryLabel       = "_Open location"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Just "<Control>l"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = openLocation
+    }
+  , ActionEntry
     { actionEntryName        = "add-to-playlist"
     , actionEntryLabel       = "_Add to playlist"
     , actionEntryStockId     = Just stockAdd
