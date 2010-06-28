@@ -21,14 +21,28 @@ module Location.UI
   ( setupUI
   ) where
 
+import Control.Applicative
+import Control.Monad
+
 import Graphics.UI.Gtk
 
 import UI
+import XMMS
+import Handler
+import Utils
+import Location.Model
 import Location.View
+import Location.Control
 
 
 setupUI = do
   addUIActions uiActions
+
+  srvAG <- actionGroupNew "server"
+  actionGroupAddActions srvAG srvActions
+  onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
+  insertActionGroup srvAG 1
+
   addUIFromFile "location-browser"
 
   toolbar <- getWidget castToToolbar "ui/toolbar"
@@ -39,12 +53,22 @@ setupUI = do
   toolItemSetHomogeneous item False
   toolItemSetExpand item True
   containerAdd item locationEntry
-  toolbarInsert toolbar item (-1)
+  toolbarInsert toolbar item 0
+
+  load <- getAction srvAG "load"
+  locationEntry `onEntryActivate` do
+    actionActivate load
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   containerAdd scroll locationView
   boxPackStartDefaults contents scroll
+
+  down <- getAction srvAG "down"
+  locationView `onRowActivated` \_ _ -> do
+    actionActivate down
+
+  updateWindowTitle
 
   return ()
 
@@ -59,3 +83,54 @@ uiActions =
     , actionEntryCallback    = return ()
     }
   ]
+
+srvActions =
+  [ ActionEntry
+    { actionEntryName        = "load"
+    , actionEntryLabel       = ""
+    , actionEntryStockId     = Just stockJumpTo
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = loadCurrentLocation
+    }
+  , ActionEntry
+    { actionEntryName        = "down"
+    , actionEntryLabel       = ""
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = loadAtCursor
+    }
+  , ActionEntry
+    { actionEntryName        = "add-to-playlist"
+    , actionEntryLabel       = "_Add to playlist"
+    , actionEntryStockId     = Just stockAdd
+    , actionEntryAccelerator = Just "<Control>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = addToPlaylist
+    }
+  , ActionEntry
+    { actionEntryName        = "replace-playlist"
+    , actionEntryLabel       = "_Replace playlist"
+    , actionEntryStockId     = Just stockRefresh
+    , actionEntryAccelerator = Just "<Control><Shift>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = replacePlaylist
+    }
+  ]
+
+loadCurrentLocation = do
+  text <- trim <$> entryGetText locationEntry
+  url  <- case text of
+    [] -> getCurrentLocation
+    _  -> return $ makeURL text
+  unless (null url) $ loadLocation url
+
+loadAtCursor = do
+  (path, _) <- treeViewGetCursor locationView
+  case path of
+    [n] -> do
+      item <- listStoreGetValue locationStore n
+      when (iIsDir item) $ loadLocation $ iPath item
+    _   ->
+      return ()

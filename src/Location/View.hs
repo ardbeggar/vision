@@ -20,6 +20,7 @@
 module Location.View
   ( initView
   , locationView
+  , locationSel
   , locationEntry
   ) where
 
@@ -34,16 +35,20 @@ import Location.Model
 
 data View
   = View { vView  :: TreeView
+         , vSel   :: TreeSelection
          , vEntry :: Entry
          }
 
 locationView  = vView getEnv
+locationSel   = vSel getEnv
 locationEntry = vEntry getEnv
 
 
 initView = do
   env <- initEnv
   let ?env = env
+
+  treeSelectionSetMode locationSel SelectionMultiple
 
   column <- treeViewColumnNew
   treeViewAppendColumn locationView column
@@ -73,9 +78,11 @@ initView = do
 
 initEnv = do
   view  <- treeViewNewWithModel locationStore
+  sel   <- treeViewGetSelection view
   entry <- entryNew
   return $ augmentEnv
     View { vView  = view
+         , vSel   = sel
          , vEntry = entry
          }
 

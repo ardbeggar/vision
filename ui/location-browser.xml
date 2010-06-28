@@ -2,11 +2,15 @@
   <menubar action="menubar">
     <placeholder name="entries">
       <menu action="location">
+        <menuitem action="add-to-playlist"/>
+        <menuitem action="replace-playlist"/>
+        <separator/>
         <menuitem action="close-window"/>
         <menuitem action="quit"/>
       </menu>
     </placeholder>
   </menubar>
   <toolbar action="toolbar">
+    <toolitem action="load"/>
   </toolbar>
 </ui>

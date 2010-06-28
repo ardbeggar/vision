@@ -41,6 +41,7 @@ executable vision
                     Location,
                     Location.Model,
                     Location.View,
+                    Location.Control,
                     Location.UI,
                     Playlist,
                     Playlist.Model,
