@@ -109,4 +109,20 @@ uiActions =
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = return ()
     }
+  , ActionEntry
+    { actionEntryName        = "quit"
+    , actionEntryLabel       = "_Quit"
+    , actionEntryStockId     = Just stockQuit
+    , actionEntryAccelerator = Just "<Control>q"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = mainQuit
+    }
+  , ActionEntry
+    { actionEntryName        = "close-window"
+    , actionEntryLabel       = "_Close window"
+    , actionEntryStockId     = Just stockClose
+    , actionEntryAccelerator = Just "<Control>w"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = widgetDestroy window
+    }
   ]

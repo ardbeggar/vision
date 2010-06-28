@@ -164,14 +164,6 @@ uiActions =
     , actionEntryCallback    = return ()
     }
   , ActionEntry
-    { actionEntryName        = "quit"
-    , actionEntryLabel       = "_Quit"
-    , actionEntryStockId     = Just stockQuit
-    , actionEntryAccelerator = Just "<Control>q"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = mainQuit
-    }
-  , ActionEntry
     { actionEntryName        = "edit"
     , actionEntryLabel       = "_Edit"
     , actionEntryStockId     = Nothing
