@@ -43,49 +43,28 @@ setupUI = do
   addUIActions uiActions
 
   srvAG <- actionGroupNew "server"
+  actionGroupAddActions srvAG srvActions
   onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
   insertActionGroup srvAG 1
 
-  let addA name text stockId accel func = do
-        a <- actionNew name text Nothing stockId
-        a `on` actionActivated $ (func >> return ())
-        actionGroupAddActionWithAccel srvAG a accel
-        return a
-  play  <- addA "play" "_Play" (Just stockMediaPlay) (Just "<Control>space") (startPlayback False)
-  pause <- addA "pause" "_Pause" (Just stockMediaPause) (Just "<Control>space") pausePlayback
-  stop  <- addA "stop" "_Stop" (Just stockMediaStop) (Just "<Control>s") stopPlayback
-  prev  <- addA "prev" "P_revious track" (Just stockMediaPrevious) (Just "<Control>p") prevTrack
-  next  <- addA "next" "_Next track" (Just stockMediaNext) (Just "<Control>n") nextTrack
-  cut    <- addA "cut" "Cu_t" (Just stockCut) (Just "<Control>x") $ editDelete True
-  copy   <- addA "copy" "_Copy" (Just stockCopy) (Just "<Control>c") editCopy
-  paste  <- addA "paste" "_Paste" (Just stockPaste) (Just "<Control>v") $ editPaste False
-  append <- addA "append" "_Append" (Just stockPaste) (Just "<Control><Shift>v") $ editPaste True
-  delete <- addA "delete" "_Delete" (Just stockDelete) (Just "Delete") $ editDelete False
-  addA "select-all" "_Select all" (Just stockSelectAll) (Just "<Control>a") editSelectAll
-  addA "invert-selection" "_Invert selection" (Just stockSelectAll) (Just "<Control><Shift>a") editInvertSelection
-  addA "browse-location" "Browse _location" Nothing Nothing $ browseLocation Nothing
+  play  <- getAction srvAG "play"
+  pause <- getAction srvAG "pause"
+  stop  <- getAction srvAG "stop"
   let setupPPS = do
         ps <- getPlaybackStatus
-        case ps of
-          Just StatusPlay -> do
-            actionSetSensitive play False
-            actionSetVisible play False
-            actionSetSensitive pause True
-            actionSetVisible pause True
-            actionSetSensitive stop True
-          Just StatusPause -> do
-            actionSetSensitive play True
-            actionSetVisible play True
-            actionSetSensitive pause False
-            actionSetVisible pause False
-            actionSetSensitive stop True
-          _ -> do
-            actionSetSensitive play True
-            actionSetVisible play True
-            actionSetSensitive pause False
-            actionSetVisible pause False
-            actionSetSensitive stop False
-      setupPN = do
+        let (ePlay, ePause, eStop) = case ps of
+              Just StatusPlay  -> (False, True, True)
+              Just StatusPause -> (True, False, True)
+              _                -> (True, False, False)
+        actionSetSensitive play ePlay
+        actionSetVisible play ePlay
+        actionSetSensitive pause ePause
+        actionSetVisible pause ePause
+        actionSetSensitive stop eStop
+
+  prev <- getAction srvAG "prev"
+  next <- getAction srvAG "next"
+  let setupPN = do
         size <- getPlaylistSize
         name <- getPlaylistName
         cpos <- getCurrentTrack
@@ -96,15 +75,23 @@ setupUI = do
                 (False, False)
         actionSetSensitive prev ep
         actionSetSensitive next en
-      setupSel = do
+
+  cut    <- getAction srvAG "cut"
+  copy   <- getAction srvAG "copy"
+  delete <- getAction srvAG "delete"
+  let setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
         mapM_ (flip actionSetSensitive (n /= 0)) [cut, copy, delete]
-      setupPA = do
+
+  paste  <- getAction srvAG "paste"
+  append <- getAction srvAG "append"
+  let setupPA = do
         en <- editCheckClipboard
         mapM_ (flip actionSetSensitive en) [paste, append]
-  onPlaybackStatus . add . ever . const $ setupPPS
-  onCurrentTrack . add . ever . const $ setupPN
-  onPlaylistUpdated . add . ever . const $ setupPN
+
+  onPlaybackStatus   . add . ever . const $ setupPPS
+  onCurrentTrack     . add . ever . const $ setupPN
+  onPlaylistUpdated  . add . ever . const $ setupPN
   onClipboardTargets . add . ever . const $ setupPA
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
@@ -186,5 +173,112 @@ uiActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = return ()
+    }
+  ]
+
+srvActions =
+  [ ActionEntry
+    { actionEntryName        = "play"
+    , actionEntryLabel       = "_Play"
+    , actionEntryStockId     = Just stockMediaPlay
+    , actionEntryAccelerator = Just "<Control>space"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = startPlayback False
+    }
+  , ActionEntry
+    { actionEntryName        = "pause"
+    , actionEntryLabel       = "_Pause"
+    , actionEntryStockId     = Just stockMediaPause
+    , actionEntryAccelerator = Just "<Control>space"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = pausePlayback
+    }
+  , ActionEntry
+    { actionEntryName        = "stop"
+    , actionEntryLabel       = "_Stop"
+    , actionEntryStockId     = Just stockMediaStop
+    , actionEntryAccelerator = Just "<Control>s"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = stopPlayback
+    }
+  , ActionEntry
+    { actionEntryName        = "prev"
+    , actionEntryLabel       = "P_revious track"
+    , actionEntryStockId     = Just stockMediaPrevious
+    , actionEntryAccelerator = Just "<Control>p"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = prevTrack
+    }
+  , ActionEntry
+    { actionEntryName        = "next"
+    , actionEntryLabel       = "_Next track"
+    , actionEntryStockId     = Just stockMediaNext
+    , actionEntryAccelerator = Just "<Control>n"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = nextTrack
+    }
+  , ActionEntry
+    { actionEntryName        = "cut"
+    , actionEntryLabel       = "Cu_t"
+    , actionEntryStockId     = Just stockCut
+    , actionEntryAccelerator = Just "<Control>x"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editDelete True
+    }
+  , ActionEntry
+    { actionEntryName        = "copy"
+    , actionEntryLabel       = "_Copy"
+    , actionEntryStockId     = Just stockCopy
+    , actionEntryAccelerator = Just "<Control>c"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editCopy
+    }
+  , ActionEntry
+    { actionEntryName        = "paste"
+    , actionEntryLabel       = "_Paste"
+    , actionEntryStockId     = Just stockPaste
+    , actionEntryAccelerator = Just "<Control>v"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editPaste False
+    }
+  , ActionEntry
+    { actionEntryName        = "append"
+    , actionEntryLabel       = "_Append"
+    , actionEntryStockId     = Just stockPaste
+    , actionEntryAccelerator = Just "<Control><Shift>v"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editPaste True
+    }
+  , ActionEntry
+    { actionEntryName        = "delete"
+    , actionEntryLabel       = "_Delete"
+    , actionEntryStockId     = Just stockDelete
+    , actionEntryAccelerator = Just "Delete"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editDelete False
+    }
+  , ActionEntry
+    { actionEntryName        = "select-all"
+    , actionEntryLabel       = "_Select all"
+    , actionEntryStockId     = Just stockSelectAll
+    , actionEntryAccelerator = Just "<Control>a"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editSelectAll
+    }
+  , ActionEntry
+    { actionEntryName        = "invert-selection"
+    , actionEntryLabel       = "_Invert selection"
+    , actionEntryStockId     = Just stockSelectAll
+    , actionEntryAccelerator = Just "<Control><Shift>a"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editInvertSelection
+    }
+  , ActionEntry
+    { actionEntryName        = "browse-location"
+    , actionEntryLabel       = "Browse _location"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = browseLocation Nothing
     }
   ]

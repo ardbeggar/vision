@@ -28,6 +28,7 @@ module UI
   , addUIFromFile
   , insertActionGroup
   , addUIActions
+  , getAction
   ) where
 
 import Control.Applicative
@@ -91,6 +92,7 @@ insertActionGroup = uiManagerInsertActionGroup uiManager
 addUIFromFile = uiManagerAddUiFromFile uiManager . uiFilePath
 maybeGetWidget cast name = fmap cast <$> uiManagerGetWidget uiManager name
 getWidget cast name = fromJust <$> maybeGetWidget cast name
+getAction group name = fromJust <$> actionGroupGetAction group name
 
 uiActions =
   [ ActionEntry

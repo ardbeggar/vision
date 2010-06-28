@@ -133,8 +133,9 @@ requestCurrentTrack =
       onCurrentTrack $ invoke old
     return False
 
-startPlayback False =
+startPlayback False = do
   playbackStart xmms
+  return ()
 startPlayback True = do
   ps <- getPlaybackStatus
   case ps of
@@ -146,10 +147,15 @@ startPlayback True = do
       playbackTickle xmms
     _ ->
       playbackStart xmms
+  return ()
 
-pausePlayback = playbackPause xmms
+pausePlayback = do
+  playbackPause xmms
+  return ()
 
-stopPlayback = playbackStop xmms
+stopPlayback = do
+  playbackStop xmms
+  return ()
 
 nextTrack = do
   playlistSetNextRel xmms 1
