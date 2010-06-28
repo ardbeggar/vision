@@ -1,0 +1,10 @@
+<ui>
+  <menubar name="menubar">
+    <placeholder name="entries">
+      <menu action="location">
+        <menuitem action="close-window"/>
+        <menuitem action="quit"/>
+      </menu>
+    </placeholder>
+  </menubar>
+</ui>

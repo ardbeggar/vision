@@ -17,22 +17,27 @@
 --  General Public License for more details.
 --
 
-module Location
-  ( browseLocation
+module Location.UI
+  ( setupUI
   ) where
 
 import Graphics.UI.Gtk
 
 import UI
-import Env
-import Location.UI
 
 
-browseLocation _ = do
-  env <- initUI
-  let ?env = env
-
-  setupUI
-  widgetShowAll window
+setupUI = do
+  addUIActions uiActions
+  addUIFromFile "location-browser"
 
 
+uiActions =
+  [ ActionEntry
+    { actionEntryName        = "location"
+    , actionEntryLabel       = "_Location"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  ]
