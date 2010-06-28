@@ -17,17 +17,28 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Location.Model
   ( initModel
   , Item (..)
   , locationStore
+  , loadLocation
   ) where
 
+import Prelude hiding (catch)
+import Control.Monad.CatchIO
+
 import Control.Concurrent.MVar
+import Control.Monad.Trans
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client
+
 import Env
+import XMMS
+import Utils
 
 
 data State
@@ -37,9 +48,17 @@ makeState =
   State { sLocation = Nothing }
 
 data Item
-  = Item { iURL   :: String
+  = Item { iName  :: String
+         , iPath  :: String
          , iIsDir :: Bool
          }
+
+makeItem x =
+  Item { iName  = name
+       , iPath  = path
+       , iIsDir = entryIsDir x }
+  where name = last $ split $ path
+        path = decodeURL $ entryPath x
 
 data Model
   = Model { mState :: MVar State
@@ -63,3 +82,24 @@ initEnv = do
     Model { mState = state
           , mStore = store
           }
+
+loadLocation = do
+  let url = "file:///srv/share/music"
+  listStoreClear locationStore
+  xformMediaBrowse xmms url >>* handleBrowse url
+
+handleBrowse url = do
+  handleBrowse' `catch` \(_ :: XMMSException) ->
+    liftIO $ putStrLn $ "error loading " ++ url
+  return False
+  where handleBrowse' = do
+          r <- result
+          liftIO $ mapM_ (listStoreAppend locationStore . makeItem) r
+
+split [] =  []
+split s  =
+  let (p, s') = break (== '/') s in
+  p : case s' of
+        []      -> []
+        (_:s'') -> split s''
+

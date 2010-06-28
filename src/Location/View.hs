@@ -22,6 +22,9 @@ module Location.View
   , locationView
   ) where
 
+import Data.List
+import Data.Char
+
 import Graphics.UI.Gtk
 
 import Env
@@ -37,6 +40,29 @@ locationView = vView getEnv
 initView = do
   env <- initEnv
   let ?env = env
+
+  column <- treeViewColumnNew
+  treeViewAppendColumn locationView column
+  treeViewColumnSetTitle column "Name"
+
+  cell <- cellRendererPixbufNew
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributes column cell locationStore $ \item ->
+    [ cellPixbufStockId :=
+      if iIsDir item
+      then stockDirectory
+      else stockFile ]
+
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributes column cell locationStore $ \item ->
+    [ cellText := iName item ]
+
+  treeViewSetEnableSearch locationView True
+  treeViewSetSearchEqualFunc locationView $ Just $ \str iter -> do
+    [n]  <- treeModelGetPath locationStore iter
+    item <- listStoreGetValue locationStore n
+    return $ isInfixOf (map toLower str) (map toLower $ iName item)
 
   return ?env
 

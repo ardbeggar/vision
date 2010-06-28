@@ -41,5 +41,6 @@ browseLocation _ = do
 
   setupUI
   widgetShowAll window
+  loadLocation
 
 
