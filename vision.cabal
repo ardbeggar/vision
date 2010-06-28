@@ -38,6 +38,7 @@ executable vision
                     Volume,
                     Playtime,
                     Clipboard,
+                    Location,
                     Playlist,
                     Playlist.Model,
                     Playlist.View,

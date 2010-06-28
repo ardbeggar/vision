@@ -33,6 +33,7 @@ import Playtime
 import Volume
 import Utils
 import Clipboard
+import Location
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
@@ -62,6 +63,7 @@ setupUI = do
   delete <- addA "delete" "_Delete" (Just stockDelete) (Just "Delete") $ editDelete False
   addA "select-all" "_Select all" (Just stockSelectAll) (Just "<Control>a") editSelectAll
   addA "invert-selection" "_Invert selection" (Just stockSelectAll) (Just "<Control><Shift>a") editInvertSelection
+  addA "browse-location" "Browse _location" Nothing Nothing $ browseLocation Nothing
   let setupPPS = do
         ps <- getPlaybackStatus
         case ps of
@@ -172,6 +174,14 @@ uiActions =
   , ActionEntry
     { actionEntryName        = "edit"
     , actionEntryLabel       = "_Edit"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "browse"
+    , actionEntryLabel       = "_Browse"
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing

@@ -20,6 +20,9 @@
         <menuitem action="select-all"/>
         <menuitem action="invert-selection"/>
       </menu>
+      <menu action="browse">
+        <menuitem action="browse-location"/>
+      </menu>
     </placeholder>
   </menubar>
   <toolbar name="playbar">
