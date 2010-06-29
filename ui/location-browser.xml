@@ -17,4 +17,10 @@
   <toolbar action="toolbar">
     <toolitem action="load"/>
   </toolbar>
+  <popup action="location-popup">
+    <menuitem action="browse-in-new-window"/>
+    <separator/>
+    <menuitem action="add-to-playlist"/>
+    <menuitem action="replace-playlist"/>
+  </popup>
 </ui>

@@ -64,6 +64,9 @@ setupUI browse = do
   containerAdd scroll locationView
   boxPackStartDefaults contents scroll
 
+  popup <- getWidget castToMenu "ui/location-popup"
+  setupTreeViewPopup locationView popup
+
   down <- getAction srvAG "down"
   locationView `onRowActivated` \_ _ -> do
     actionActivate down
@@ -77,6 +80,14 @@ uiActions =
   [ ActionEntry
     { actionEntryName        = "location"
     , actionEntryLabel       = "_Location"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "location-popup"
+    , actionEntryLabel       = ""
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
