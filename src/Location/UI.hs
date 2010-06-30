@@ -160,7 +160,7 @@ srvActions browse =
   , ActionEntry
     { actionEntryName        = "browse-in-new-window"
     , actionEntryLabel       = "_Browse in new window"
-    , actionEntryStockId     = Just stockNew
+    , actionEntryStockId     = Just stockOpen
     , actionEntryAccelerator = Just "<Control>Return"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = loadAtCursor (browse . Just)
@@ -176,7 +176,7 @@ srvActions browse =
   , ActionEntry
     { actionEntryName        = "replace-playlist"
     , actionEntryLabel       = "_Replace playlist"
-    , actionEntryStockId     = Just stockRefresh
+    , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Just "<Control><Shift>p"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = replacePlaylist

@@ -16,6 +16,7 @@
         <menuitem action="back"/>
         <menuitem action="forward"/>
         <menuitem action="up"/>
+        <separator/>
         <menuitem action="refresh"/>
       </menu>
     </placeholder>

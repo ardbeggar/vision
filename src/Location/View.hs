@@ -48,6 +48,8 @@ initView = do
   env <- initEnv
   let ?env = env
 
+  treeViewSetRulesHint locationView True
+
   treeSelectionSetMode locationSel SelectionMultiple
 
   column <- treeViewColumnNew
