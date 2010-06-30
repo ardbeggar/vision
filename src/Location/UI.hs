@@ -53,7 +53,7 @@ setupUI browse = do
   toolItemSetHomogeneous item False
   toolItemSetExpand item True
   containerAdd item locationEntry
-  toolbarInsert toolbar item 3
+  toolbarInsert toolbar item 4
 
   load <- getAction srvAG "load"
   locationEntry `onEntryActivate` do
@@ -71,14 +71,16 @@ setupUI browse = do
   locationView `onRowActivated` \_ _ -> do
     actionActivate down
 
-  up <- getAction srvAG "up"
-  back <- getAction srvAG "back"
+  back    <- getAction srvAG "back"
   forward <- getAction srvAG "forward"
+  up      <- getAction srvAG "up"
+  refresh <- getAction srvAG "refresh"
   let updateN = do
-        (eb, ef, eu) <- canGo
+        (eb, ef, eu, er) <- canGo
         actionSetSensitive back eb
         actionSetSensitive forward ef
         actionSetSensitive up eu
+        actionSetSensitive refresh er
   onLocation . add . ever . const $ updateN
   updateN
 
@@ -95,6 +97,14 @@ uiActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "open-location"
+    , actionEntryLabel       = "_Open location"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Just "<Control>l"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = openLocation
     }
   , ActionEntry
     { actionEntryName        = "go"
@@ -140,14 +150,6 @@ srvActions browse =
     , actionEntryCallback    = browse Nothing
     }
   , ActionEntry
-    { actionEntryName        = "open-location"
-    , actionEntryLabel       = "_Open location"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Just "<Control>l"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = openLocation
-    }
-  , ActionEntry
     { actionEntryName        = "browse-in-new-window"
     , actionEntryLabel       = "_Browse in new window"
     , actionEntryStockId     = Just stockNew
@@ -172,14 +174,6 @@ srvActions browse =
     , actionEntryCallback    = replacePlaylist
     }
   , ActionEntry
-    { actionEntryName        = "up"
-    , actionEntryLabel       = "Go _up"
-    , actionEntryStockId     = Just stockGoUp
-    , actionEntryAccelerator = Just "<Alt>Up"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadLocation Up
-    }
-  , ActionEntry
     { actionEntryName        = "back"
     , actionEntryLabel       = "Go _back"
     , actionEntryStockId     = Just stockGoBack
@@ -189,11 +183,27 @@ srvActions browse =
     }
   , ActionEntry
     { actionEntryName        = "forward"
-    , actionEntryLabel       = "Go _"
+    , actionEntryLabel       = "Go _forward"
     , actionEntryStockId     = Just stockGoForward
     , actionEntryAccelerator = Just "<Alt>Right"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = loadLocation Forward
+    }
+  , ActionEntry
+    { actionEntryName        = "up"
+    , actionEntryLabel       = "Go _up"
+    , actionEntryStockId     = Just stockGoUp
+    , actionEntryAccelerator = Just "<Alt>Up"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = loadLocation Up
+    }
+  , ActionEntry
+    { actionEntryName        = "refresh"
+    , actionEntryLabel       = "_Refresh"
+    , actionEntryStockId     = Just stockRefresh
+    , actionEntryAccelerator = Just "F5"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = loadLocation Refresh
     }
   ]
 

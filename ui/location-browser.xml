@@ -13,7 +13,10 @@
         <menuitem action="quit"/>
       </menu>
       <menu action="go">
+        <menuitem action="back"/>
+        <menuitem action="forward"/>
         <menuitem action="up"/>
+        <menuitem action="refresh"/>
       </menu>
     </placeholder>
   </menubar>
@@ -21,6 +24,7 @@
     <toolitem action="back"/>
     <toolitem action="forward"/>
     <toolitem action="up"/>
+    <toolitem action="refresh"/>
     <toolitem action="load"/>
   </toolbar>
   <popup action="location-popup">

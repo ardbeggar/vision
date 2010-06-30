@@ -110,7 +110,7 @@ data UpdateLocation
   = Back
   | Forward
   | Go String
-  | Reload
+  | Refresh
   | Up
 
 updateLocation location = do
@@ -144,7 +144,7 @@ updateLocation location = do
            , sForward = []
            }
         , Just u)
-      Reload ->
+      Refresh ->
         (s, Just $ sLocation s)
       Up ->
         let u  = sLocation s
@@ -166,4 +166,5 @@ canGo = withMVar state $ \State { sLocation = l
                                 }  ->
   return (not $ null b,
           not $ null f,
-          not $ null l || isSuffixOf "//" l)
+          not $ null l || isSuffixOf "//" l,
+          not $ null l)
