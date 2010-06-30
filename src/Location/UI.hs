@@ -36,7 +36,7 @@ import Location.Control
 
 
 setupUI browse = do
-  addUIActions uiActions
+  addUIActions $ uiActions browse
 
   srvAG <- actionGroupNew "server"
   actionGroupAddActions srvAG $ srvActions browse
@@ -89,7 +89,7 @@ setupUI browse = do
   return ()
 
 
-uiActions =
+uiActions browse =
   [ ActionEntry
     { actionEntryName        = "location"
     , actionEntryLabel       = "_Location"
@@ -97,6 +97,14 @@ uiActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "new-window"
+    , actionEntryLabel       = "_New window"
+    , actionEntryStockId     = Just stockNew
+    , actionEntryAccelerator = Just "<Control>n"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = browse Nothing
     }
   , ActionEntry
     { actionEntryName        = "open-location"
@@ -148,14 +156,6 @@ srvActions browse =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = loadAtCursor (loadLocation . Go)
-    }
-  , ActionEntry
-    { actionEntryName        = "new-window"
-    , actionEntryLabel       = "_New window"
-    , actionEntryStockId     = Just stockNew
-    , actionEntryAccelerator = Just "<Control>n"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browse Nothing
     }
   , ActionEntry
     { actionEntryName        = "browse-in-new-window"
