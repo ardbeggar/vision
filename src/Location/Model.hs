@@ -121,7 +121,7 @@ updateLocation location = do
           (u : us) ->
             (s { sLocation = u
                , sBack = us
-               , sForward = u : sForward s
+               , sForward = sLocation s : sForward s
                }
             , Just u)
           _ ->
@@ -130,7 +130,7 @@ updateLocation location = do
         case sForward s of
           (u : us) ->
             (s { sLocation = u
-               , sBack = u : sBack s
+               , sBack = sLocation s : sBack s
                , sForward = us
                }
             , Just u)
