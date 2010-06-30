@@ -53,7 +53,7 @@ setupUI browse = do
   toolItemSetHomogeneous item False
   toolItemSetExpand item True
   containerAdd item locationEntry
-  toolbarInsert toolbar item 4
+  toolbarInsert toolbar item 6
 
   load <- getAction srvAG "load"
   locationEntry `onEntryActivate` do
@@ -121,6 +121,14 @@ uiActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "clear"
+    , actionEntryLabel       = ""
+    , actionEntryStockId     = Just stockClear
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = clearLocationEntry
     }
   ]
 
@@ -227,3 +235,7 @@ loadAtCursor func = do
       when (iIsDir item) $ func $ iPath item
     _   ->
       return ()
+
+clearLocationEntry = do
+  entrySetText locationEntry ""
+  widgetGrabFocus locationEntry
