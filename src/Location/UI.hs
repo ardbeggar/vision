@@ -23,6 +23,7 @@ module Location.UI
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.Trans
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -70,6 +71,20 @@ setupUI browse = do
   down <- getAction srvAG "down"
   locationView `onRowActivated` \_ _ -> do
     actionActivate down
+
+  binw <- getAction srvAG "browse-in-new-window"
+  locationView `on` buttonPressEvent $ tryEvent $ do
+    MiddleButton <- eventButton
+    SingleClick  <- eventClick
+    (x, y)       <- eventCoordinates
+    liftIO $ do
+      maybePath <- treeViewGetPathAtPos locationView (round x, round y)
+      case maybePath of
+        Just (path, _, _) -> do
+          treeViewSetCursor locationView path Nothing
+          actionActivate binw
+        Nothing           ->
+          return ()
 
   back    <- getAction srvAG "back"
   forward <- getAction srvAG "forward"
