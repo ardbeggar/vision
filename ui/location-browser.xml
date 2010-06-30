@@ -12,9 +12,13 @@
         <menuitem action="close-window"/>
         <menuitem action="quit"/>
       </menu>
+      <menu action="go">
+        <menuitem action="up"/>
+      </menu>
     </placeholder>
   </menubar>
   <toolbar action="toolbar">
+    <toolitem action="up"/>
     <toolitem action="load"/>
   </toolbar>
   <popup action="location-popup">

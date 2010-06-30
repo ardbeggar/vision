@@ -24,6 +24,7 @@ module Location.Model
   , locationStore
   , getCurrentLocation
   , setCurrentLocation
+  , onLocation
   ) where
 
 import Control.Concurrent.MVar
@@ -34,6 +35,7 @@ import XMMS2.Client
 
 import Env
 import Utils
+import Handler
 
 
 data State
@@ -56,18 +58,21 @@ makeItem x =
         path = decodeURL $ entryPath x
 
 data Model
-  = Model { mState :: MVar State
-          , mStore :: ListStore Item
+  = Model { mState      :: MVar State
+          , mStore      :: ListStore Item
+          , mOnLocation :: HandlerMVar ()
           }
 
 locationStore = mStore getEnv
+onLocation = onHandler $ mOnLocation getEnv
 state = mState getEnv
 
 getCurrentLocation =
   withMVar state $ return . sLocation
-setCurrentLocation location =
+setCurrentLocation location = do
   modifyMVar_ state $ \state ->
     return state { sLocation = location }
+  onLocation $ invoke ()
 
 
 initModel = do
@@ -78,11 +83,13 @@ initModel = do
 
 
 initEnv = do
-  state <- newMVar makeState
-  store <- listStoreNewDND [] Nothing Nothing
+  state      <- newMVar makeState
+  store      <- listStoreNewDND [] Nothing Nothing
+  onLocation <- makeHandlerMVar
   return $ augmentEnv
-    Model { mState = state
-          , mStore = store
+    Model { mState      = state
+          , mStore      = store
+          , mOnLocation = onLocation
           }
 
 split [] =  []

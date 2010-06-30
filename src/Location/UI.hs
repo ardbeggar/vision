@@ -24,7 +24,9 @@ module Location.UI
 import Control.Applicative
 import Control.Monad
 
-import Graphics.UI.Gtk
+import Data.List
+
+import Graphics.UI.Gtk hiding (add)
 
 import UI
 import XMMS
@@ -53,7 +55,7 @@ setupUI browse = do
   toolItemSetHomogeneous item False
   toolItemSetExpand item True
   containerAdd item locationEntry
-  toolbarInsert toolbar item 0
+  toolbarInsert toolbar item 1
 
   load <- getAction srvAG "load"
   locationEntry `onEntryActivate` do
@@ -71,6 +73,13 @@ setupUI browse = do
   locationView `onRowActivated` \_ _ -> do
     actionActivate down
 
+  up <- getAction srvAG "up"
+  let updateUp = do
+        url <- getCurrentLocation
+        actionSetSensitive up . not $ null url || isSuffixOf "//" url
+  onLocation . add . ever . const $ updateUp
+  updateUp
+
   updateWindowTitle
 
   return ()
@@ -80,6 +89,14 @@ uiActions =
   [ ActionEntry
     { actionEntryName        = "location"
     , actionEntryLabel       = "_Location"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "go"
+    , actionEntryLabel       = "_Go"
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
@@ -152,6 +169,14 @@ srvActions browse =
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = replacePlaylist
     }
+  , ActionEntry
+    { actionEntryName        = "up"
+    , actionEntryLabel       = "Go _up"
+    , actionEntryStockId     = Just stockGoUp
+    , actionEntryAccelerator = Just "<Alt>Up"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = goUp
+    }
   ]
 
 loadCurrentLocation = do
@@ -169,3 +194,7 @@ loadAtCursor func = do
       when (iIsDir item) $ func $ iPath item
     _   ->
       return ()
+
+goUp = do
+  url <- getCurrentLocation
+  loadLocation . reverse . dropWhile (/= '/') . tail $ reverse url
