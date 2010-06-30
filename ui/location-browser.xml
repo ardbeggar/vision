@@ -18,6 +18,8 @@
     </placeholder>
   </menubar>
   <toolbar action="toolbar">
+    <toolitem action="back"/>
+    <toolitem action="forward"/>
     <toolitem action="up"/>
     <toolitem action="load"/>
   </toolbar>

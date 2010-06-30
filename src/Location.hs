@@ -46,7 +46,7 @@ browseLocation maybeURL = do
 
   widgetShowAll window
   case maybeURL of
-    Just url -> loadLocation url
+    Just url -> loadLocation $ Go url
     Nothing  -> openLocation
 
 

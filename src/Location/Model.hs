@@ -23,11 +23,15 @@ module Location.Model
   , makeItem
   , locationStore
   , getCurrentLocation
-  , setCurrentLocation
   , onLocation
+  , UpdateLocation (..)
+  , updateLocation
+  , canGo
   ) where
 
 import Control.Concurrent.MVar
+
+import Data.List
 
 import Graphics.UI.Gtk
 
@@ -39,10 +43,17 @@ import Handler
 
 
 data State
-  = State { sLocation :: String }
+  = State { sLocation :: String
+          , sBack     :: [String]
+          , sForward  :: [String]
+          }
+    deriving Show
 
 makeState =
-  State { sLocation = "" }
+  State { sLocation = ""
+        , sBack     = []
+        , sForward  = []
+        }
 
 data Item
   = Item { iName  :: String
@@ -69,10 +80,6 @@ state = mState getEnv
 
 getCurrentLocation =
   withMVar state $ return . sLocation
-setCurrentLocation location = do
-  modifyMVar_ state $ \state ->
-    return state { sLocation = location }
-  onLocation $ invoke ()
 
 
 initModel = do
@@ -99,4 +106,64 @@ split s  =
         []      -> []
         (_:s'') -> split s''
 
+data UpdateLocation
+  = Back
+  | Forward
+  | Go String
+  | Reload
+  | Up
 
+updateLocation location = do
+  r <- modifyMVar state $ \s -> return $
+    case location of
+      Back ->
+        case sBack s of
+          (u : us) ->
+            (s { sLocation = u
+               , sBack = us
+               , sForward = u : sForward s
+               }
+            , Just u)
+          _ ->
+            (s, Nothing)
+      Forward ->
+        case sForward s of
+          (u : us) ->
+            (s { sLocation = u
+               , sBack = u : sBack s
+               , sForward = us
+               }
+            , Just u)
+          _ ->
+            (s, Nothing)
+      Go u ->
+        (s { sLocation = u
+           , sBack = case sLocation s of
+             [] -> sBack s
+             u' -> u' : sBack s
+           , sForward = []
+           }
+        , Just u)
+      Reload ->
+        (s, Just $ sLocation s)
+      Up ->
+        let u  = sLocation s
+            u' = reverse . dropWhile (/= '/') . tail $ reverse u in
+        (s { sLocation = u'
+           , sBack = case u of
+             [] -> sBack s
+             _  -> u : sBack s
+           , sForward = []
+           }
+        , Just u')
+  onLocation $ invoke ()
+  print r
+  return r
+
+canGo = withMVar state $ \State { sLocation = l
+                                , sBack     = b
+                                , sForward  = f
+                                }  ->
+  return (not $ null b,
+          not $ null f,
+          not $ null l || isSuffixOf "//" l)

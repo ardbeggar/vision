@@ -46,12 +46,16 @@ import Location.Model
 import Location.View
 
 
-loadLocation url = do
+loadLocation location = do
   listStoreClear locationStore
-  setCurrentLocation url
-  updateWindowTitle
-  entrySetText locationEntry url
-  xformMediaBrowse xmms url >>* handleBrowse url
+  maybeURL <- updateLocation location
+  case maybeURL of
+    Just url -> do
+      updateWindowTitle
+      entrySetText locationEntry url
+      xformMediaBrowse xmms url >>* handleBrowse url
+    Nothing ->
+      return ()
 
 handleBrowse url = do
   handleBrowse' `catch` \(_ :: XMMSException) ->

@@ -24,8 +24,6 @@ module Location.UI
 import Control.Applicative
 import Control.Monad
 
-import Data.List
-
 import Graphics.UI.Gtk hiding (add)
 
 import UI
@@ -55,7 +53,7 @@ setupUI browse = do
   toolItemSetHomogeneous item False
   toolItemSetExpand item True
   containerAdd item locationEntry
-  toolbarInsert toolbar item 1
+  toolbarInsert toolbar item 3
 
   load <- getAction srvAG "load"
   locationEntry `onEntryActivate` do
@@ -74,11 +72,15 @@ setupUI browse = do
     actionActivate down
 
   up <- getAction srvAG "up"
-  let updateUp = do
-        url <- getCurrentLocation
-        actionSetSensitive up . not $ null url || isSuffixOf "//" url
-  onLocation . add . ever . const $ updateUp
-  updateUp
+  back <- getAction srvAG "back"
+  forward <- getAction srvAG "forward"
+  let updateN = do
+        (eb, ef, eu) <- canGo
+        actionSetSensitive back eb
+        actionSetSensitive forward ef
+        actionSetSensitive up eu
+  onLocation . add . ever . const $ updateN
+  updateN
 
   updateWindowTitle
 
@@ -127,7 +129,7 @@ srvActions browse =
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadAtCursor loadLocation
+    , actionEntryCallback    = loadAtCursor (loadLocation . Go)
     }
   , ActionEntry
     { actionEntryName        = "new-window"
@@ -175,16 +177,37 @@ srvActions browse =
     , actionEntryStockId     = Just stockGoUp
     , actionEntryAccelerator = Just "<Alt>Up"
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = goUp
+    , actionEntryCallback    = loadLocation Up
+    }
+  , ActionEntry
+    { actionEntryName        = "back"
+    , actionEntryLabel       = "Go _back"
+    , actionEntryStockId     = Just stockGoBack
+    , actionEntryAccelerator = Just "<Alt>Left"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = loadLocation Back
+    }
+  , ActionEntry
+    { actionEntryName        = "forward"
+    , actionEntryLabel       = "Go _"
+    , actionEntryStockId     = Just stockGoForward
+    , actionEntryAccelerator = Just "<Alt>Right"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = loadLocation Forward
     }
   ]
 
 loadCurrentLocation = do
   text <- trim <$> entryGetText locationEntry
-  url  <- case text of
-    [] -> getCurrentLocation
-    _  -> return $ makeURL text
-  unless (null url) $ loadLocation url
+  case text of
+    [] -> do
+      cur <- getCurrentLocation
+      case cur of
+        [] -> return ()
+        _  -> do
+          entrySetText locationEntry cur
+          widgetGrabFocus locationView
+    _  -> loadLocation . Go $ makeURL text
 
 loadAtCursor func = do
   (path, _) <- treeViewGetCursor locationView
@@ -194,7 +217,3 @@ loadAtCursor func = do
       when (iIsDir item) $ func $ iPath item
     _   ->
       return ()
-
-goUp = do
-  url <- getCurrentLocation
-  loadLocation . reverse . dropWhile (/= '/') . tail $ reverse url
