@@ -25,10 +25,14 @@ import Graphics.UI.Gtk
 
 import UI
 import Utils
+import Playlist.Format.Config
 
 
 showPlaylistConfigDialog = do
+  windowGroup <- windowGroupNew
+
   dialog <- dialogNew
+  windowGroupAddWindow windowGroup dialog
   windowSetTransientFor dialog window
   windowSetModal dialog False
   windowSetTitle dialog "Configure playlist"
@@ -38,5 +42,9 @@ showPlaylistConfigDialog = do
   dialogAddButton   dialog "gtk-apply"  ResponseApply
   dialogAddButton   dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok"     ResponseOk
+
+  upper <- dialogGetUpper dialog
+  fview <- makePlaylistFormatView windowGroup (return ())
+  boxPackStartDefaults upper $ formatViewBox fview
 
   widgetShowAll dialog

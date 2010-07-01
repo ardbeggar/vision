@@ -174,9 +174,8 @@ makePlaylistFormatView windowGroup onChanged = do
 
 makeFormatEditor windowGroup onDone = do
   dialog <- dialogNew
-  fixWindow dialog
   windowGroupAddWindow windowGroup dialog
-  windowSetTransientFor dialog mainWindow
+  windowSetTransientFor dialog window
   windowSetModal dialog True
   windowSetTitle dialog "Edit format"
   windowSetDefaultSize dialog 500 400

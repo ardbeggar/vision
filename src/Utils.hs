@@ -31,6 +31,7 @@ module Utils
   , catchResult
   , setupTreeViewPopup
   , dialogAddButtonCR
+  , fmaybeM_
   ) where
 
 import Prelude hiding (catch)
@@ -118,3 +119,9 @@ dialogAddButtonCR dialog label response = do
       when doIt $ do
         widgetActivate button
         return ()
+
+fmaybe :: b -> Maybe a -> (a -> b) -> b
+fmaybe = flip . maybe
+
+fmaybeM_ :: Monad m => Maybe a -> (a -> m ()) -> m ()
+fmaybeM_ = fmaybe (return ())
