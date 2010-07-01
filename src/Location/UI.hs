@@ -73,9 +73,17 @@ setupUI browse = do
   addp <- getAction srvAG "add-to-playlist"
   repp <- getAction srvAG "replace-playlist"
   let updateB = do
-        nr <- treeSelectionCountSelectedRows locationSel
-        mapM_ (flip actionSetSensitive (nr == 1)) [down, binw]
-        mapM_ (flip actionSetSensitive (nr > 0)) [addp, repp]
+        rows       <- treeSelectionGetSelectedRows locationSel
+        (enp, enn) <- case rows of
+          []    ->
+            return (False, False)
+          [[n]] -> do
+            item <- listStoreGetValue locationStore n
+            return (True, iIsDir item)
+          _     ->
+            return (True, False)
+        mapM_ (flip actionSetSensitive enp) [addp, repp]
+        mapM_ (flip actionSetSensitive enn) [down, binw]
   locationSel `onSelectionChanged` updateB
   updateB
 
