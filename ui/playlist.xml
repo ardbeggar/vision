@@ -23,6 +23,9 @@
       <menu action="browse">
         <menuitem action="browse-location"/>
       </menu>
+      <menu action="playlist">
+        <menuitem action="configure-playlist"/>
+      </menu>
     </placeholder>
   </menubar>
   <toolbar name="playbar">

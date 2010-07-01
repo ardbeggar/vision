@@ -53,6 +53,7 @@ executable vision
                     Playlist.Index,
                     Playlist.Search,
                     Playlist.Edit,
+                    Playlist.Config,
                     Playlist.Format,
                     Playlist.Format.Format,
                     Playlist.Format.Parser

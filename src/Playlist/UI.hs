@@ -37,6 +37,7 @@ import Location
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
+import Playlist.Config
 
 
 setupUI = do
@@ -165,6 +166,22 @@ uiActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "playlist"
+    , actionEntryLabel       = "_Playlist"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "configure-playlist"
+    , actionEntryLabel       = "_Configure playlist"
+    , actionEntryStockId     = Just stockPreferences
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPlaylistConfigDialog
     }
   , ActionEntry
     { actionEntryName        = "playlist-popup"

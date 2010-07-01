@@ -30,6 +30,7 @@ module Utils
   , bracket_
   , catchResult
   , setupTreeViewPopup
+  , dialogAddButtonCR
   ) where
 
 import Prelude hiding (catch)
@@ -39,7 +40,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Applicative
 import Control.Concurrent.MVar
-import Data.Char
+import Data.Char hiding (Control)
 import Codec.Binary.UTF8.String
 
 import Graphics.UI.Gtk
@@ -106,3 +107,14 @@ setupTreeViewPopup view popup = do
     stamp       <- eventTime
     setCursor
     liftIO $ menuPopup popup $ Just (RightButton, stamp)
+
+dialogAddButtonCR dialog label response = do
+  button <- dialogAddButton dialog label response
+  dialog `on` keyPressEvent $ tryEvent $ do
+    "Return"  <- eventKeyName
+    [Control] <- eventModifier
+    liftIO $ do
+      doIt <- button `get` widgetSensitive
+      when doIt $ do
+        widgetActivate button
+        return ()
