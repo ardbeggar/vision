@@ -42,6 +42,7 @@ import XMMS2.Client
 import XMMS
 import Environment
 import UI
+import Location.History
 import Location.Model
 import Location.View
 
@@ -51,6 +52,7 @@ loadLocation location = do
   maybeURL <- updateLocation location
   case maybeURL of
     Just url -> do
+      addToHistory url
       updateWindowTitle
       entrySetText locationEntry url
       xformMediaBrowse xmms url >>* handleBrowse url

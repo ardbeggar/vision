@@ -18,16 +18,22 @@
 --
 
 module Location
-  ( browseLocation
+  ( initLocation
+  , browseLocation
   ) where
 
 import Graphics.UI.Gtk
 
 import UI
+import Location.History
 import Location.Model
 import Location.View
 import Location.Control
 import Location.UI
+
+
+initLocation =
+  initHistory
 
 
 browseLocation maybeURL = do

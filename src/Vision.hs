@@ -30,6 +30,7 @@ import Playback
 import Volume
 import Playtime
 import Clipboard
+import Location
 import Playlist
 
 
@@ -58,6 +59,9 @@ main = do
   let ?env = env
 
   env <- initClipboard
+  let ?env = env
+
+  env <- initLocation
   let ?env = env
 
   showPlaylist

@@ -39,6 +39,7 @@ executable vision
                     Playtime,
                     Clipboard,
                     Location,
+                    Location.History,
                     Location.Model,
                     Location.View,
                     Location.Control,

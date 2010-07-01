@@ -31,6 +31,7 @@ import Graphics.UI.Gtk
 
 import Env
 import Location.Model
+import Location.History
 
 
 data View
@@ -74,6 +75,9 @@ initView = do
     [n]  <- treeModelGetPath locationStore iter
     item <- listStoreGetValue locationStore n
     return $ isInfixOf (map toLower str) (map toLower $ iName item)
+
+  comp <- makeHistoryCompletion
+  entrySetCompletion locationEntry comp
 
   return ?env
 
