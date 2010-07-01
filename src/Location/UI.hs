@@ -69,10 +69,19 @@ setupUI browse = do
   setupTreeViewPopup locationView popup
 
   down <- getAction srvAG "down"
-  locationView `onRowActivated` \_ _ -> do
+  binw <- getAction srvAG "browse-in-new-window"
+  addp <- getAction srvAG "add-to-playlist"
+  repp <- getAction srvAG "replace-playlist"
+  let updateB = do
+        nr <- treeSelectionCountSelectedRows locationSel
+        mapM_ (flip actionSetSensitive (nr == 1)) [down, binw]
+        mapM_ (flip actionSetSensitive (nr > 0)) [addp, repp]
+  locationSel `onSelectionChanged` updateB
+  updateB
+
+  locationView `onRowActivated` \_ _ ->
     actionActivate down
 
-  binw <- getAction srvAG "browse-in-new-window"
   locationView `on` buttonPressEvent $ tryEvent $ do
     MiddleButton <- eventButton
     SingleClick  <- eventClick
