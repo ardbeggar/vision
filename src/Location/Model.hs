@@ -47,7 +47,6 @@ data State
           , sBack     :: [String]
           , sForward  :: [String]
           }
-    deriving Show
 
 makeState =
   State { sLocation = ""
@@ -157,7 +156,6 @@ updateLocation location = do
            }
         , Just u')
   onLocation $ invoke ()
-  print r
   return r
 
 canGo = withMVar state $ \State { sLocation = l
