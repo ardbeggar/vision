@@ -24,7 +24,7 @@ module Location.Model
   , locationStore
   , getCurrentLocation
   , onLocation
-  , UpdateLocation (..)
+  , LocationChange (..)
   , updateLocation
   , canGo
   ) where
@@ -42,17 +42,62 @@ import Utils
 import Handler
 
 
+data Location
+  = Location { lCurrent :: String
+             , lBack    :: [String]
+             , lForward :: [String]
+             }
+
+makeLocation =
+  Location { lCurrent = ""
+           , lBack    = []
+           , lForward = []
+           }
+
+data LocationChange
+  = Back
+  | Forward
+  | Go String
+  | Refresh
+  | Up
+
+changeLocation Back l =
+  case lBack l of
+    (u : us) ->
+      (l { lCurrent = u
+         , lBack    = us
+         , lForward = lCurrent l : lForward l
+         }, Just u)
+    _ ->
+      (l, Nothing)
+changeLocation Forward l =
+  case lForward l of
+    (u : us) ->
+      (l { lCurrent = u
+         , lBack    = lCurrent l : lBack l
+         , lForward = us
+         }, Just u)
+    _ ->
+      (l, Nothing)
+changeLocation (Go u) l =
+  (l { lCurrent = u
+     , lBack    = case lCurrent l of
+         [] -> lBack l
+         u' -> u' : lBack l
+     , lForward = []
+     }, Just u)
+changeLocation Refresh l =
+  (l, Just $ lCurrent l)
+changeLocation Up l =
+  let u = reverse . dropWhile (/= '/') . tail . reverse $ lCurrent l
+  in changeLocation (Go u) l
+
+
 data State
-  = State { sLocation :: String
-          , sBack     :: [String]
-          , sForward  :: [String]
-          }
+  = State { sLocation :: Location }
 
 makeState =
-  State { sLocation = ""
-        , sBack     = []
-        , sForward  = []
-        }
+  State { sLocation = makeLocation }
 
 data Item
   = Item { iName  :: String
@@ -63,7 +108,8 @@ data Item
 makeItem x =
   Item { iName  = name
        , iPath  = path
-       , iIsDir = entryIsDir x }
+       , iIsDir = entryIsDir x
+       }
   where name = last $ split $ path
         path = decodeURL $ entryPath x
 
@@ -78,7 +124,24 @@ onLocation = onHandler $ mOnLocation getEnv
 state = mState getEnv
 
 getCurrentLocation =
-  withMVar state $ return . sLocation
+  withMVar state $ return . lCurrent . sLocation
+
+updateLocation change = do
+  r <- modifyMVar state $ \s -> do
+    let (l, u) = changeLocation change $ sLocation s
+    return (s { sLocation = l }, u)
+  onLocation $ invoke ()
+  return r
+
+canGo = withMVar state $ \s ->
+  let Location { lCurrent = c
+               , lBack    = b
+               , lForward = f
+               } = sLocation s
+  in return (not $ null b,
+             not $ null f,
+             not $ null c || isSuffixOf "//" c,
+             not $ null c)
 
 
 initModel = do
@@ -105,64 +168,3 @@ split s  =
         []      -> []
         (_:s'') -> split s''
 
-data UpdateLocation
-  = Back
-  | Forward
-  | Go String
-  | Refresh
-  | Up
-
-updateLocation location = do
-  r <- modifyMVar state $ \s -> return $
-    case location of
-      Back ->
-        case sBack s of
-          (u : us) ->
-            (s { sLocation = u
-               , sBack = us
-               , sForward = sLocation s : sForward s
-               }
-            , Just u)
-          _ ->
-            (s, Nothing)
-      Forward ->
-        case sForward s of
-          (u : us) ->
-            (s { sLocation = u
-               , sBack = sLocation s : sBack s
-               , sForward = us
-               }
-            , Just u)
-          _ ->
-            (s, Nothing)
-      Go u ->
-        (s { sLocation = u
-           , sBack = case sLocation s of
-             [] -> sBack s
-             u' -> u' : sBack s
-           , sForward = []
-           }
-        , Just u)
-      Refresh ->
-        (s, Just $ sLocation s)
-      Up ->
-        let u  = sLocation s
-            u' = reverse . dropWhile (/= '/') . tail $ reverse u in
-        (s { sLocation = u'
-           , sBack = case u of
-             [] -> sBack s
-             _  -> u : sBack s
-           , sForward = []
-           }
-        , Just u')
-  onLocation $ invoke ()
-  return r
-
-canGo = withMVar state $ \State { sLocation = l
-                                , sBack     = b
-                                , sForward  = f
-                                }  ->
-  return (not $ null b,
-          not $ null f,
-          not $ null l || isSuffixOf "//" l,
-          not $ null l)
