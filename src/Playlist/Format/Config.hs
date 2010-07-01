@@ -2,9 +2,9 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 23 Feb. 2010
+--  Created: 1 Jul. 2010
 --
---  Copyright (C) 2009-2010 Oleg Belozeorov
+--  Copyright (C) 2010 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -20,13 +20,8 @@
 module Playlist.Format.Config
   ( FormatView
   , formatViewBox
-  , formatViewSet
-  , formatViewGet
-  , formatViewChanged
-  , formatViewResetChanged
-  , formatViewDone
-  , formatViewFocus
   , makePlaylistFormatView
+  , ConfigWidget (..)
   ) where
 
 import Control.Monad
@@ -39,22 +34,34 @@ import Utils
 import UI
 
 
+class ConfigWidget cw where
+  type Config cw
+  getConfig    :: cw -> IO (Config cw)
+  setConfig    :: cw -> Config cw -> IO ()
+  getChanged   :: cw -> IO Bool
+  clearChanged :: cw -> IO ()
+  grabFocus    :: cw -> IO ()
+
+
 data FormatView
-  = FormatView { fBox     :: HBox
-               , fSet     :: [String] -> IO ()
-               , fGet     :: IO [String]
-               , fChanged :: IO Bool
+  = FormatView { fBox          :: HBox
+               , fSet          :: [String] -> IO ()
+               , fGet          :: IO [String]
+               , fChanged      :: IO Bool
                , fResetChanged :: IO ()
-               , fDone    :: IO ()
-               , fFocus   :: IO () }
+               , fFocus        :: IO ()
+               }
+
+instance ConfigWidget FormatView where
+  type Config FormatView = [String]
+  getConfig    = fGet
+  setConfig    = fSet
+  getChanged   = fChanged
+  clearChanged = fResetChanged
+  grabFocus    = fFocus
+
 
 formatViewBox     = fBox
-formatViewSet     = fSet
-formatViewGet     = fGet
-formatViewChanged = fChanged
-formatViewResetChanged = fResetChanged
-formatViewDone    = fDone
-formatViewFocus   = fFocus
 
 
 makePlaylistFormatView windowGroup onChanged = do
@@ -158,9 +165,6 @@ makePlaylistFormatView windowGroup onChanged = do
         treeViewSetCursor view [0] Nothing
       changed = readIORef changedRef
       resetChanged = writeIORef changedRef False
-      done = do
-        withoutChanged $ listStoreClear store
-        resetChanged
       focus = widgetGrabFocus view
 
   widgetShowAll box
@@ -169,8 +173,8 @@ makePlaylistFormatView windowGroup onChanged = do
                     , fSet     = set
                     , fChanged = changed
                     , fResetChanged = resetChanged
-                    , fDone    = done
-                    , fFocus   = focus }
+                    , fFocus   = focus
+                    }
 
 makeFormatEditor windowGroup onDone = do
   dialog <- dialogNew

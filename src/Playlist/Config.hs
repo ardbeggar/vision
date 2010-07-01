@@ -21,10 +21,13 @@ module Playlist.Config
   ( showPlaylistConfigDialog
   ) where
 
+import Control.Monad
+
 import Graphics.UI.Gtk
 
 import UI
 import Utils
+import Playlist.Format
 import Playlist.Format.Config
 
 
@@ -42,9 +45,29 @@ showPlaylistConfigDialog = do
   dialogAddButton   dialog "gtk-apply"  ResponseApply
   dialogAddButton   dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok"     ResponseOk
+  dialogSetResponseSensitive dialog ResponseApply False
 
   upper <- dialogGetUpper dialog
-  fview <- makePlaylistFormatView windowGroup (return ())
+  fview <- makePlaylistFormatView windowGroup $ do
+    dialogSetResponseSensitive dialog ResponseApply True
   boxPackStartDefaults upper $ formatViewBox fview
 
+  setConfig fview =<< getFormatDefs
+
+  dialog `onResponse` \resp ->
+    case resp of
+      ResponseApply -> do
+        dialogSetResponseSensitive dialog ResponseApply False
+        changed <- getChanged fview
+        when changed $ putFormatDefs =<< getConfig fview
+        clearChanged fview
+        grabFocus fview
+      ResponseOk    -> do
+        changed <- getChanged fview
+        when changed $ putFormatDefs =<< getConfig fview
+        widgetDestroy dialog
+      _ ->
+        widgetDestroy dialog
+
   widgetShowAll dialog
+

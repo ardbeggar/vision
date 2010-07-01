@@ -18,7 +18,8 @@
 --
 
 module Playlist
-  ( showPlaylist
+  ( initPlaylist
+  , showPlaylist
   ) where
 
 import Graphics.UI.Gtk
@@ -35,14 +36,14 @@ import Playlist.DnD
 import Playlist.UI
 
 
+initPlaylist =
+  initFormat
+
 showPlaylist = do
   env <- initUI
   let ?env = env
 
   env <- initModel
-  let ?env = env
-
-  env <- initFormat
   let ?env = env
 
   env <- initIndex

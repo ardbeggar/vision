@@ -26,11 +26,13 @@ module Playlist.Format
   , trackInfoAttrs
   , trackInfoText
   , trackInfoDuration
+  , onFormatsChanged
   ) where
 
 import Prelude hiding (lookup)
 
 import Control.Applicative
+import Control.Monad
 
 import Data.IORef
 import Data.Maybe
@@ -45,6 +47,7 @@ import Properties
 import Config
 import Utils
 import Env
+import Handler
 
 import Playlist.Format.Format
 import Playlist.Format.Parser
@@ -70,6 +73,7 @@ data Format
            , fFormatDefsRef    :: IORef [String]
            , fLookupDuration   :: MediaInfo -> String
            , fLookupURL        :: MediaInfo -> String
+           , fOnFormatsChanged :: HandlerMVar ()
            }
 
 getMakeInfo = readIORef (fMakeInfoRef getEnv)
@@ -85,6 +89,9 @@ putFormatDefs defs = do
 lookupDuration = fLookupDuration getEnv
 lookupURL      = fLookupURL getEnv
 
+onFormatsChanged = onHandler $ fOnFormatsChanged getEnv
+
+
 initFormat = do
   env <- initEnv
   let ?env = env
@@ -98,11 +105,13 @@ initEnv = do
   makeInfoRef      <- newIORef $ const $ return ([], "")
   duration         <- fromJust <$> property "Duration"
   url              <- fromJust <$> property "URL"
+  onFormatsChanged <- makeHandlerMVar
   return $ augmentEnv
     Format { fMakeInfoRef      = makeInfoRef
            , fFormatDefsRef    = formatDefsRef
            , fLookupDuration   = maybe "" escapeMarkup . lookup duration
            , fLookupURL        = maybe "" escapeMarkup . lookup url
+           , fOnFormatsChanged = onFormatsChanged
            }
 
 
@@ -133,8 +142,9 @@ saveFormatDefs = do
 
 getFormats = (rights . map parseFormat) <$> getFormatDefs
 
-updateFormats _ = do
+updateFormats notify = do
   putMakeInfo =<< makeMakeInfo =<< getFormats
+  when notify $ onFormatsChanged $ invoke ()
 
 makeTrackInfo info = do
   makeInfo      <- getMakeInfo

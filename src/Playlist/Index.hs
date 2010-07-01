@@ -23,6 +23,7 @@ module Playlist.Index
   , addToIndex
   ) where
 
+import Control.Applicative
 import Control.Concurrent.MVar
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
@@ -52,6 +53,7 @@ initIndex = do
   let ?env = env
 
   onMediaInfo . add . ever $ handleInfo
+  onFormatsChanged . add . ever . const $ handleFormats
 
   return ?env
 
@@ -67,6 +69,16 @@ handleInfo (id, stamp, info) = do
     case IntMap.lookup id' ix of
       Just (entry, list) -> updateIndex ix id' stamp info entry list
       Nothing            -> return ix
+
+handleFormats =
+  modifyMVar_ index $ \ix ->
+    IntMap.fromList <$> mapM update (IntMap.toList ix)
+  where update (i, (IEReady s m _, l)) = do
+          t <- makeTrackInfo m
+          mapM touch l
+          return (i, (IEReady s m t, l))
+        update other =
+          return other
 
 updateIndex ix id stamp info old list =
   if upd

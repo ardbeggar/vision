@@ -64,6 +64,9 @@ main = do
   env <- initLocation
   let ?env = env
 
+  env <- initPlaylist
+  let ?env = env
+
   showPlaylist
 
   mainGUI
