@@ -24,6 +24,8 @@
         <menuitem action="browse-location"/>
       </menu>
       <menu action="playlist">
+        <menuitem action="clear-playlist"/>
+        <separator/>
         <menuitem action="configure-playlist"/>
       </menu>
     </placeholder>

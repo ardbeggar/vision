@@ -27,6 +27,7 @@ module Playlist.Model
   , touchPlaylist
   , onPlaylistUpdated
   , playlistGetIds
+  , clearPlaylist
   ) where
 
 import Control.Concurrent.MVar
@@ -35,8 +36,11 @@ import Data.Int
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client
+
 import Env
 import Utils
+import XMMS
 
 
 data State
@@ -89,3 +93,6 @@ initEnv = do
 makeState =
   State { sName = Nothing }
 
+clearPlaylist = do
+  playlistClear xmms =<< getPlaylistName
+  return ()

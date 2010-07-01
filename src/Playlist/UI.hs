@@ -177,7 +177,7 @@ uiActions =
     }
   , ActionEntry
     { actionEntryName        = "configure-playlist"
-    , actionEntryLabel       = "_Configure playlist"
+    , actionEntryLabel       = "C_onfigure playlist"
     , actionEntryStockId     = Just stockPreferences
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
@@ -297,5 +297,13 @@ srvActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = browseLocation Nothing
+    }
+  , ActionEntry
+    { actionEntryName        = "clear-playlist"
+    , actionEntryLabel       = "_Clear playlist"
+    , actionEntryStockId     = Just stockClear
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = clearPlaylist
     }
   ]
