@@ -27,6 +27,7 @@ import Graphics.UI.Gtk
 
 import UI
 import Utils
+import Compound
 import Playlist.Format
 import Playlist.Format.Config
 
@@ -50,7 +51,7 @@ showPlaylistConfigDialog = do
   upper <- dialogGetUpper dialog
   fview <- makePlaylistFormatView windowGroup $ do
     dialogSetResponseSensitive dialog ResponseApply True
-  boxPackStartDefaults upper $ formatViewBox fview
+  boxPackStartDefaults upper $ outer fview
 
   setConfig fview =<< getFormatDefs
 

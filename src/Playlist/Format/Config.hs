@@ -18,9 +18,7 @@
 --
 
 module Playlist.Format.Config
-  ( FormatView
-  , formatViewBox
-  , makePlaylistFormatView
+  ( makePlaylistFormatView
   , ConfigWidget (..)
   ) where
 
@@ -32,6 +30,7 @@ import Graphics.UI.Gtk
 
 import Utils
 import UI
+import Compound
 
 
 class ConfigWidget cw where
@@ -52,6 +51,10 @@ data FormatView
                , fFocus        :: IO ()
                }
 
+instance CompoundWidget FormatView where
+  type Outer FormatView = HBox
+  outer = fBox
+
 instance ConfigWidget FormatView where
   type Config FormatView = [String]
   getConfig    = fGet
@@ -59,9 +62,6 @@ instance ConfigWidget FormatView where
   getChanged   = fChanged
   clearChanged = fResetChanged
   grabFocus    = fFocus
-
-
-formatViewBox     = fBox
 
 
 makePlaylistFormatView windowGroup onChanged = do

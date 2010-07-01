@@ -31,6 +31,7 @@ executable vision
                     UI,
                     Atoms,
                     Config,
+                    Compound,
                     Properties,
                     Properties.Property,
                     Properties.Model,
