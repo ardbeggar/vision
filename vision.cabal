@@ -68,6 +68,6 @@ executable vision
                     MonadCatchIO-mtl, json, parsec >= 3.0.1
   extensions:       ImplicitParams, NoMonomorphismRestriction,
                     FlexibleContexts, FlexibleInstances,
-                    TypeFamilies
+                    TypeFamilies, ScopedTypeVariables
                     TupleSections
   ghc-options:      -W

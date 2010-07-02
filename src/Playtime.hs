@@ -17,8 +17,6 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Playtime
   ( initPlaytime
   , makeSeekControl

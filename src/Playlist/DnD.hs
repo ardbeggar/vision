@@ -18,7 +18,6 @@
 --
 
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Playlist.DnD
   ( setupDnD
