@@ -36,7 +36,6 @@ import XMMS2.Client
 import Env
 import UI
 import Playback
-import XMMS
 import Playlist.Model
 import Playlist.Index
 import Playlist.Format
