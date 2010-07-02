@@ -29,6 +29,7 @@ module Playback
   , startPlayback
   , pausePlayback
   , stopPlayback
+  , restartPlayback
   , prevTrack
   , nextTrack
   , requestCurrentTrack
@@ -169,3 +170,7 @@ prevTrack = do
 
 invokeOnPlaybackStatus =
   onPlaybackStatus . invoke =<< getPlaybackStatus
+
+restartPlayback = do
+  playbackTickle xmms
+  return ()

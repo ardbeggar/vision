@@ -38,6 +38,7 @@ import Playlist.Model
 import Playlist.View
 import Playlist.Edit
 import Playlist.Config
+import Playlist.Control
 
 
 setupUI = do

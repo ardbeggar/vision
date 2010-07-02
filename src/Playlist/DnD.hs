@@ -31,12 +31,10 @@ import Data.IORef
 
 import Graphics.UI.Gtk
 
-import XMMS2.Client
-
 import Atoms
-import XMMS
 import Playlist.Model
 import Playlist.View
+import Playlist.Control
 
 
 setupDnD = do
@@ -76,7 +74,7 @@ setupDnD = do
 handleReorder _ Nothing     = return ()
 handleReorder y (Just rows) = do
   base <- getTargetRow
-  mapM_ (uncurry (playlistMoveEntry xmms Nothing)) $ reorder base rows
+  moveTracks $ reorder base rows
   where getTargetRow = do
           maybePos <- treeViewGetPathAtPos playlistView (0, y)
           case maybePos of

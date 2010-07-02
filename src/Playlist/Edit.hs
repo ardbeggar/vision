@@ -32,42 +32,33 @@ import Control.Monad.Trans
 
 import Graphics.UI.Gtk
 
-import XMMS2.Client
-
 import Atoms
-import XMMS
+import Utils
 import Clipboard
 import Playback
 import Playlist.Model
 import Playlist.View
+import Playlist.Control
 
 
 editDelete cut = do
   tracks <- getSelectedTracks
   when cut $ copyIds tracks
-  name <- getPlaylistName
-  curt <- getCurrentTrack
-  mapM_ (playlistRemoveEntry xmms name) $ reverse tracks
-  case (name, curt) of
-    (Just pname, Just (ct, cname)) | pname == cname && ct `elem` tracks ->
-      playbackTickle xmms >> return ()
-    _ ->
-      return ()
+  removeTracks tracks
+  maybeTrack <- currentTrackThisPlaylist
+  fmaybeM_ maybeTrack $ \t ->
+    when (t `elem` tracks) restartPlayback
 
 editCopy = copyIds =<< getSelectedTracks
 
 editPaste append =
   clipboardRequestContents clipboard xmms2MlibId $ do
     maybeIds <- selectionDataGet selectionTypeInteger
-    case maybeIds of
-      Just ids -> liftIO $ do
-        name      <- getPlaylistName
-        (path, _) <- treeViewGetCursor playlistView
-        start     <- case path of
-          [n] | not append -> return n
-          _                -> getPlaylistSize
-        zipWithM_ (playlistInsertId xmms name) [start .. ] ids
-      _        -> return ()
+    fmaybeM_ maybeIds $ \ids -> liftIO $ do
+      (path, _) <- treeViewGetCursor playlistView
+      insertIds ids $ case path of
+        [n] | not append -> Just n
+        _                -> Nothing
 
 editSelectAll =
   treeSelectionSelectAll playlistSel
