@@ -22,14 +22,18 @@ module Location.Model
   , Item (..)
   , makeItem
   , locationStore
+  , sortModel
   , getCurrentLocation
   , onLocation
   , LocationChange (..)
   , updateLocation
   , canGo
+  , itemByIter
+  , itemByPath
   ) where
 
 import Control.Concurrent.MVar
+import Control.Applicative
 
 import Data.List
 
@@ -113,13 +117,21 @@ makeItem x =
   where name = last $ split $ path
         path = decodeURL $ entryPath x
 
+compareItems a b
+  | iIsDir a == iIsDir b = compare (iName a) (iName b)
+  | iIsDir a             = LT
+  | iIsDir b             = GT
+
+
 data Model
   = Model { mState      :: MVar State
           , mStore      :: ListStore Item
+          , mSort       :: TypedTreeModelSort Item
           , mOnLocation :: HandlerMVar ()
           }
 
 locationStore = mStore getEnv
+sortModel = mSort getEnv
 onLocation = onHandler $ mOnLocation getEnv
 state = mState getEnv
 
@@ -148,16 +160,20 @@ initModel = do
   env <- initEnv
   let ?env = env
 
+  treeSortableSetDefaultSortFunc sortModel compareIters
+
   return ?env
 
 
 initEnv = do
   state      <- newMVar makeState
   store      <- listStoreNewDND [] Nothing Nothing
+  sort       <- treeModelSortNewWithModel store
   onLocation <- makeHandlerMVar
   return $ augmentEnv
     Model { mState      = state
           , mStore      = store
+          , mSort       = sort
           , mOnLocation = onLocation
           }
 
@@ -168,3 +184,17 @@ split s  =
         []      -> []
         (_:s'') -> split s''
 
+itemByIter' iter = do
+  [n]   <- treeModelGetPath locationStore iter
+  listStoreGetValue locationStore n
+
+itemByIter iter = do
+  citer <- treeModelSortConvertIterToChildIter sortModel iter
+  itemByIter' citer
+
+itemByPath path = do
+  [n] <- treeModelSortConvertPathToChildPath sortModel path
+  listStoreGetValue locationStore n
+
+compareIters a b =
+  compareItems <$> itemByIter' a <*> itemByIter' b

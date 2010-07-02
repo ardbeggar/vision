@@ -81,10 +81,10 @@ replacePlaylist = do
 
 addToPlaylist = do
   rows <- treeSelectionGetSelectedRows locationSel
-  mapM_ (addOne . head) rows
+  mapM_ addOne rows
 
-addOne r = do
-  item <- listStoreGetValue locationStore r
+addOne p = do
+  item <- itemByPath p
   let path = iPath item
   if iIsDir item
     then do

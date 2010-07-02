@@ -77,8 +77,8 @@ setupUI browse = do
         (enp, enn) <- case rows of
           []    ->
             return (False, False)
-          [[n]] -> do
-            item <- listStoreGetValue locationStore n
+          [path] -> do
+            item <- itemByPath path
             return (True, iIsDir item)
           _     ->
             return (True, False)
@@ -262,8 +262,8 @@ loadCurrentLocation = do
 loadAtCursor func = do
   (path, _) <- treeViewGetCursor locationView
   case path of
-    [n] -> do
-      item <- listStoreGetValue locationStore n
+    [_] -> do
+      item <- itemByPath path
       when (iIsDir item) $ func $ iPath item
     _   ->
       return ()

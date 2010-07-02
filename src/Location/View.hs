@@ -59,21 +59,22 @@ initView = do
 
   cell <- cellRendererPixbufNew
   treeViewColumnPackStart column cell False
-  cellLayoutSetAttributes column cell locationStore $ \item ->
-    [ cellPixbufStockId :=
-      if iIsDir item
-      then stockDirectory
-      else stockFile ]
+  cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
+    item <- itemByIter iter
+    cell `set` [ cellPixbufStockId :=
+                 if iIsDir item
+                 then stockDirectory
+                 else stockFile ]
 
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
-  cellLayoutSetAttributes column cell locationStore $ \item ->
-    [ cellText := iName item ]
+  cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
+    item <- itemByIter iter
+    cell `set` [ cellText := iName item ]
 
   treeViewSetEnableSearch locationView True
   treeViewSetSearchEqualFunc locationView $ Just $ \str iter -> do
-    [n]  <- treeModelGetPath locationStore iter
-    item <- listStoreGetValue locationStore n
+    item <- itemByIter iter
     return $ isInfixOf (map toLower str) (map toLower $ iName item)
 
   comp <- makeHistoryCompletion
@@ -83,7 +84,7 @@ initView = do
 
 
 initEnv = do
-  view  <- treeViewNewWithModel locationStore
+  view  <- treeViewNewWithModel sortModel
   sel   <- treeViewGetSelection view
   entry <- entryNew
   return $ augmentEnv
