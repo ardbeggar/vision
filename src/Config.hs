@@ -20,7 +20,11 @@
 module Config
   ( config
   , writeConfig
+  , ConfigWidget (..)
+  , makeConfigDialog
   ) where
+
+import Control.Monad
 
 import Data.Maybe
 
@@ -30,7 +34,12 @@ import System.FilePath
 import System.Directory
 import System.IO
 
+import Graphics.UI.Gtk
+
 import Environment
+import Compound
+import UI
+import Utils
 
 
 config name defl = do
@@ -51,3 +60,52 @@ writeConfig name cont =
 configFileName name = joinPath [configBaseDir, name]
 
 configBaseDir = joinPath [fromJust homeDir, ".vision"]
+
+
+class CompoundWidget cw => ConfigWidget cw where
+  type Config cw
+  getConfig    :: cw -> IO (Config cw)
+  setConfig    :: cw -> Config cw -> IO ()
+  getChanged   :: cw -> IO Bool
+  clearChanged :: cw -> IO ()
+  grabFocus    :: cw -> IO ()
+
+
+makeConfigDialog make getc setc = do
+  windowGroup <- windowGroupNew
+
+  dialog <- dialogNew
+  windowGroupAddWindow windowGroup dialog
+  windowSetTransientFor dialog window
+  windowSetModal dialog False
+  dialogSetHasSeparator dialog False
+
+  dialogAddButton   dialog "gtk-apply"  ResponseApply
+  dialogAddButton   dialog "gtk-cancel" ResponseCancel
+  dialogAddButtonCR dialog "gtk-ok"     ResponseOk
+  dialogSetResponseSensitive dialog ResponseApply False
+
+  upper <- dialogGetUpper dialog
+  cw <- make windowGroup $
+    dialogSetResponseSensitive dialog ResponseApply True
+  boxPackStartDefaults upper $ outer cw
+
+  dialog `onResponse` \resp ->
+    case resp of
+      ResponseApply -> do
+        dialogSetResponseSensitive dialog ResponseApply False
+        changed <- getChanged cw
+        when changed $ setc =<< getConfig cw
+        clearChanged cw
+        grabFocus cw
+      ResponseOk    -> do
+        changed <- getChanged cw
+        when changed $ setc =<< getConfig cw
+        widgetDestroy dialog
+      _ ->
+        widgetDestroy dialog
+
+  setConfig cw =<< getc
+  grabFocus cw
+
+  return dialog

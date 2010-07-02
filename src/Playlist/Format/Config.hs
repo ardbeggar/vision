@@ -19,7 +19,6 @@
 
 module Playlist.Format.Config
   ( makePlaylistFormatView
-  , ConfigWidget (..)
   ) where
 
 import Control.Monad
@@ -30,16 +29,8 @@ import Graphics.UI.Gtk
 
 import Utils
 import UI
+import Config
 import Compound
-
-
-class ConfigWidget cw where
-  type Config cw
-  getConfig    :: cw -> IO (Config cw)
-  setConfig    :: cw -> Config cw -> IO ()
-  getChanged   :: cw -> IO Bool
-  clearChanged :: cw -> IO ()
-  grabFocus    :: cw -> IO ()
 
 
 data FormatView
