@@ -36,13 +36,13 @@ initLocation =
   initHistory
 
 
-browseLocation maybeURL = do
+browseLocation order maybeURL = do
   let f = browseLocation
 
   env <- initUI
   let ?env = env
 
-  env <- initModel
+  env <- initModel order
   let ?env = env
 
   env <- initView

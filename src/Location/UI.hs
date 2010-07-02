@@ -136,7 +136,7 @@ uiActions browse =
     , actionEntryStockId     = Just stockNew
     , actionEntryAccelerator = Just "<Control>n"
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browse Nothing
+    , actionEntryCallback    = newWindow browse
     }
   , ActionEntry
     { actionEntryName        = "open-location"
@@ -195,7 +195,7 @@ srvActions browse =
     , actionEntryStockId     = Just stockOpen
     , actionEntryAccelerator = Just "<Control>Return"
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadAtCursor (browse . Just)
+    , actionEntryCallback    = browseInNewWindow browse
     }
   , ActionEntry
     { actionEntryName        = "add-to-playlist"
@@ -271,3 +271,11 @@ loadAtCursor func = do
 clearLocationEntry = do
   entrySetText locationEntry ""
   widgetGrabFocus locationEntry
+
+browseInNewWindow browse = do
+  order <- getSortOrder
+  loadAtCursor (browse order . Just)
+
+newWindow browse = do
+  order <- getSortOrder
+  browse order Nothing

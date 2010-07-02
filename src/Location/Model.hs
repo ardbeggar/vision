@@ -33,6 +33,7 @@ module Location.Model
   , itemByIter
   , itemByPath
   , setSortOrder
+  , getSortOrder
   ) where
 
 import Control.Concurrent.MVar
@@ -101,10 +102,14 @@ changeLocation Up l =
 
 
 data State
-  = State { sLocation :: Location }
+  = State { sLocation :: Location
+          , sOrder    :: SortType
+          }
 
-makeState =
-  State { sLocation = makeLocation }
+makeState order =
+  State { sLocation = makeLocation
+        , sOrder    = order
+        }
 
 data Item
   = Item { iName  :: String
@@ -163,17 +168,17 @@ canGo = withMVar state $ \s ->
              not $ null c)
 
 
-initModel = do
-  env <- initEnv
+initModel order = do
+  env <- initEnv order
   let ?env = env
 
-  setSortOrder SortAscending
+  setSortOrder order
 
   return ?env
 
 
-initEnv = do
-  state      <- newMVar makeState
+initEnv order = do
+  state      <- newMVar $ makeState order
   store      <- listStoreNewDND [] Nothing Nothing
   sort       <- treeModelSortNewWithModel store
   onLocation <- makeHandlerMVar
@@ -206,5 +211,10 @@ itemByPath path = do
 compareIters order a b =
   compareItems order <$> itemByIter' a <*> itemByIter' b
 
-setSortOrder =
-  treeSortableSetDefaultSortFunc sortModel . compareIters
+getSortOrder =
+  withMVar state $ return . sOrder
+
+setSortOrder order = do
+  modifyMVar_ state $ \s ->
+    return s { sOrder = order }
+  treeSortableSetDefaultSortFunc sortModel $ compareIters order

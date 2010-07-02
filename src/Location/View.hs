@@ -56,7 +56,7 @@ initView = do
   column <- treeViewColumnNew
   treeViewAppendColumn locationView column
   treeViewColumnSetTitle column "Name"
-  treeViewColumnSetSortOrder column SortAscending
+  treeViewColumnSetSortOrder column =<< getSortOrder
   treeViewColumnSetSortIndicator column True
   treeViewColumnSetClickable column True
   column `onColClicked` do

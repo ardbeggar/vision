@@ -297,7 +297,7 @@ srvActions =
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browseLocation Nothing
+    , actionEntryCallback    = browseLocation SortAscending Nothing
     }
   , ActionEntry
     { actionEntryName        = "clear-playlist"
