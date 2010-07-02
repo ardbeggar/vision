@@ -56,6 +56,16 @@ initView = do
   column <- treeViewColumnNew
   treeViewAppendColumn locationView column
   treeViewColumnSetTitle column "Name"
+  treeViewColumnSetSortOrder column SortAscending
+  treeViewColumnSetSortIndicator column True
+  treeViewColumnSetClickable column True
+  column `onColClicked` do
+    order <- treeViewColumnGetSortOrder column
+    let order' = case order of
+          SortAscending  -> SortDescending
+          SortDescending -> SortAscending
+    treeViewColumnSetSortOrder column order'
+    setSortOrder order'
 
   cell <- cellRendererPixbufNew
   treeViewColumnPackStart column cell False

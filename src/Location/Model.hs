@@ -30,6 +30,7 @@ module Location.Model
   , canGo
   , itemByIter
   , itemByPath
+  , setSortOrder
   ) where
 
 import Control.Concurrent.MVar
@@ -117,7 +118,11 @@ makeItem x =
   where name = last $ split $ path
         path = decodeURL $ entryPath x
 
-compareItems a b
+compareItems SortDescending a b
+  | iIsDir a == iIsDir b = compare (iName b) (iName a)
+  | iIsDir a             = LT
+  | iIsDir b             = GT
+compareItems SortAscending a b
   | iIsDir a == iIsDir b = compare (iName a) (iName b)
   | iIsDir a             = LT
   | iIsDir b             = GT
@@ -160,7 +165,7 @@ initModel = do
   env <- initEnv
   let ?env = env
 
-  treeSortableSetDefaultSortFunc sortModel compareIters
+  setSortOrder SortAscending
 
   return ?env
 
@@ -196,5 +201,8 @@ itemByPath path = do
   [n] <- treeModelSortConvertPathToChildPath sortModel path
   listStoreGetValue locationStore n
 
-compareIters a b =
-  compareItems <$> itemByIter' a <*> itemByIter' b
+compareIters order a b =
+  compareItems order <$> itemByIter' a <*> itemByIter' b
+
+setSortOrder =
+  treeSortableSetDefaultSortFunc sortModel . compareIters
