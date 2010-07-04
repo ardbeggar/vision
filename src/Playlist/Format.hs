@@ -46,7 +46,7 @@ import Medialib
 import Properties
 import Config
 import Utils
-import Env
+import Context
 import Handler
 
 import Playlist.Format.Format
@@ -76,37 +76,37 @@ data Format
            , fOnFormatsChanged :: HandlerMVar ()
            }
 
-getMakeInfo = readIORef (fMakeInfoRef getEnv)
-putMakeInfo = writeIORef (fMakeInfoRef getEnv)
+getMakeInfo = readIORef (fMakeInfoRef context)
+putMakeInfo = writeIORef (fMakeInfoRef context)
 
-getFormatDefs  = readIORef (fFormatDefsRef getEnv)
-putFormatDefs' = writeIORef (fFormatDefsRef getEnv)
+getFormatDefs  = readIORef (fFormatDefsRef context)
+putFormatDefs' = writeIORef (fFormatDefsRef context)
 putFormatDefs defs = do
   putFormatDefs' defs
   saveFormatDefs
   updateFormats True
 
-lookupDuration = fLookupDuration getEnv
-lookupURL      = fLookupURL getEnv
+lookupDuration = fLookupDuration context
+lookupURL      = fLookupURL context
 
-onFormatsChanged = onHandler $ fOnFormatsChanged getEnv
+onFormatsChanged = onHandler $ fOnFormatsChanged context
 
 
 initFormat = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   loadFormatDefs
 
-  return ?env
+  return ?context
 
-initEnv = do
+initContext = do
   formatDefsRef    <- newIORef []
   makeInfoRef      <- newIORef $ const $ return ([], "")
   duration         <- fromJust <$> property "Duration"
   url              <- fromJust <$> property "URL"
   onFormatsChanged <- makeHandlerMVar
-  return $ augmentEnv
+  return $ augmentContext
     Format { fMakeInfoRef      = makeInfoRef
            , fFormatDefsRef    = formatDefsRef
            , fLookupDuration   = maybe "" escapeMarkup . lookup duration

@@ -20,7 +20,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Environment
-  ( EnvironmentEnvClass
+  ( EnvironmentContextClass
   , initEnvironment
   , homeDir
   , dataDir
@@ -29,11 +29,11 @@ module Environment
   , maybeGetEnv
   ) where
 
-import qualified System.Environment as SE
+import System.Environment
 import System.FilePath
 import Control.Applicative
 
-import Env
+import Context
 
 import Paths_vision
 
@@ -43,25 +43,25 @@ data Environment
                 , eDataDir  :: FilePath
                 , eXMMSPath :: Maybe String }
 
-class (EnvClass Environment c) => EnvironmentEnvClass c where {}
-instance (EnvClass Environment c) => EnvironmentEnvClass c
+class (ContextClass Environment c) => EnvironmentContextClass c where {}
+instance (ContextClass Environment c) => EnvironmentContextClass c
 
-homeDir   = eHomeDir getEnv
-dataDir   = eDataDir getEnv
-xmmsPath  = eXMMSPath getEnv
+homeDir   = eHomeDir context
+dataDir   = eDataDir context
+xmmsPath  = eXMMSPath context
 
 
 initEnvironment = do
   homeDir  <- maybeGetEnv "HOME"
   dataDir  <- getDataDir
   xmmsPath <- maybeGetEnv "XMMS_PATH"
-  return $ makeEnv Environment { eHomeDir  = homeDir
+  return $ makeContext Environment { eHomeDir  = homeDir
                                , eDataDir  = dataDir
                                , eXMMSPath = xmmsPath
                                }
 
 maybeGetEnv var =
-  (Just <$> SE.getEnv var) `catch` \_ -> return Nothing
+  (Just <$> getEnv var) `catch` \_ -> return Nothing
 
 uiFilePath name = dataDir </> "ui" </> name <.> "xml"
 

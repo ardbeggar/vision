@@ -29,19 +29,19 @@ import Data.Char
 import Graphics.UI.Gtk
 
 import Config
-import Env
+import Context
 
 
 data History
   = History { hStore :: ListStore String }
 
-historyStore = hStore getEnv
+historyStore = hStore context
 
 
 initHistory = do
   history <- config "history.urls" []
   store   <- listStoreNewDND history Nothing Nothing
-  return $ augmentEnv
+  return $ augmentContext
     History { hStore = store }
 
 makeHistoryCompletion = do

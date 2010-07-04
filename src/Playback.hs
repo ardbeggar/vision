@@ -40,7 +40,7 @@ import XMMS2.Client
 
 import XMMS
 import Handler
-import Env
+import Context
 import Utils
 
 
@@ -55,15 +55,15 @@ data Playback
              , pOnCurrentTrack   :: HandlerMVar (Maybe (Int, String))
              }
 
-state = pState getEnv
+state = pState context
 
-onPlaybackStatus = onHandler (pOnPlaybackStatus getEnv)
+onPlaybackStatus = onHandler (pOnPlaybackStatus context)
 onPlaybackStatusAdd f = do
   id <- onPlaybackStatus . add $ f
   f =<< getPlaybackStatus
   return id
 
-onCurrentTrack = onHandler (pOnCurrentTrack getEnv)
+onCurrentTrack = onHandler (pOnCurrentTrack context)
 
 getPlaybackStatus =
   withMVar state $ return . sStatus
@@ -73,8 +73,8 @@ getCurrentTrack =
 
 
 initPlayback = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   onServerConnectionAdd . ever $ \conn ->
     if conn
@@ -90,14 +90,14 @@ initPlayback = do
     else
       resetState
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   state            <- newMVar makeState
   onPlaybackStatus <- makeHandlerMVar
   onCurrentTrack   <- makeHandlerMVar
-  return $ augmentEnv
+  return $ augmentContext
     Playback { pState            = state
              , pOnPlaybackStatus = onPlaybackStatus
              , pOnCurrentTrack   = onCurrentTrack

@@ -32,7 +32,7 @@ import Data.Maybe
 import Graphics.UI.Gtk hiding (Clipboard)
 import qualified Graphics.UI.Gtk as G
 
-import Env
+import Context
 import Handler
 import Utils
 
@@ -49,11 +49,11 @@ data Clipboard
               , cOnClipboardTargets :: HandlerMVar ()
               }
 
-state = cState getEnv
+state = cState context
 
-clipboard = cClipboard getEnv
+clipboard = cClipboard context
 
-onClipboardTargets = onHandler $ cOnClipboardTargets getEnv
+onClipboardTargets = onHandler $ cOnClipboardTargets context
 
 getClipboardTargets = withMVar state $ return . sTargets
 
@@ -64,19 +64,19 @@ updateClipboardTargets targets = do
 
 
 initClipboard = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   timeoutAdd checkClipboard 0
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   state              <- newMVar makeState
   clipboard          <- clipboardGet selectionClipboard
   onClipboardTargets <- makeHandlerMVar
-  return $ augmentEnv
+  return $ augmentContext
     Clipboard { cState              = state
               , cClipboard          = clipboard
               , cOnClipboardTargets = onClipboardTargets

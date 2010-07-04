@@ -57,8 +57,8 @@ import Debug.Trace
 
 
 setupImpex = do
-  env <- trace "    init env" initEnv
-  let ?env = env
+  context <- trace "    init context" initContext
+  let ?context = context
   trace "    setup import" setupImport
   trace "    setup export" setupExport
   trace "    all done" $ return ()
@@ -179,21 +179,21 @@ readOnlyProps =
   , "startms", "stopms", "isdir", "intsort" ]
 
 
-data Env
-  = Env { eActionGroup :: ActionGroup
+data Context
+  = Context { eActionGroup :: ActionGroup
         , eVpfFilter   :: FileFilter
         , eAllFilter   :: FileFilter }
 
 addAction name text stockId onActivated = do
   action <- actionNew name text Nothing (Just stockId)
-  actionGroupAddAction (eActionGroup ?env) action
+  actionGroupAddAction (eActionGroup ?context) action
   action `on` actionActivated $ onActivated
   return action
 
-vpfFilter = eVpfFilter ?env
-allFilter = eAllFilter ?env
+vpfFilter = eVpfFilter ?context
+allFilter = eAllFilter ?context
 
-initEnv = do
+initContext = do
   actionGroup <- actionGroupNew "property-impex"
   insertActionGroup actionGroup 1
   actionGroupSetSensitive actionGroup False
@@ -209,7 +209,7 @@ initEnv = do
   fileFilterSetName allFilter "All files"
   fileFilterAddCustom allFilter [] $ \_ _ _ _ -> return True
 
-  return Env { eActionGroup = actionGroup
+  return Context { eActionGroup = actionGroup
              , eVpfFilter   = vpfFilter
              , eAllFilter   = allFilter }
 

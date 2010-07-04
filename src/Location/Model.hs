@@ -45,7 +45,7 @@ import Graphics.UI.Gtk
 
 import XMMS2.Client
 
-import Env
+import Context
 import Utils
 import Handler
 
@@ -142,10 +142,10 @@ data Model
           , mOnLocation :: HandlerMVar ()
           }
 
-locationStore = mStore getEnv
-sortModel = mSort getEnv
-onLocation = onHandler $ mOnLocation getEnv
-state = mState getEnv
+locationStore = mStore context
+sortModel = mSort context
+onLocation = onHandler $ mOnLocation context
+state = mState context
 
 getCurrentLocation =
   withMVar state $ return . lCurrent . sLocation
@@ -169,20 +169,20 @@ canGo = withMVar state $ \s ->
 
 
 initModel order = do
-  env <- initEnv order
-  let ?env = env
+  context <- initContext order
+  let ?context = context
 
   setSortOrder order
 
-  return ?env
+  return ?context
 
 
-initEnv order = do
+initContext order = do
   state      <- newMVar $ makeState order
   store      <- listStoreNewDND [] Nothing Nothing
   sort       <- treeModelSortNewWithModel store
   onLocation <- makeHandlerMVar
-  return $ augmentEnv
+  return $ augmentContext
     Model { mState      = state
           , mStore      = store
           , mSort       = sort

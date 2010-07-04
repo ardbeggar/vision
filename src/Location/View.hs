@@ -29,7 +29,7 @@ import Data.Char
 
 import Graphics.UI.Gtk
 
-import Env
+import Context
 import Location.Model
 import Location.History
 
@@ -40,14 +40,14 @@ data View
          , vEntry :: Entry
          }
 
-locationView  = vView getEnv
-locationSel   = vSel getEnv
-locationEntry = vEntry getEnv
+locationView  = vView context
+locationSel   = vSel context
+locationEntry = vEntry context
 
 
 initView = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   treeViewSetRulesHint locationView True
 
@@ -90,14 +90,14 @@ initView = do
   comp <- makeHistoryCompletion
   entrySetCompletion locationEntry comp
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   view  <- treeViewNewWithModel sortModel
   sel   <- treeViewGetSelection view
   entry <- entryNew
-  return $ augmentEnv
+  return $ augmentContext
     View { vView  = view
          , vSel   = sel
          , vEntry = entry

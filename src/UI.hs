@@ -37,7 +37,7 @@ import Data.Maybe
 
 import Graphics.UI.Gtk
 
-import Env
+import Context
 import Environment
 
 
@@ -48,14 +48,14 @@ data UI
        , uActionGroup :: ActionGroup
        }
 
-window        = uWindow getEnv
-contents      = uContents getEnv
-uiManager     = uManager getEnv
-uiActionGroup = uActionGroup getEnv
+window        = uWindow context
+contents      = uContents context
+uiManager     = uManager context
+uiActionGroup = uActionGroup context
 
 initUI = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   containerAdd window contents
 
@@ -67,15 +67,15 @@ initUI = do
   menubar <- getWidget castToMenuBar "ui/menubar"
   boxPackStart contents menubar PackNatural 0
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   window        <- windowNew
   contents      <- vBoxNew False 0
   uiManager     <- uiManagerNew
   uiActionGroup <- actionGroupNew "ui"
-  return $ augmentEnv
+  return $ augmentContext
     UI { uWindow      = window
        , uContents    = contents
        , uManager     = uiManager

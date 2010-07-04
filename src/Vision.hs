@@ -37,35 +37,35 @@ import Playlist
 main = do
   initGUI
 
-  env <- initEnvironment
-  let ?env = env
+  context <- initEnvironment
+  let ?context = context
 
-  env <- initProperties
-  let ?env = env
+  context <- initProperties
+  let ?context = context
 
-  env <- initXMMS
-  let ?env = env
+  context <- initXMMS
+  let ?context = context
 
-  env <- initMedialib
-  let ?env = env
+  context <- initMedialib
+  let ?context = context
 
-  env <- initPlayback
-  let ?env = env
+  context <- initPlayback
+  let ?context = context
 
-  env <- initVolume
-  let ?env = env
+  context <- initVolume
+  let ?context = context
 
-  env <- initPlaytime
-  let ?env = env
+  context <- initPlaytime
+  let ?context = context
 
-  env <- initClipboard
-  let ?env = env
+  context <- initClipboard
+  let ?context = context
 
-  env <- initLocation
-  let ?env = env
+  context <- initLocation
+  let ?context = context
 
-  env <- initPlaylist
-  let ?env = env
+  context <- initPlaylist
+  let ?context = context
 
   showPlaylist
 

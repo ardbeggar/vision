@@ -39,7 +39,7 @@ import XMMS2.Client
 import XMMS
 import Handler
 import Medialib
-import Env
+import Context
 import Utils
 import Playback
 
@@ -52,9 +52,9 @@ data Playtime
              , pAdj   :: Adjustment
              , pCId   :: ConnectId Adjustment }
 
-state = pState getEnv
-cId   = pCId getEnv
-adj   = pAdj getEnv
+state = pState context
+cId   = pCId context
+adj   = pAdj context
 
 getCurrentId    = withMVar state $ return . sCurrentId
 setCurrentId id = modifyMVar_ state $ \s -> return  s { sCurrentId = id }
@@ -63,8 +63,8 @@ initPlaytime = do
   updateRef <- initUpdate
   let ?updateRef = updateRef
 
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   onServerConnectionAdd . ever $ \conn ->
     if conn
@@ -83,17 +83,17 @@ initPlaytime = do
     when (fromMaybe StatusStop status == StatusStop) $
       setValue 0
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   state <- newMVar makeState
   adj <- adjustmentNew 0 0 bigNum 5000 5000 0
   cId <- adj `onValueChanged` do
     pos <- adjustmentGetValue adj
     seek pos
 
-  return $ augmentEnv
+  return $ augmentContext
     Playtime { pState = state
              , pAdj   = adj
              , pCId   = cId }

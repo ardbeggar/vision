@@ -40,7 +40,7 @@ import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
 
 import Utils
-import Env
+import Context
 import XMMS
 import Handler
 
@@ -69,14 +69,14 @@ data MLib
          , mOnMediaInfo :: HandlerMVar (MediaId, Stamp, MediaInfo)
          }
 
-cache = mCache getEnv
+cache = mCache context
 
 
-onMediaInfo = onHandler $ mOnMediaInfo getEnv
+onMediaInfo = onHandler $ mOnMediaInfo context
 
 initMedialib = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   onServerConnectionAdd . ever $ \conn ->
     when conn $ do
@@ -89,7 +89,7 @@ initMedialib = do
               medialibGetInfo xmms id >>* handleInfo id'
         return True
 
-  return ?env
+  return ?context
 
 requestInfo id = do
   modifyMVar_ cache $ \cache ->
@@ -106,10 +106,10 @@ requestInfo id = do
         return cache
 
 
-initEnv = do
+initContext = do
   cache       <- newMVar emptyCache
   onMediaInfo <- makeHandlerMVar
-  return $ augmentEnv
+  return $ augmentContext
     MLib { mCache       = cache
          , mOnMediaInfo = onMediaInfo }
 

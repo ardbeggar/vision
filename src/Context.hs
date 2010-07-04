@@ -22,12 +22,12 @@
              OverlappingInstances,
              TypeOperators #-}
 
-module Env
-  ( EnvClass
-  , EnvType
-  , makeEnv
-  , augmentEnv
-  , getEnv
+module Context
+  ( ContextClass
+  , ContextType
+  , makeContext
+  , augmentContext
+  , context
   ) where
 
 
@@ -35,24 +35,24 @@ infixr 9 :*
 data a :* b = a :* b
 data Nil = Nil
 
-class EnvClass e c where
-  env :: c -> e
+class ContextClass c a where
+  ctxt :: a -> c
 
-instance EnvClass e (e :* b) where
-  env (e :* _) = e
+instance ContextClass c (c :* b) where
+  ctxt (c :* _) = c
 
-instance EnvClass e b => EnvClass e (a :* b) where
-  env (_ :* b) = env b
-
-
-type EnvType a b = a :* b
+instance ContextClass c b => ContextClass c (a :* b) where
+  ctxt (_ :* b) = ctxt b
 
 
-makeEnv :: e -> EnvType e Nil
-makeEnv e = e :* Nil
+type ContextType a b = a :* b
 
-augmentEnv :: (?env :: e1) => e2 -> EnvType e2 e1
-augmentEnv e = e :* ?env
 
-getEnv :: (?env :: c, EnvClass e c) => e
-getEnv = env ?env
+makeContext :: c -> ContextType c Nil
+makeContext c = c :* Nil
+
+augmentContext :: (?context :: c1) => c2 -> ContextType c2 c1
+augmentContext c = c :* ?context
+
+context :: (?context :: a, ContextClass c a) => c
+context = ctxt ?context

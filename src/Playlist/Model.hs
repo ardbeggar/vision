@@ -35,7 +35,7 @@ import Data.Int
 
 import Graphics.UI.Gtk
 
-import Env
+import Context
 import Utils
 
 
@@ -48,9 +48,9 @@ data Model
           , mState             :: MVar State
           }
 
-playlistStore = mStore getEnv
-onPlaylistUpdated = onHandler (mOnPlaylistUpdated getEnv)
-state = mState getEnv
+playlistStore = mStore context
+onPlaylistUpdated = onHandler (mOnPlaylistUpdated context)
+state = mState context
 
 getPlaylistName      = withMVar state (return . sName)
 setPlaylistName name = modifyMVar_ state $ \s ->
@@ -67,20 +67,20 @@ playlistGetIds =
 
 
 initModel = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
-  return ?env
+  return ?context
 
 clearModel =
   listStoreClear playlistStore
 
 
-initEnv = do
+initContext = do
   store             <- listStoreNewDND [] Nothing Nothing
   onPlaylistUpdated <- makeHandlerMVar
   state             <- newMVar makeState
-  return $ augmentEnv
+  return $ augmentContext
     Model { mStore             = store
           , mOnPlaylistUpdated = onPlaylistUpdated
           , mState             = state

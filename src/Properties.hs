@@ -36,8 +36,8 @@ import Properties.Model
 
 
 initProperties = do
-  env <- initModel
-  let ?env = env
+  context <- initModel
+  let ?context = context
 
-  return ?env
+  return ?context
 

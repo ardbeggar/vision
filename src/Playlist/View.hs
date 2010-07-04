@@ -33,7 +33,7 @@ import Graphics.UI.Gtk
 
 import XMMS2.Client
 
-import Env
+import Context
 import UI
 import Playback
 import Playlist.Model
@@ -46,13 +46,13 @@ data View
   = View { vView :: TreeView
          , vSel  :: TreeSelection }
 
-playlistView = vView getEnv
-playlistSel  = vSel getEnv
+playlistView = vView context
+playlistSel  = vSel context
 
 
 initView = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   treeViewSetRulesHint playlistView True
   treeViewSetReorderable playlistView True
@@ -98,7 +98,7 @@ initView = do
   playlistView `onRowActivated` \[n] _ ->
     playTrack n
 
-  return ?env
+  return ?context
 
 
 getInfoIfNeeded iter = do
@@ -116,10 +116,10 @@ updateWindowTitle = do
     Nothing   -> "Vision playlist"
     Just name -> name ++ " - Vision playlist"
 
-initEnv = do
+initContext = do
   view <- treeViewNewWithModel playlistStore
   sel  <- treeViewGetSelection view
-  return $ augmentEnv
+  return $ augmentContext
     View { vView = view
          , vSel  = sel }
 

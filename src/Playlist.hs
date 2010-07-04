@@ -40,17 +40,17 @@ initPlaylist =
   initFormat
 
 showPlaylist = do
-  env <- initUI
-  let ?env = env
+  context <- initUI
+  let ?context = context
 
-  env <- initModel
-  let ?env = env
+  context <- initModel
+  let ?context = context
 
-  env <- initIndex
-  let ?env = env
+  context <- initIndex
+  let ?context = context
 
-  env <- initView
-  let ?env = env
+  context <- initView
+  let ?context = context
 
   setupSearch
   setupUpdate

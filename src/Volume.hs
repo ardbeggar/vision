@@ -33,19 +33,19 @@ import XMMS2.Client
 import XMMS
 import Handler
 import Utils
-import Env
+import Context
 
 
 data Volume
   = Volume { vAdj :: Adjustment
            , vCid :: ConnectId Adjustment }
 
-adj = vAdj getEnv
-cId = vCid getEnv
+adj = vAdj context
+cId = vCid context
 
 initVolume = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   onServerConnectionAdd . ever $ \conn ->
     if conn
@@ -59,15 +59,15 @@ initVolume = do
       signalBlock cId
       withoutVolumeChange $ adjustmentSetValue (adj) 0
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   adj <- adjustmentNew 0 0 100 5 5 0
   cId <- adj `onValueChanged` do
     vol <- adjustmentGetValue adj
     setVolume $ round vol
-  return $ augmentEnv
+  return $ augmentContext
     Volume { vAdj = adj, vCid = cId }
 
 

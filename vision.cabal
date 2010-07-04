@@ -24,7 +24,7 @@ executable vision
   main-is:          Vision.hs
   other-modules:    Handler,
                     Utils,
-                    Env,
+                    Context,
                     XMMS,
                     Environment,
                     Medialib,

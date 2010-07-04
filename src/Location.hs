@@ -39,14 +39,14 @@ initLocation =
 browseLocation order maybeURL = do
   let f = browseLocation
 
-  env <- initUI
-  let ?env = env
+  context <- initUI
+  let ?context = context
 
-  env <- initModel order
-  let ?env = env
+  context <- initModel order
+  let ?context = context
 
-  env <- initView
-  let ?env = env
+  context <- initView
+  let ?context = context
 
   setupUI f
 

@@ -35,7 +35,7 @@ import qualified Data.Map as Map
 
 import Graphics.UI.Gtk
 
-import Env
+import Context
 import Config
 
 import Properties.Property
@@ -46,23 +46,23 @@ data Properties
                , pMap   :: MVar (Map String Property)
                }
 
-propertyStore = pStore getEnv
-propertyMap   = pMap getEnv
+propertyStore = pStore context
+propertyMap   = pMap context
 
 
 initModel = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   loadProperties
   updateProperties
 
-  return ?env
+  return ?context
 
-initEnv = do
+initContext = do
   store <- listStoreNew []
   npmap <- newMVar $ Map.fromList $ map (\p -> (propName p, p)) builtinProperties
-  return $ augmentEnv
+  return $ augmentContext
     Properties { pStore = store
                , pMap   = npmap
                }

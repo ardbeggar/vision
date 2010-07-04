@@ -33,7 +33,7 @@ import qualified Data.IntMap as IntMap
 import Graphics.UI.Gtk hiding (add)
 
 import Medialib
-import Env
+import Context
 import Handler
 import Playlist.Model
 import Playlist.Format
@@ -47,22 +47,22 @@ data IndexEntry
 data Index
   = Index { iTable :: MVar (IntMap (IndexEntry, [TreeRowReference])) }
 
-index = iTable getEnv
+index = iTable context
 
 
 initIndex = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   onMediaInfo . add . ever $ handleInfo
   onFormatsChanged . add . ever . const $ handleFormats
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   table <- newMVar IntMap.empty
-  return $ augmentEnv
+  return $ augmentContext
     Index { iTable = table }
 
 handleInfo (id, stamp, info) = do

@@ -36,7 +36,7 @@ import XMMS2.Client.Glib
 import Environment
 import Handler
 import Utils
-import Env
+import Context
 
 
 data State
@@ -51,26 +51,26 @@ data XMMS
          , xState              :: MVar State
          }
 
-xmms               = xXMMS getEnv
-onServerConnection = onHandler (xOnServerConnection getEnv)
-state              = xState getEnv
+xmms               = xXMMS context
+onServerConnection = onHandler (xOnServerConnection context)
+state              = xState context
 
 connected = withMVar state $ return . sConnected
 
 initXMMS = do
-  env <- initEnv
-  let ?env = env
+  context <- initContext
+  let ?context = context
 
   scheduleTryConnect 100
 
-  return ?env
+  return ?context
 
 
-initEnv = do
+initContext = do
   xmms               <- init "Vision"
   onServerConnection <- makeHandlerMVar
   state              <- newMVar makeState
-  return $ augmentEnv
+  return $ augmentContext
     XMMS { xXMMS               = xmms
          , xOnServerConnection = onServerConnection
          , xState              = state

@@ -67,27 +67,27 @@ setupEditor = do
   return ()
 
 
-data Env
-  = Env { eLock     :: MVar ()
+data Context
+  = Context { eLock     :: MVar ()
         , eStateRef :: IORef (Maybe State)
         , eDialog   :: Dialog
         , eStore    :: ListStore (Property, Maybe X.Property)
         , ePrevB    :: Button
         , eNextB    :: Button }
 
-tryLock f = maybe (return ()) (const f) =<< tryTakeMVar (eLock ?env)
-unlock    = putMVar (eLock ?env) ()
+tryLock f = maybe (return ()) (const f) =<< tryTakeMVar (eLock ?context)
+unlock    = putMVar (eLock ?context) ()
 
-initState     = writeIORef (eStateRef ?env) . Just =<< makeState
+initState     = writeIORef (eStateRef ?context) . Just =<< makeState
 withState fun = do
-  state <- readIORef (eStateRef ?env)
+  state <- readIORef (eStateRef ?context)
   fmaybeM_ state $ \state ->
-    writeIORef (eStateRef ?env) . Just =<< execStateT fun state
+    writeIORef (eStateRef ?context) . Just =<< execStateT fun state
 
-dialog      = eDialog ?env
+dialog      = eDialog ?context
 enableApply = liftIO . dialogSetResponseSensitive dialog ResponseApply
 
-store          = eStore ?env
+store          = eStore ?context
 storeToList    = liftIO $ listStoreToList store
 storeToNumList = zip [0 .. ] <$> storeToList
 storeSet n     = liftIO . listStoreSetValue store n
@@ -134,8 +134,8 @@ setupPrevNext = do
         (cur > 0, cur < (snd $ bounds $ sIdVec state))
         else (False, False)
   liftIO $ do
-    widgetSetSensitive (ePrevB ?env) prev
-    widgetSetSensitive (eNextB ?env) next
+    widgetSetSensitive (ePrevB ?context) prev
+    widgetSetSensitive (eNextB ?context) next
 
 populateStore = do
   info <- getCurrentInfo
@@ -226,7 +226,7 @@ savePropertyEditorConfig = do
   return ()
 
 makePropertyEditor = do
-  -- Initialize our environment.
+  -- Initialize our contextironment.
   lock     <- newMVar ()
   stateRef <- newIORef Nothing
   dialog   <- dialogNew
@@ -234,7 +234,7 @@ makePropertyEditor = do
   prevB    <- buttonNewWithMnemonic "_Previous track"
   nextB    <- buttonNewWithMnemonic "_Next track"
   ptrkB    <- checkButtonNewWithMnemonic "Per _track"
-  let ?env = Env { eLock     = lock
+  let ?context = Context { eLock     = lock
                  , eStateRef = stateRef
                  , eDialog   = dialog
                  , eStore    = store
