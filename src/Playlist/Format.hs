@@ -39,7 +39,7 @@ import Data.Maybe
 import Data.Either
 import Data.Char (toLower)
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (add)
 import System.Glib.GError
 
 import Medialib
@@ -48,7 +48,6 @@ import Config
 import Utils
 import Context
 import Handler
-
 import Playlist.Format.Format
 import Playlist.Format.Parser
 
@@ -97,6 +96,8 @@ initFormat = do
   let ?context = context
 
   loadFormatDefs
+  onProperties . add . ever . const $
+    updateFormats True
 
   return ?context
 
