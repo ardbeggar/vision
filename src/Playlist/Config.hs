@@ -18,20 +18,41 @@
 --
 
 module Playlist.Config
-  ( showPlaylistConfigDialog
+  ( initPlaylistConfig
+  , showPlaylistConfigDialog
   ) where
+
+import Control.Concurrent.MVar
 
 import Graphics.UI.Gtk
 
+import UI
 import Config
+import Context
 import Playlist.Format
 import Playlist.Format.Config
 
 
-showPlaylistConfigDialog = do
+data Config
+  = Config { cDialog :: MVar (Maybe Dialog) }
+
+initPlaylistConfig = do
+  dialog <- newMVar Nothing
+  return $ augmentContext
+    Config { cDialog = dialog }
+
+showPlaylistConfigDialog =
+  modifyMVar_ (cDialog context) $ \maybeDialog -> do
+    dialog <- case maybeDialog of
+      Just dialog -> return dialog
+      Nothing     -> makePlaylistConfigDialog
+    windowSetTransientFor dialog window
+    windowPresent dialog
+    return $ Just dialog
+
+makePlaylistConfigDialog = do
   dialog <- makeConfigDialog makePlaylistFormatView
             getFormatDefs putFormatDefs
   windowSetTitle dialog "Configure playlist"
   windowSetDefaultSize dialog 500 400
-  widgetShowAll dialog
-
+  return dialog

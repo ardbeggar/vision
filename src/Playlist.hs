@@ -30,6 +30,7 @@ import Playlist.Model
 import Playlist.Index
 import Playlist.Format
 import Playlist.View
+import Playlist.Config
 import Playlist.Search
 import Playlist.Update
 import Playlist.DnD
@@ -50,6 +51,9 @@ showPlaylist = do
   let ?context = context
 
   context <- initView
+  let ?context = context
+
+  context <- initPlaylistConfig
   let ?context = context
 
   setupSearch
