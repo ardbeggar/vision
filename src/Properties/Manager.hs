@@ -103,6 +103,11 @@ makePropertyManagerWidget parent windowGroup onChanged = do
         comparing f <$> getByIter a <*> getByIter b
 
   treeSortableSetDefaultSortFunc sorted $ compBy (map toLower . propName)
+  treeSortableSetSortFunc sorted 0 $ compBy (map toLower . propName)
+  treeSortableSetSortFunc sorted 1 $ compBy (map toLower . propKey)
+  treeSortableSetSortFunc sorted 2 $ compBy (fromEnum . propType)
+  treeSortableSetSortFunc sorted 3 $ compBy (fromEnum . propReadOnly)
+  treeSortableSetSortFunc sorted 4 $ compBy (fromEnum . propCustom)
 
   view <- treeViewNewWithModel sorted
   treeViewSetRulesHint view True
@@ -113,8 +118,9 @@ makePropertyManagerWidget parent windowGroup onChanged = do
           PropertyString -> "string"
       showBool acc p =
         if acc p then "yes" else "no"
-      addColumn title acc = do
+      addColumn title id acc = do
         column <- treeViewColumnNew
+        treeViewColumnSetSortColumnId column id
         treeViewAppendColumn view column
         treeViewColumnSetTitle column title
         cell <- cellRendererTextNew
@@ -122,11 +128,11 @@ makePropertyManagerWidget parent windowGroup onChanged = do
         cellLayoutSetAttributes column cell store
           (\p -> [ cellText := acc p ])
 
-  addColumn "Name"        propName
-  addColumn "Key"         propKey
-  addColumn "Type"        showType
-  addColumn "Read-only" $ showBool propReadOnly
-  addColumn "Custom"    $ showBool propCustom
+  addColumn "Name"      0   propName
+  addColumn "Key"       1   propKey
+  addColumn "Type"      2   showType
+  addColumn "Read-only" 3 $ showBool propReadOnly
+  addColumn "Custom"    4 $ showBool propCustom
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
