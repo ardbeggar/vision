@@ -55,4 +55,6 @@ makePlaylistConfigDialog = do
             getFormatDefs putFormatDefs
   windowSetTitle dialog "Configure playlist"
   windowSetDefaultSize dialog 500 400
+  dialog `onDestroy` do
+    modifyMVar_ (cDialog context) $ const $ return Nothing
   return dialog
