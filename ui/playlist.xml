@@ -28,6 +28,9 @@
         <separator/>
         <menuitem action="configure-playlist"/>
       </menu>
+      <menu action="properties">
+        <menuitem action="manage-properties"/>
+      </menu>
     </placeholder>
   </menubar>
   <toolbar name="playbar">

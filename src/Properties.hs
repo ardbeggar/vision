@@ -27,12 +27,14 @@ module Properties
   , propertyStore
   , property
   , propertyList
+  , showPropertyManager
   ) where
 
 import Prelude hiding (lookup)
 
 import Properties.Property
 import Properties.Model
+import Properties.Manager
 
 
 initProperties = do

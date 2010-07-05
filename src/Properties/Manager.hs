@@ -2,9 +2,9 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 4 Mar. 2009
+--  Created: 5 Jul. 2010
 --
---  Copyright (C) 2009-2010 Oleg Belozeorov
+--  Copyright (C) 2010 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -18,7 +18,7 @@
 --
 
 module Properties.Manager
-  ( setupManager
+  ( showPropertyManager
   ) where
 
 import Control.Applicative
@@ -31,11 +31,123 @@ import Graphics.UI.Gtk
 
 import UI
 import Utils
-
+import Compound
+import Config
 import Properties.Property
 import Properties.Model
 
 
+showPropertyManager = do
+  dialog <- makeConfigDialog makePropertyManager
+            getProperties setProperties
+  windowSetTitle dialog "Manage properties"
+  windowSetDefaultSize dialog 500 400
+  widgetShowAll dialog
+
+
+data PM
+  = PM { pStore   :: ListStore Property
+       , pView    :: TreeView
+       , pBox     :: VBox
+       , pChanged :: IORef Bool
+       }
+
+instance CompoundWidget PM where
+  type Outer PM = VBox
+  outer = pBox
+
+instance ConfigWidget PM where
+  type Config PM = [Property]
+  getConfig = listStoreToList . pStore
+  setConfig pm config = do
+    let store = pStore pm
+    listStoreClear store
+    mapM_ (listStoreAppend store) config
+  getChanged = readIORef .  pChanged
+  clearChanged pm = writeIORef (pChanged pm) False
+  grabFocus = widgetGrabFocus . pView
+
+makePropertyManager _ onChanged = do
+  store <- listStoreNewDND [] Nothing Nothing
+  view  <- treeViewNewWithModel store
+  treeViewSetRulesHint view True
+
+  let showType p =
+        case propType p of
+          PropertyInt    -> "integer"
+          PropertyString -> "string"
+      showBool acc p =
+        if acc p then "yes" else "no"
+      addColumn title acc = do
+        column <- treeViewColumnNew
+        treeViewAppendColumn view column
+        treeViewColumnSetTitle column title
+        cell <- cellRendererTextNew
+        treeViewColumnPackStart column cell True
+        cellLayoutSetAttributes column cell store
+          (\p -> [ cellText := acc p ])
+
+  addColumn "Name"        propName
+  addColumn "Key"         propKey
+  addColumn "Type"        showType
+  addColumn "Read-only" $ showBool propReadOnly
+  addColumn "Custom"    $ showBool propCustom
+
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
+  containerAdd scroll view
+
+  changed <- newIORef False
+
+  let setChanged = do
+        writeIORef changed True
+        onChanged
+
+--  run  <- makeRunPropertyEntryDialog
+  addB <- buttonNewFromStock stockAdd
+--  addB `onClicked` run
+
+  delB <- buttonNewFromStock stockRemove
+  delB `onClicked` do
+    (path, _) <- treeViewGetCursor view
+    case path of
+      [n] -> do
+        prop <- listStoreGetValue store n
+        when (propCustom prop) $ do
+          listStoreRemove store n
+          s <- listStoreGetSize store
+          unless (s < 1) $
+            treeViewSetCursor view [min (s - 1) n] Nothing
+          setChanged
+      _ ->
+        return ()
+
+  view `on` cursorChanged $ do
+    (path, _) <- treeViewGetCursor view
+    case path of
+      [n] -> do
+        prop <- listStoreGetValue store n
+        widgetSetSensitive delB $ propCustom prop
+      _ ->
+        widgetSetSensitive delB False
+
+  bbox <- hBoxNew True 5
+  boxPackStartDefaults bbox addB
+  boxPackStartDefaults bbox delB
+
+  vbox <- vBoxNew False 5
+  containerSetBorderWidth vbox 7
+  boxPackStart vbox scroll PackGrow 0
+  boxPackStart vbox bbox PackNatural 0
+
+  return PM { pStore   = store
+            , pView    = view
+            , pBox     = vbox
+            , pChanged = changed
+            }
+
+{-
 setupManager = do
   pmdlg  <- makePropertyManagerDialog
 
@@ -80,7 +192,7 @@ makePropertyManagerDialog = do
 
 
 makePropertyManager = do
-  view <- treeViewNewWithModel propertyStore
+  view <- treeViewNewWithModel store
   treeViewSetRulesHint view True
 
   let showType p =
@@ -95,7 +207,7 @@ makePropertyManager = do
         treeViewColumnSetTitle column title
         cell <- cellRendererTextNew
         treeViewColumnPackStart column cell True
-        cellLayoutSetAttributes column cell propertyStore
+        cellLayoutSetAttributes column cell store
           (\p -> [ cellText := acc p ])
 
   addColumn "Name"        propName
@@ -118,9 +230,9 @@ makePropertyManager = do
     (path, _) <- treeViewGetCursor view
     case path of
       [n] -> do
-        prop <- listStoreGetValue propertyStore n
+        prop <- listStoreGetValue store n
         when (propCustom prop) $ delProperty prop
-        s <- listStoreGetSize propertyStore
+        s <- listStoreGetSize store
         unless (s < 1) $
           treeViewSetCursor view [min (s - 1) n] Nothing
       _ ->
@@ -130,7 +242,7 @@ makePropertyManager = do
     (path, _) <- treeViewGetCursor view
     case path of
       [n] -> do
-        prop <- listStoreGetValue propertyStore n
+        prop <- listStoreGetValue store n
         widgetSetSensitive delB $ propCustom prop
       _ ->
         widgetSetSensitive delB False
@@ -264,3 +376,4 @@ comboSet combo maybeCid =
 
 setupCombo combo ref =
   combo `on` changed $ (writeIORef ref =<< comboGet combo)
+-}

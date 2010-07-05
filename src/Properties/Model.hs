@@ -24,6 +24,8 @@ module Properties.Model
   , property
   , propertyList
   , propertyMap
+  , getProperties
+  , setProperties
   ) where
 
 import Prelude hiding (lookup)
@@ -82,3 +84,11 @@ loadProperties = do
   props <- config "properties.conf" []
   modifyMVar_ propertyMap $ \m ->
     return . Map.union m . Map.fromList $ map (\p -> (propName p, p)) props
+
+getProperties =
+  withMVar propertyMap $ return . Map.elems
+
+setProperties props = do
+  modifyMVar_ propertyMap $ const $ return $
+    Map.fromList $ map (\p -> (propName p, p)) props
+  updateProperties

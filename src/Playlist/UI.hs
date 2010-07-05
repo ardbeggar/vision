@@ -34,6 +34,7 @@ import Volume
 import Utils
 import Clipboard
 import Location
+import Properties
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
@@ -183,6 +184,22 @@ uiActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = showPlaylistConfigDialog
+    }
+  , ActionEntry
+    { actionEntryName        = "properties"
+    , actionEntryLabel       = "P_roperties"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "manage-properties"
+    , actionEntryLabel       = "_Manage properties"
+    , actionEntryStockId     = Just stockPreferences
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyManager
     }
   , ActionEntry
     { actionEntryName        = "playlist-popup"
