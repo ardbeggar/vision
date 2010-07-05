@@ -24,7 +24,6 @@ module Properties
   , showValue
   , lookup
   , initProperties
-  , propertyStore
   , property
   , propertyList
   , showPropertyManager

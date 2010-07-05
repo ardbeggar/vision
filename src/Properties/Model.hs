@@ -20,7 +20,6 @@
 module Properties.Model
   ( lookup
   , initModel
-  , propertyStore
   , property
   , propertyList
   , propertyMap
@@ -35,21 +34,15 @@ import Control.Concurrent.MVar
 import Data.Map (Map)
 import qualified Data.Map as Map
 
-import Graphics.UI.Gtk
-
 import Context
 import Config
-
 import Properties.Property
 
 
-data Properties
-  = Properties { pStore :: ListStore Property
-               , pMap   :: MVar (Map String Property)
-               }
+data Model
+  = Model { mMap   :: MVar (Map String Property) }
 
-propertyStore = pStore context
-propertyMap   = pMap context
+propertyMap = mMap context
 
 
 initModel = do
@@ -57,28 +50,19 @@ initModel = do
   let ?context = context
 
   loadProperties
-  updateProperties
 
   return ?context
 
 initContext = do
-  store <- listStoreNew []
   npmap <- newMVar $ Map.fromList $ map (\p -> (propName p, p)) builtinProperties
   return $ augmentContext
-    Properties { pStore = store
-               , pMap   = npmap
-               }
+    Model { mMap = npmap }
 
 property name =
   withMVar propertyMap $ return . Map.lookup name
 
 propertyList =
   withMVar propertyMap $ return . Map.elems
-
-updateProperties =
-  withMVar propertyMap $ \m -> do
-    listStoreClear propertyStore
-    mapM_ (\(_, p) -> listStoreAppend propertyStore p) $ Map.toList m
 
 loadProperties = do
   props <- config "properties.conf" []
@@ -91,4 +75,6 @@ getProperties =
 setProperties props = do
   modifyMVar_ propertyMap $ const $ return $
     Map.fromList $ map (\p -> (propName p, p)) props
-  updateProperties
+  writeConfig "properties.conf" props
+  return ()
+
