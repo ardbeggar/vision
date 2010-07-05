@@ -27,6 +27,7 @@ module Properties
   , property
   , propertyList
   , showPropertyManager
+  , onProperties
   ) where
 
 import Prelude hiding (lookup)

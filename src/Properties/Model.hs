@@ -25,6 +25,7 @@ module Properties.Model
   , propertyMap
   , getProperties
   , setProperties
+  , onProperties
   ) where
 
 import Prelude hiding (lookup)
@@ -36,13 +37,18 @@ import qualified Data.Map as Map
 
 import Context
 import Config
+import Handler
+import Utils
 import Properties.Property
 
 
 data Model
-  = Model { mMap   :: MVar (Map String Property) }
+  = Model { mMap          :: MVar (Map String Property)
+          , mOnProperties :: HandlerMVar ()
+          }
 
 propertyMap = mMap context
+onProperties = onHandler $ mOnProperties context
 
 
 initModel = do
@@ -54,9 +60,12 @@ initModel = do
   return ?context
 
 initContext = do
-  npmap <- newMVar $ Map.fromList $ map (\p -> (propName p, p)) builtinProperties
+  npmap   <- newMVar $ Map.fromList $ map (\p -> (propName p, p)) builtinProperties
+  onprops <- makeHandlerMVar
   return $ augmentContext
-    Model { mMap = npmap }
+    Model { mMap          = npmap
+          , mOnProperties = onprops
+          }
 
 property name =
   withMVar propertyMap $ return . Map.lookup name
@@ -76,5 +85,6 @@ setProperties props = do
   modifyMVar_ propertyMap $ const $ return $
     Map.fromList $ map (\p -> (propName p, p)) props
   writeConfig "properties.conf" props
-  return ()
+  onProperties $ invoke ()
+
 
