@@ -29,6 +29,8 @@ import Control.Monad
 import Data.IORef
 import Data.Maybe
 import qualified Data.Map as Map
+import Data.Ord
+import Data.Char
 
 import Graphics.UI.Gtk
 
@@ -91,8 +93,18 @@ instance ConfigWidget PM where
   grabFocus = widgetGrabFocus . pView
 
 makePropertyManagerWidget parent windowGroup onChanged = do
-  store <- listStoreNewDND [] Nothing Nothing
-  view  <- treeViewNewWithModel store
+  store  <- listStoreNewDND [] Nothing Nothing
+  sorted <- treeModelSortNewWithModel store
+
+  let getByIter iter = do
+        [n] <- treeModelGetPath store iter
+        listStoreGetValue store n
+      compBy f a b =
+        comparing f <$> getByIter a <*> getByIter b
+
+  treeSortableSetDefaultSortFunc sorted $ compBy (map toLower . propName)
+
+  view <- treeViewNewWithModel sorted
   treeViewSetRulesHint view True
 
   let showType p =
@@ -131,7 +143,7 @@ makePropertyManagerWidget parent windowGroup onChanged = do
         setChanged
         return ()
 
-  ed   <- makePropertyEntryDialog windowGroup addProperty
+  ed <- makePropertyEntryDialog windowGroup addProperty
   windowSetTransientFor (eDialog ed) parent
   parent `onDestroy` do widgetDestroy $ eDialog ed
 
@@ -143,9 +155,10 @@ makePropertyManagerWidget parent windowGroup onChanged = do
     (path, _) <- treeViewGetCursor view
     case path of
       [n] -> do
-        prop <- listStoreGetValue store n
+        [n'] <- treeModelSortConvertPathToChildPath sorted path
+        prop <- listStoreGetValue store n'
         when (propCustom prop) $ do
-          listStoreRemove store n
+          listStoreRemove store n'
           s <- listStoreGetSize store
           unless (s < 1) $
             treeViewSetCursor view [min (s - 1) n] Nothing
@@ -156,8 +169,9 @@ makePropertyManagerWidget parent windowGroup onChanged = do
   view `on` cursorChanged $ do
     (path, _) <- treeViewGetCursor view
     case path of
-      [n] -> do
-        prop <- listStoreGetValue store n
+      [_] -> do
+        [n'] <- treeModelSortConvertPathToChildPath sorted path
+        prop <- listStoreGetValue store n'
         widgetSetSensitive delB $ propCustom prop
       _ ->
         widgetSetSensitive delB False
