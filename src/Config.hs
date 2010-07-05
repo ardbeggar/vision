@@ -86,8 +86,9 @@ makeConfigDialog make getc setc = do
   dialogSetResponseSensitive dialog ResponseApply False
 
   upper <- dialogGetUpper dialog
-  cw <- make windowGroup $
+  cw <- make dialog windowGroup $
     dialogSetResponseSensitive dialog ResponseApply True
+  widgetShowAll $ outer cw
   boxPackStartDefaults upper $ outer cw
 
   dialog `onResponse` \resp ->

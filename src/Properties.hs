@@ -41,5 +41,8 @@ initProperties = do
   context <- initModel
   let ?context = context
 
+  context <- initPropertyManager
+  let ?context = context
+
   return ?context
 

@@ -18,9 +18,11 @@
 --
 
 module Properties.Manager
-  ( showPropertyManager
+  ( initPropertyManager
+  , showPropertyManager
   ) where
 
+import Control.Concurrent.MVar
 import Control.Applicative
 import Control.Monad
 
@@ -34,16 +36,36 @@ import UI
 import Utils
 import Compound
 import Config
+import Context
 import Properties.Property
 import Properties.Model
 
 
-showPropertyManager = do
-  dialog <- makeConfigDialog makePropertyManager
+data Manager
+  = Manager { pManager :: MVar (Maybe Dialog) }
+
+initPropertyManager = do
+  manager <- newMVar Nothing
+  return $ augmentContext
+    Manager { pManager = manager }
+
+showPropertyManager =
+  modifyMVar_ (pManager context) $ \maybeManager -> do
+    manager <- case maybeManager of
+      Just manager -> return manager
+      Nothing      -> makePropertyManager
+    windowSetTransientFor manager window
+    windowPresent manager
+    return $ Just manager
+
+makePropertyManager = do
+  dialog <- makeConfigDialog makePropertyManagerWidget
             getProperties setProperties
   windowSetTitle dialog "Manage properties"
   windowSetDefaultSize dialog 500 400
-  widgetShowAll dialog
+  dialog `onDestroy` do
+    modifyMVar_ (pManager context) $ const $ return Nothing
+  return dialog
 
 
 data PM
@@ -68,7 +90,7 @@ instance ConfigWidget PM where
   clearChanged pm = writeIORef (pChanged pm) False
   grabFocus = widgetGrabFocus . pView
 
-makePropertyManager windowGroup onChanged = do
+makePropertyManagerWidget parent windowGroup onChanged = do
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetRulesHint view True
@@ -110,6 +132,9 @@ makePropertyManager windowGroup onChanged = do
         return ()
 
   ed   <- makePropertyEntryDialog windowGroup addProperty
+  windowSetTransientFor (eDialog ed) parent
+  parent `onDestroy` do widgetDestroy $ eDialog ed
+
   addB <- buttonNewFromStock stockAdd
   addB `onClicked` do eRun ed
 
@@ -145,8 +170,6 @@ makePropertyManager windowGroup onChanged = do
   containerSetBorderWidth vbox 7
   boxPackStart vbox scroll PackGrow 0
   boxPackStart vbox bbox PackNatural 0
-
-  vbox `onDestroy` do widgetDestroy $ eDialog ed
 
   return PM { pStore   = store
             , pView    = view

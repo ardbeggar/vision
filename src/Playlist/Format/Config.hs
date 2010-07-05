@@ -55,7 +55,7 @@ instance ConfigWidget FormatView where
   grabFocus    = fFocus
 
 
-makePlaylistFormatView windowGroup onChanged = do
+makePlaylistFormatView parent windowGroup onChanged = do
   box <- hBoxNew False 5
   containerSetBorderWidth box 7
 
@@ -125,7 +125,7 @@ makePlaylistFormatView windowGroup onChanged = do
         mapM_ signalUnblock [insId, chgId, delId]
 
   editPosRef <- newIORef Nothing
-  editor     <- makeFormatEditor windowGroup $ \text ->
+  editor     <- makeFormatEditor parent windowGroup $ \text ->
     fmaybeM_ text $ \text -> do
       editPos <- readIORef editPosRef
       case editPos of
@@ -167,10 +167,10 @@ makePlaylistFormatView windowGroup onChanged = do
                     , fFocus   = focus
                     }
 
-makeFormatEditor windowGroup onDone = do
+makeFormatEditor parent windowGroup onDone = do
   dialog <- dialogNew
   windowGroupAddWindow windowGroup dialog
-  windowSetTransientFor dialog window
+  windowSetTransientFor dialog parent
   windowSetModal dialog True
   windowSetTitle dialog "Edit format"
   windowSetDefaultSize dialog 500 400
