@@ -25,6 +25,7 @@ import Control.Applicative
 import Control.Monad
 
 import Data.IORef
+import Data.Maybe
 import qualified Data.Map as Map
 
 import Graphics.UI.Gtk
@@ -67,7 +68,7 @@ instance ConfigWidget PM where
   clearChanged pm = writeIORef (pChanged pm) False
   grabFocus = widgetGrabFocus . pView
 
-makePropertyManager _ onChanged = do
+makePropertyManager windowGroup onChanged = do
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetRulesHint view True
@@ -103,10 +104,14 @@ makePropertyManager _ onChanged = do
   let setChanged = do
         writeIORef changed True
         onChanged
+      addProperty prop = do
+        listStoreAppend store prop
+        setChanged
+        return ()
 
---  run  <- makeRunPropertyEntryDialog
+  run  <- makeRunPropertyEntryDialog windowGroup addProperty
   addB <- buttonNewFromStock stockAdd
---  addB `onClicked` run
+  addB `onClicked` run
 
   delB <- buttonNewFromStock stockRemove
   delB `onClicked` do
@@ -147,127 +152,15 @@ makePropertyManager _ onChanged = do
             , pChanged = changed
             }
 
-{-
-setupManager = do
-  pmdlg  <- makePropertyManagerDialog
 
-  group <- actionGroupNew "properties"
-  insertActionGroup group 1
-
-  actionGroupAddActions group
-    [ ActionEntry { actionEntryName        = "manage"
-                  , actionEntryLabel       = "_Manage properties…"
-                  , actionEntryStockId     = Just "gtk-preferences"
-                  , actionEntryAccelerator = Just ""
-                  , actionEntryTooltip     = Nothing
-                  , actionEntryCallback    = windowPresent pmdlg } ]
-
-  return ()
-
-
-makePropertyManagerDialog = do
-  windowGroup <- windowGroupNew
-  let ?windowGroup = windowGroup
-
+makeRunPropertyEntryDialog windowGroup addProperty = do
   dialog <- dialogNew
-  windowGroupAddWindow ?windowGroup dialog
-  fixWindow dialog
-  windowSetTransientFor dialog mainWindow
-  windowSetModal dialog False
-  windowSetTitle dialog "Manage properties"
-  windowSetDefaultSize dialog 500 400
-  dialogSetHasSeparator dialog False
+  windowGroupAddWindow windowGroup dialog
 
-  dialogAddButtonCR dialog "gtk-close" ResponseClose
-  dialogSetDefaultResponse dialog ResponseClose
-  dialog `onResponse` \_ -> do
-    widgetHide dialog
-    dialogSetDefaultResponse dialog ResponseClose
-
-  manager <- makePropertyManager
-  upper   <- dialogGetUpper dialog
-  boxPackStartDefaults upper manager
-
-  return dialog
-
-
-makePropertyManager = do
-  view <- treeViewNewWithModel store
-  treeViewSetRulesHint view True
-
-  let showType p =
-        case propType p of
-          PropertyInt    -> "integer"
-          PropertyString -> "string"
-      showBool acc p =
-        if acc p then "yes" else "no"
-      addColumn title acc = do
-        column <- treeViewColumnNew
-        treeViewAppendColumn view column
-        treeViewColumnSetTitle column title
-        cell <- cellRendererTextNew
-        treeViewColumnPackStart column cell True
-        cellLayoutSetAttributes column cell store
-          (\p -> [ cellText := acc p ])
-
-  addColumn "Name"        propName
-  addColumn "Key"         propKey
-  addColumn "Type"        showType
-  addColumn "Read-only" $ showBool propReadOnly
-  addColumn "Custom"    $ showBool propCustom
-
-  scroll <- scrolledWindowNew Nothing Nothing
-  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
-  scrolledWindowSetShadowType scroll ShadowIn
-  containerAdd scroll view
-
-  run  <- makeRunPropertyEntryDialog
-  addB <- buttonNewFromStock stockAdd
-  addB `onClicked` run
-
-  delB <- buttonNewFromStock stockRemove
-  delB `onClicked` do
-    (path, _) <- treeViewGetCursor view
-    case path of
-      [n] -> do
-        prop <- listStoreGetValue store n
-        when (propCustom prop) $ delProperty prop
-        s <- listStoreGetSize store
-        unless (s < 1) $
-          treeViewSetCursor view [min (s - 1) n] Nothing
-      _ ->
-        return ()
-
-  view `on` cursorChanged $ do
-    (path, _) <- treeViewGetCursor view
-    case path of
-      [n] -> do
-        prop <- listStoreGetValue store n
-        widgetSetSensitive delB $ propCustom prop
-      _ ->
-        widgetSetSensitive delB False
-
-  bbox <- hBoxNew True 5
-  boxPackStartDefaults bbox addB
-  boxPackStartDefaults bbox delB
-
-  vbox <- vBoxNew False 5
-  containerSetBorderWidth vbox 7
-  boxPackStart vbox scroll PackGrow 0
-  boxPackStart vbox bbox PackNatural 0
-
-  widgetShowAll vbox
-  return vbox
-
-
-makeRunPropertyEntryDialog = do
-  dialog <- dialogNew
-  windowGroupAddWindow ?windowGroup dialog
-  fixWindow dialog
   dialogSetHasSeparator dialog False
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
-  windowSetTransientFor dialog mainWindow
+  windowSetTransientFor dialog window
   windowSetModal dialog True
 
   table <- tableNew 4 2 False
@@ -309,7 +202,7 @@ makeRunPropertyEntryDialog = do
   let check = do
         name   <- trim <$> entryGetText nameE
         key    <- trim <$> entryGetText keyE
-        exists <- Map.member name <$> readIORef propertyMap
+        exists <- isJust <$> property name
         dialogSetResponseSensitive dialog ResponseOk $
           not $ exists || null name || null key
         case Map.lookup key builtinPropertyMap of
@@ -376,4 +269,3 @@ comboSet combo maybeCid =
 
 setupCombo combo ref =
   combo `on` changed $ (writeIORef ref =<< comboGet combo)
--}

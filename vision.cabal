@@ -70,5 +70,5 @@ executable vision
   extensions:       ImplicitParams, NoMonomorphismRestriction,
                     FlexibleContexts, FlexibleInstances,
                     TypeFamilies, ScopedTypeVariables
-                    TupleSections
+                    TupleSections, PatternGuards
   ghc-options:      -W

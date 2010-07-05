@@ -30,6 +30,7 @@ module Utils
   , setupTreeViewPopup
   , dialogAddButtonCR
   , fmaybeM_
+  , withSignalBlocked
   ) where
 
 import Prelude hiding (catch)
@@ -123,3 +124,10 @@ fmaybe = flip . maybe
 
 fmaybeM_ :: Monad m => Maybe a -> (a -> m ()) -> m ()
 fmaybeM_ = fmaybe (return ())
+
+withSignalBlocked s f =
+  block $ do
+    signalBlock s
+    r <- unblock f `onException` signalUnblock s
+    signalUnblock s
+    return r
