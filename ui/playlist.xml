@@ -29,6 +29,8 @@
         <menuitem action="configure-playlist"/>
       </menu>
       <menu action="properties">
+        <menuitem action="edit-properties"/>
+        <separator/>
         <menuitem action="manage-properties"/>
       </menu>
     </placeholder>

@@ -39,7 +39,7 @@ import Playback
 import Playlist.Model
 import Playlist.Index
 import Playlist.Format
-import Playlist.Control
+--import Playlist.Control
 
 
 data View
@@ -94,9 +94,6 @@ initView = do
   cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
     info <- getInfoIfNeeded iter
     cell `set` [ cellText := trackInfoDuration info ]
-
-  playlistView `onRowActivated` \[n] _ ->
-    playTrack n
 
   return ?context
 

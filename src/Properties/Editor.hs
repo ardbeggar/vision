@@ -19,9 +19,15 @@
 
 module Properties.Editor
   ( initPropertyEditor
+  , showPropertyEditor
   ) where
 
+import Properties.Editor.UI
 
-initPropertyEditor =
+
+initPropertyEditor = do
+  context <- initEditorUI
+  let ?context = context
+
   return ?context
 

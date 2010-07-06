@@ -31,6 +31,7 @@ module Utils
   , dialogAddButtonCR
   , fmaybeM_
   , withSignalBlocked
+  , hideOnDeleteEvent
   ) where
 
 import Prelude hiding (catch)
@@ -131,3 +132,8 @@ withSignalBlocked s f =
     r <- unblock f `onException` signalUnblock s
     signalUnblock s
     return r
+
+hideOnDeleteEvent window =
+  window `on` deleteEvent $ do
+    liftIO $ widgetHide window
+    return True

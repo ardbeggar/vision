@@ -27,6 +27,7 @@ module Properties
   , property
   , propertyList
   , showPropertyManager
+  , showPropertyEditor
   , onProperties
   ) where
 

@@ -24,6 +24,7 @@ module Playlist.Control
   , insertIds
   , moveTracks
   , playTrack
+  , showPropertyEditor
   ) where
 
 import Control.Monad
@@ -32,7 +33,9 @@ import XMMS2.Client
 
 import XMMS
 import Playback
+import qualified Properties as P
 import Playlist.Model
+import Playlist.View
 
 
 clearPlaylist = do
@@ -67,3 +70,6 @@ playTrack n = do
   playlistSetNext xmms $ fromIntegral n
   startPlayback True
 
+showPropertyEditor = do
+  ids <- playlistGetIds =<< getSelectedTracks
+  P.showPropertyEditor ids

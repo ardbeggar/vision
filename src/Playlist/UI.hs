@@ -34,7 +34,7 @@ import Volume
 import Utils
 import Clipboard
 import Location
-import Properties
+import Properties hiding (showPropertyEditor)
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
@@ -82,9 +82,10 @@ setupUI = do
   cut    <- getAction srvAG "cut"
   copy   <- getAction srvAG "copy"
   delete <- getAction srvAG "delete"
+  editp  <- getAction srvAG "edit-properties"
   let setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
-        mapM_ (flip actionSetSensitive (n /= 0)) [cut, copy, delete]
+        mapM_ (flip actionSetSensitive (n /= 0)) [cut, copy, delete, editp]
 
   paste  <- getAction srvAG "paste"
   append <- getAction srvAG "append"
@@ -105,6 +106,9 @@ setupUI = do
     return False
 
   addUIFromFile "playlist"
+
+  playlistView `onRowActivated` \[n] _ ->
+    playTrack n
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
@@ -323,5 +327,13 @@ srvActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = clearPlaylist
+    }
+  , ActionEntry
+    { actionEntryName        = "edit-properties"
+    , actionEntryLabel       = "_Edit properties"
+    , actionEntryStockId     = Just stockEdit
+    , actionEntryAccelerator = Just "<Alt>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyEditor
     }
   ]

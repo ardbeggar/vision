@@ -37,6 +37,8 @@ executable vision
                     Properties.Property,
                     Properties.Model,
                     Properties.Manager,
+                    Properties.Editor,
+                    Properties.Editor.UI,
                     Playback,
                     Volume,
                     Playtime,
