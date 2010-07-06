@@ -170,6 +170,7 @@ makeFormatEditor parent windowGroup onDone = do
   dialog <- dialogNew
   windowGroupAddWindow windowGroup dialog
   windowSetTransientFor dialog parent
+  parent `onDestroy` do widgetDestroy dialog
   windowSetModal dialog True
   windowSetTitle dialog "Edit format"
   windowSetDefaultSize dialog 500 400

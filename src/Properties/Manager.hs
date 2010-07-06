@@ -140,12 +140,9 @@ makePropertyManagerWidget parent windowGroup onChanged = do
         setChanged
         return ()
 
-  ed <- makePropertyEntryDialog parent windowGroup addProperty
-  windowSetTransientFor (eDialog ed) parent
-  parent `onDestroy` do widgetDestroy $ eDialog ed
-
+  runE <- makePropertyEntryDialog parent windowGroup addProperty
   addB <- buttonNewFromStock stockAdd
-  addB `onClicked` do eRun ed
+  addB `onClicked` runE
 
   delB <- buttonNewFromStock stockRemove
   delB `onClicked` do
@@ -189,15 +186,11 @@ makePropertyManagerWidget parent windowGroup onChanged = do
             }
 
 
-data ED =
-  ED { eRun    :: IO ()
-     , eDialog :: Dialog
-     }
-
 makePropertyEntryDialog parent windowGroup addProperty = do
   dialog <- dialogNew
   windowGroupAddWindow windowGroup dialog
-
+  windowSetTransientFor dialog parent
+  parent `onDestroy` do widgetDestroy dialog
   dialogSetHasSeparator dialog False
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
@@ -269,34 +262,30 @@ makePropertyEntryDialog parent windowGroup addProperty = do
   keyE  `afterInsertText` checkInsert
   keyE  `afterDeleteText` checkDelete
 
-  let run = do
-        dialogSetDefaultResponse dialog ResponseOk
-        dialogSetResponseSensitive dialog ResponseOk False
-        entrySetText nameE ""
-        entrySetText keyE ""
-        comboSet typeC Nothing PropertyString
-        comboSet roC Nothing False
-        windowPresent dialog
-        widgetGrabFocus nameE
-        resp <- dialogRun dialog
-        widgetHide dialog
-        when (resp == ResponseOk) $ do
-          pname  <- entryGetText nameE
-          pkey   <- entryGetText keyE
-          ptype  <- comboGet typeC
-          pro    <- comboGet roC
-          addProperty Property { propName      = trim pname
-                               , propKey       = trim pkey
-                               , propType      = ptype
-                               , propReadOnly  = pro
-                               , propCustom    = True
-                               , propReadValue = Nothing
-                               , propShowValue = Nothing
-                               }
-
-  return ED { eRun    = run
-            , eDialog = dialog
-            }
+  return $ do
+    dialogSetDefaultResponse dialog ResponseOk
+    dialogSetResponseSensitive dialog ResponseOk False
+    entrySetText nameE ""
+    entrySetText keyE ""
+    comboSet typeC Nothing PropertyString
+    comboSet roC Nothing False
+    windowPresent dialog
+    widgetGrabFocus nameE
+    resp <- dialogRun dialog
+    widgetHide dialog
+    when (resp == ResponseOk) $ do
+      pname  <- entryGetText nameE
+      pkey   <- entryGetText keyE
+      ptype  <- comboGet typeC
+      pro    <- comboGet roC
+      addProperty Property { propName      = trim pname
+                           , propKey       = trim pkey
+                           , propType      = ptype
+                           , propReadOnly  = pro
+                           , propCustom    = True
+                           , propReadValue = Nothing
+                           , propShowValue = Nothing
+                           }
 
 
 comboGet combo =
