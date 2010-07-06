@@ -41,6 +41,7 @@ initEditorView = do
 
   treeViewSetRulesHint view True
   treeViewSetHeadersVisible view False
+  treeViewSetReorderable view True
 
   column <- treeViewColumnNew
   treeViewAppendColumn view column
