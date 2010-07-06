@@ -32,6 +32,7 @@ module Utils
   , fmaybeM_
   , withSignalBlocked
   , hideOnDeleteEvent
+  , eqBy
   ) where
 
 import Prelude hiding (catch)
@@ -137,3 +138,5 @@ hideOnDeleteEvent window =
   window `on` deleteEvent $ do
     liftIO $ widgetHide window
     return True
+
+eqBy f a b = f a == f b

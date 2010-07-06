@@ -26,6 +26,7 @@ import Control.Concurrent.MVar
 import Control.Monad.State hiding (State)
 
 import Data.Maybe
+import Data.List
 
 import Graphics.UI.Gtk
 
@@ -74,10 +75,8 @@ initContext = do
           , mStore = store
           }
 
-loadConfig =
-  mapM_ addProperty =<<
-    config "property-editor.conf" (map propName builtinProperties)
-
-addProperty name = do
-  prop <- property name
-  fmaybeM_ prop $ listStoreAppend store
+loadConfig = do
+  cfg <- mapM property =<< config "property-editor.conf" []
+  all <- propertyList
+  mapM_ (listStoreAppend store) $
+    unionBy (eqBy propName) (catMaybes cfg) all
