@@ -2,9 +2,9 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 22 Sep. 2009
+--  Created: 6 Jul. 2010
 --
---  Copyright (C) 2009-2010 Oleg Belozeorov
+--  Copyright (C) 2010 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -17,36 +17,11 @@
 --  General Public License for more details.
 --
 
-module Properties
-  ( PropertyType (..)
-  , Property (..)
-  , readValue
-  , showValue
-  , lookup
-  , initProperties
-  , property
-  , propertyList
-  , showPropertyManager
-  , onProperties
+module Properties.Editor
+  ( initPropertyEditor
   ) where
 
-import Prelude hiding (lookup)
 
-import Properties.Property
-import Properties.Model
-import Properties.Manager
-import Properties.Editor
-
-
-initProperties = do
-  context <- initModel
-  let ?context = context
-
-  context <- initPropertyManager
-  let ?context = context
-
-  context <- initPropertyEditor
-  let ?context = context
-
+initPropertyEditor =
   return ?context
 
