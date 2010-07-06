@@ -22,7 +22,6 @@ module Properties.Manager
   , showPropertyManager
   ) where
 
-import Control.Concurrent.MVar
 import Control.Applicative
 import Control.Monad
 
@@ -34,39 +33,31 @@ import Data.Char
 
 import Graphics.UI.Gtk
 
-import UI
 import Utils
 import Compound
 import Config
 import Context
+import CODW
 import Properties.Property
 import Properties.Model
 
 
 data Manager
-  = Manager { pManager :: MVar (Maybe Dialog) }
+  = Manager { pManager :: CODW Dialog }
 
 initPropertyManager = do
-  manager <- newMVar Nothing
+  manager <- makeCODW makePropertyManager
   return $ augmentContext
     Manager { pManager = manager }
 
 showPropertyManager =
-  modifyMVar_ (pManager context) $ \maybeManager -> do
-    manager <- case maybeManager of
-      Just manager -> return manager
-      Nothing      -> makePropertyManager
-    windowSetTransientFor manager window
-    windowPresent manager
-    return $ Just manager
+  showCODW $ pManager context
 
 makePropertyManager = do
   dialog <- makeConfigDialog makePropertyManagerWidget
             getProperties setProperties
   windowSetTitle dialog "Manage properties"
   windowSetDefaultSize dialog 500 400
-  dialog `onDestroy` do
-    modifyMVar_ (pManager context) $ const $ return Nothing
   return dialog
 
 
@@ -149,7 +140,7 @@ makePropertyManagerWidget parent windowGroup onChanged = do
         setChanged
         return ()
 
-  ed <- makePropertyEntryDialog windowGroup addProperty
+  ed <- makePropertyEntryDialog parent windowGroup addProperty
   windowSetTransientFor (eDialog ed) parent
   parent `onDestroy` do widgetDestroy $ eDialog ed
 
@@ -203,14 +194,14 @@ data ED =
      , eDialog :: Dialog
      }
 
-makePropertyEntryDialog windowGroup addProperty = do
+makePropertyEntryDialog parent windowGroup addProperty = do
   dialog <- dialogNew
   windowGroupAddWindow windowGroup dialog
 
   dialogSetHasSeparator dialog False
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
-  windowSetTransientFor dialog window
+  windowSetTransientFor dialog parent
   windowSetModal dialog True
 
   table <- tableNew 4 2 False

@@ -22,11 +22,9 @@ module Playlist.Config
   , showPlaylistConfigDialog
   ) where
 
-import Control.Concurrent.MVar
-
 import Graphics.UI.Gtk
 
-import UI
+import CODW
 import Config
 import Context
 import Playlist.Format
@@ -34,27 +32,19 @@ import Playlist.Format.Config
 
 
 data Config
-  = Config { cDialog :: MVar (Maybe Dialog) }
+  = Config { cDialog :: CODW Dialog }
 
 initPlaylistConfig = do
-  dialog <- newMVar Nothing
+  dialog <- makeCODW makePlaylistConfigDialog
   return $ augmentContext
     Config { cDialog = dialog }
 
 showPlaylistConfigDialog =
-  modifyMVar_ (cDialog context) $ \maybeDialog -> do
-    dialog <- case maybeDialog of
-      Just dialog -> return dialog
-      Nothing     -> makePlaylistConfigDialog
-    windowSetTransientFor dialog window
-    windowPresent dialog
-    return $ Just dialog
+  showCODW $ cDialog context
 
 makePlaylistConfigDialog = do
   dialog <- makeConfigDialog makePlaylistFormatView
             getFormatDefs putFormatDefs
   windowSetTitle dialog "Configure playlist"
   windowSetDefaultSize dialog 500 400
-  dialog `onDestroy` do
-    modifyMVar_ (cDialog context) $ const $ return Nothing
   return dialog

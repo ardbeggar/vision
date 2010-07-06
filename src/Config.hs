@@ -38,7 +38,6 @@ import Graphics.UI.Gtk
 
 import Environment
 import Compound
-import UI
 import Utils
 
 
@@ -76,7 +75,6 @@ makeConfigDialog make getc setc = do
 
   dialog <- dialogNew
   windowGroupAddWindow windowGroup dialog
-  windowSetTransientFor dialog window
   windowSetModal dialog False
   dialogSetHasSeparator dialog False
 
