@@ -17,25 +17,30 @@
 --  General Public License for more details.
 --
 
-module Properties.Editor
-  ( initPropertyEditor
-  , showPropertyEditor
+module Properties.Editor.View
+  ( initEditorView
+  , view
   ) where
 
+import Graphics.UI.Gtk
+
+import Context
 import Properties.Editor.Model
-import Properties.Editor.View
-import Properties.Editor.UI
 
 
-initPropertyEditor = do
-  context <- initEditorModel
-  let ?context = context
+data View
+  = View { vView :: TreeView }
 
-  context <- initEditorView
-  let ?context = context
+view = vView context
 
-  context <- initEditorUI
+
+initEditorView = do
+  context <- initContext
   let ?context = context
 
   return ?context
 
+initContext = do
+  view <- treeViewNewWithModel store
+  return $ augmentContext
+    View { vView = view }
