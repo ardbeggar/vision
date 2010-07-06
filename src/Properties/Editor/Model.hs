@@ -24,15 +24,17 @@ module Properties.Editor.Model
 
 import Control.Concurrent.MVar
 import Control.Monad.State hiding (State)
+import Control.Applicative
 
 import Data.Maybe
 import Data.List
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (add)
 
 import Context
 import Config
 import Utils
+import Handler
 import Properties.Property
 import Properties.Model
 
@@ -63,6 +65,9 @@ initEditorModel = do
   context <- initContext
   let ?context = context
 
+  cid <- store `on` rowDeleted $ const saveConfig
+  onProperties . add . ever . const $
+    withSignalBlocked cid updateProperties
   loadConfig
 
   return ?context
@@ -77,6 +82,19 @@ initContext = do
 
 loadConfig = do
   cfg <- mapM property =<< config "property-editor.conf" []
+  populateStore cfg
+
+saveConfig = do
+  names <- map propName <$> listStoreToList store
+  writeConfig "property-editor.conf" names
+  return ()
+
+updateProperties = do
+  cur <- mapM (property . propName) =<< listStoreToList store
+  listStoreClear store
+  populateStore cur
+
+populateStore cur = do
   all <- propertyList
   mapM_ (listStoreAppend store) $
-    unionBy (eqBy propName) (catMaybes cfg) all
+    unionBy (eqBy propName) (catMaybes cur) all
