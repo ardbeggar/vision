@@ -81,12 +81,12 @@ initContext = do
           }
 
 loadConfig = do
-  cfg <- mapM property =<< config "property-editor.conf" []
+  cfg <- mapM property =<< config configFile []
   populateStore cfg
 
 saveConfig = do
   names <- map propName <$> listStoreToList store
-  writeConfig "property-editor.conf" names
+  writeConfig configFile names
   return ()
 
 updateProperties = do
@@ -98,3 +98,5 @@ populateStore cur = do
   all <- propertyList
   mapM_ (listStoreAppend store) $
     unionBy (eqBy propName) (catMaybes cur) all
+
+configFile = "property-editor.conf"
