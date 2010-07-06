@@ -29,6 +29,7 @@ import Graphics.UI.Gtk
 
 import Context
 import Utils
+import Properties.Editor.View
 
 
 data UI
@@ -62,6 +63,18 @@ initEditorUI = do
       widgetHide dialog
       unlock
 
+  box <- vBoxNew False 0
+  containerSetBorderWidth box 7
+  upper <- dialogGetUpper dialog
+  boxPackStartDefaults upper box
+
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
+  containerAdd scroll view
+  boxPackStartDefaults box scroll
+
+  widgetShowAll box
   return ?context
 
 showPropertyEditor _ = do

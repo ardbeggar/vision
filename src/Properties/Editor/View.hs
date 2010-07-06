@@ -25,6 +25,7 @@ module Properties.Editor.View
 import Graphics.UI.Gtk
 
 import Context
+import Properties.Property
 import Properties.Editor.Model
 
 
@@ -37,6 +38,18 @@ view = vView context
 initEditorView = do
   context <- initContext
   let ?context = context
+
+  treeViewSetRulesHint view True
+  treeViewSetHeadersVisible view False
+
+  column <- treeViewColumnNew
+  treeViewAppendColumn view column
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributes column cell store $ \prop ->
+    [ cellText       := propName prop
+    , cellTextWeight := 800
+    ]
 
   return ?context
 
