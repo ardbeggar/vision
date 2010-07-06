@@ -28,7 +28,6 @@ import Data.IORef
 import Graphics.UI.Gtk
 
 import Utils
-import UI
 import Config
 import Compound
 
