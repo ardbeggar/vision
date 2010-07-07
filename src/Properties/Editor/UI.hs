@@ -47,8 +47,10 @@ data UI
        , uPtrkB   :: ToggleButton
        }
 
-dialog  = uDialog context
-visible = uVisible context
+visible    = uVisible context
+setVisible = modifyMVar_ visible . const . return
+
+dialog = uDialog context
 
 prevB = uPrevB context
 nextB = uNextB context
@@ -120,13 +122,13 @@ initEditorUI = do
         resetModel
         withSignalBlocked cid $
           toggleButtonSetActive ptrkB True
-        modifyMVar_ visible $ const $ return Nothing
+        setVisible Nothing
       _             -> do
         widgetHide dialog
         resetModel
         withSignalBlocked cid $
           toggleButtonSetActive ptrkB True
-        modifyMVar_ visible $ const $ return Nothing
+        setVisible Nothing
 
   widgetShowAll box
   return ?context
@@ -146,7 +148,7 @@ showPropertyEditor ids =
         resetView
         windowSetTransientFor dialog window
         windowPresent dialog
-        modifyMVar_ visible $ const $ return $ Just dialog
+        return $ Just dialog
 
 initContext = do
   visible <- newMVar Nothing
@@ -196,8 +198,8 @@ withMediaInfo ids f = do
       (i:is) | i == id -> do
         if null is
           then do
+          setVisible =<< (f $ reverse ((id, info) : ready))
           widgetDestroy dialog
-          f $ reverse ((id, info) : ready)
           return False
           else do
           let ctr' = ctr + 1
@@ -213,7 +215,7 @@ withMediaInfo ids f = do
   dialog `onResponse` \_ -> do
     onMediaInfo $ remove hid
     widgetDestroy dialog
-    modifyMVar_ visible $ const $ return Nothing
+    setVisible Nothing
 
   widgetShowAll dialog
   requestInfo $ head ids
