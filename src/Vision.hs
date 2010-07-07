@@ -40,10 +40,10 @@ main = do
   context <- initEnvironment
   let ?context = context
 
-  context <- initProperties
+  context <- initXMMS
   let ?context = context
 
-  context <- initXMMS
+  context <- initProperties
   let ?context = context
 
   context <- initMedialib

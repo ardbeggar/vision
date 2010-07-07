@@ -104,12 +104,29 @@ initEditorUI = do
     when chok $ dialogSetResponseSensitive dialog ResponseApply True
 
   dialog `onResponse` \resp ->
-    unless (resp == ResponseApply) $ do
-      widgetHide dialog
-      resetModel
-      withSignalBlocked cid $
-        toggleButtonSetActive ptrkB True
-      unlock
+    case resp of
+      ResponseApply -> do
+        dialogSetResponseSensitive dialog ResponseApply False
+        dialogSetResponseSensitive dialog ResponseOk False
+        writeProperties
+        dialogSetResponseSensitive dialog ResponseOk True
+        widgetGrabFocus view
+      ResponseOk    -> do
+        dialogSetResponseSensitive dialog ResponseApply False
+        dialogSetResponseSensitive dialog ResponseOk False
+        writeProperties
+        widgetHide dialog
+        dialogSetResponseSensitive dialog ResponseOk True
+        resetModel
+        withSignalBlocked cid $
+          toggleButtonSetActive ptrkB True
+        unlock
+      _             -> do
+        widgetHide dialog
+        resetModel
+        withSignalBlocked cid $
+          toggleButtonSetActive ptrkB True
+        unlock
 
   widgetShowAll box
   return ?context

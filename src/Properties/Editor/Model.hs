@@ -28,6 +28,7 @@ module Properties.Editor.Model
   , nextTrack
   , togglePerTrack
   , changeProperty
+  , writeProperties
   ) where
 
 import Prelude hiding (lookup)
@@ -42,10 +43,11 @@ import Data.Array
 import Data.Map (Map)
 import qualified Data.Map as Map
 
-import Graphics.UI.Gtk hiding (add, Entry)
+import Graphics.UI.Gtk hiding (add, get, Entry)
 
 import qualified XMMS2.Client as X
 
+import XMMS
 import Context
 import Config
 import Utils
@@ -214,3 +216,31 @@ changeProperty n prop text = do
         s { sCurrent = mapSnd (Map.insert (propKey prop) val) $ sCurrent s }
       touch n
       return True
+
+writeProperties = do
+  changes <- withState extractChanges
+  mapM_ writeForId changes
+  where writeForId (id, cs) =
+          mapM_ (writeProperty id) cs
+
+writeProperty id (key, val) =
+  X.medialibEntryPropertySet xmms id
+  (Just "client/generic/override")
+  key val
+
+extractChanges = do
+  s <- get
+  let c = sCurrent s
+      e = case sPerTrack s of
+        True  ->
+          Map.insert (sIds s ! sPos s) c (sEntries s)
+        False ->
+          let u = snd c in
+          Map.map (\(b, c) -> (b, Map.union u c)) $ sEntries s
+      e' = Map.map (\(b, c) -> (Map.union c b, Map.empty)) e
+  put s { sEntries = e'
+        , sCurrent = (Map.union (snd c) (fst c), Map.empty)
+        }
+  return $ map (\(id, (_, c)) -> (id, Map.toList c)) $ Map.toList e
+
+
