@@ -42,6 +42,7 @@ data UI
        , uDialog :: Dialog
        , uPrevB  :: Button
        , uNextB  :: Button
+       , uPtrkB  :: ToggleButton
        }
 
 dialog = uDialog context
@@ -51,6 +52,7 @@ unlock    = putMVar (uLock context) ()
 
 prevB = uPrevB context
 nextB = uNextB context
+ptrkB = uPtrkB context
 
 
 initEditorUI = do
@@ -66,11 +68,6 @@ initEditorUI = do
   dialogAddButton   dialog "gtk-apply"  ResponseApply
   dialogAddButton   dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok"     ResponseOk
-
-  dialog `onResponse` \resp ->
-    unless (resp == ResponseApply) $ do
-      widgetHide dialog
-      unlock
 
   box <- vBoxNew False 0
   containerSetBorderWidth box 7
@@ -90,11 +87,24 @@ initEditorUI = do
   widgetSetCanFocus nextB False
   containerAdd bbox nextB
 
+  toggleButtonSetActive ptrkB True
+  cid <- ptrkB `onToggled` (togglePerTrack >> updateNavButtons)
+  widgetSetCanFocus ptrkB False
+  containerAdd bbox ptrkB
+
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   scrolledWindowSetShadowType scroll ShadowIn
   containerAdd scroll view
   boxPackStartDefaults box scroll
+
+  dialog `onResponse` \resp ->
+    unless (resp == ResponseApply) $ do
+      widgetHide dialog
+      resetModel
+      withSignalBlocked cid $
+        toggleButtonSetActive ptrkB True
+      unlock
 
   widgetShowAll box
   return ?context
@@ -114,11 +124,13 @@ initContext = do
   dialog <- dialogNew
   prevB  <- buttonNewWithMnemonic "_Previous track"
   nextB  <- buttonNewWithMnemonic "_Next track"
+  ptrkB  <- toggleButtonNewWithMnemonic "Per _track"
   return $ augmentContext
     UI { uLock   = lock
        , uDialog = dialog
        , uPrevB  = prevB
        , uNextB  = nextB
+       , uPtrkB  = ptrkB
        }
 
 updateNavButtons = do

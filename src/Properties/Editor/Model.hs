@@ -21,10 +21,12 @@ module Properties.Editor.Model
   ( initEditorModel
   , store
   , populateModel
+  , resetModel
   , propertyText
   , getNavEnables
   , prevTrack
   , nextTrack
+  , togglePerTrack
   ) where
 
 import Prelude hiding (lookup)
@@ -60,6 +62,7 @@ data State
           , sIds      :: Array Int MediaId
           , sEntries  :: Map MediaId Entry
           , sCurrent  :: Entry
+          , sPerTrack :: Bool
           }
 
 makeState list =
@@ -68,11 +71,12 @@ makeState list =
       entries = Map.fromList $
         map (\(id, info) -> (id, (info, Map.empty))) list
       current = fromJust $ Map.lookup (ids ! 0) entries
-  in State { sPos     = 0
-           , sSize    = size
-           , sIds     = ids
-           , sEntries = entries
-           , sCurrent = current
+  in State { sPos      = 0
+           , sSize     = size
+           , sIds      = ids
+           , sEntries  = entries
+           , sCurrent  = current
+           , sPerTrack = True
            }
 
 data Model
@@ -85,6 +89,9 @@ store = mStore context
 
 setupState list =
   modifyMVar_ state . const . return . Just $ makeState list
+
+resetState =
+  modifyMVar_ state . const $ return Nothing
 
 withState f =
   modifyMVar state $ \(Just s) -> do
@@ -134,14 +141,18 @@ configFile = "property-editor.conf"
 populateModel list = do
   setupState list
 
+resetModel =
+  resetState
+
 propertyText prop = withState $ do
   (b, c) <- gets sCurrent
   return $ maybe "" id $ lookup prop c `mplus` lookup prop b
 
 getNavEnables = withState $ do
+  t <- gets sPerTrack
   p <- gets sPos
   s <- gets sSize
-  return (p > 0, p < s - 1)
+  return (t && p > 0, t && p < s - 1)
 
 prevTrack = stepTrack (-1)
 nextTrack = stepTrack 1
@@ -164,3 +175,28 @@ touchAll = do
 touch n = do
   Just iter <- treeModelGetIter store [n]
   treeModelRowChanged store [n] iter
+
+togglePerTrack = do
+  withState $ modify $ \s ->
+    if sPerTrack s
+    then let
+      e = Map.insert (sIds s ! sPos s) (sCurrent s) (sEntries s)
+      c = (common $ Map.elems e, Map.empty)
+      in s { sPerTrack = False
+           , sEntries  = e
+           , sCurrent  = c
+           }
+    else let
+      u = snd $ sCurrent s
+      e = Map.map (\(b, c) -> (b, Map.union u c)) $ sEntries s
+      c = e Map.! (sIds s ! sPos s)
+      in s { sPerTrack = True
+           , sEntries  = e
+           , sCurrent  = c
+           }
+  touchAll
+
+common e =
+  let (h : t) = map (uncurry $ flip Map.union) e
+      f a b = if a == b then Just a else Nothing
+  in foldl (Map.differenceWith f) h t
