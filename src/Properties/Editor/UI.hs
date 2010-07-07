@@ -116,6 +116,7 @@ initEditorUI = do
         dialogSetResponseSensitive dialog ResponseOk False
         writeProperties
         widgetHide dialog
+        dialogSetResponseSensitive dialog ResponseOk True
         resetModel
         withSignalBlocked cid $
           toggleButtonSetActive ptrkB True
@@ -137,7 +138,6 @@ showPropertyEditor ids = do
     list <- mapMaybe f . zip ids <$> mapM getInfo ids
     populateModel list
     dialogSetResponseSensitive dialog ResponseApply False
-    dialogSetResponseSensitive dialog ResponseOk True
     updateNavButtons
     resetView
   widgetHide dialog
