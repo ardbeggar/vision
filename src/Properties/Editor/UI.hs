@@ -24,15 +24,17 @@ module Properties.Editor.UI
 
 import Control.Concurrent.MVar
 import Control.Monad
-import Control.Applicative
 
-import Data.Maybe
+import Data.IORef
+import Data.List
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (add, remove)
 
 import Context
 import Utils
 import Medialib
+import Handler
+import UI
 import Properties.Editor.Model
 import Properties.Editor.View
 
@@ -132,16 +134,13 @@ initEditorUI = do
   return ?context
 
 showPropertyEditor ids = do
-  tryLock $ do
-    let f (id, Just info) = Just (id, info)
-        f _               = Nothing
-    list <- mapMaybe f . zip ids <$> mapM getInfo ids
+  tryLock $ withMediaInfo ids $ \list -> do
     populateModel list
     dialogSetResponseSensitive dialog ResponseApply False
     updateNavButtons
     resetView
-  widgetHide dialog
-  windowPresent dialog
+    widgetHide dialog
+    windowPresent dialog
 
 initContext = do
   lock   <- newMVar ()
@@ -161,3 +160,53 @@ updateNavButtons = do
   (ep, en) <- getNavEnables
   widgetSetSensitive prevB ep
   widgetSetSensitive nextB en
+
+withMediaInfo ids f = do
+  let ids' = nub ids
+      len  = length ids'
+      step = len `div` 100
+
+  dialog <- dialogNew
+  windowSetDefaultSize dialog 200 (-1)
+  dialogSetHasSeparator dialog False
+  windowSetTitle dialog "Retrieving properties"
+  windowSetTransientFor dialog window
+
+  dialogAddButton dialog "gtk-cancel" ResponseCancel
+
+  upper <- dialogGetUpper dialog
+  box   <- vBoxNew False 0
+  containerSetBorderWidth box 7
+  boxPackStart upper box PackNatural 0
+
+  pbar <- progressBarNew
+  progressBarSetText pbar "Retrieving properties"
+  boxPackStart box pbar PackNatural 0
+
+  ref <- newIORef (0, ids', [])
+  hid <- onMediaInfo . add $ \(id, _, info) -> do
+    (ctr, todo, ready) <- readIORef ref
+    case todo of
+      (i:is) | i == id -> do
+        if null is
+          then do
+          widgetDestroy dialog
+          f $ reverse ((id, info) : ready)
+          return False
+          else do
+          let ctr' = ctr + 1
+          when (ctr' `mod` step == 0) $
+            progressBarSetFraction pbar $ fromIntegral ctr' / fromIntegral len
+          requestInfo $ head is
+          writeIORef ref (ctr', is, (id, info) : ready)
+          return True
+      _ ->
+        return True
+
+  dialog `onResponse` \_ -> do
+    onMediaInfo $ remove hid
+    widgetDestroy dialog
+    unlock
+
+  widgetShowAll dialog
+  requestInfo $ head ids
