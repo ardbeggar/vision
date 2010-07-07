@@ -200,9 +200,11 @@ togglePerTrack = do
   touchAll
 
 common e =
-  let (h : t) = map (uncurry $ flip Map.union) e
-      f a b = if a == b then Just a else Nothing
-  in foldl (Map.differenceWith f) h t
+  let (c, i)     = foldl g (h, h) t
+      f a b      = if a == b then Just a else Nothing
+      g (c, i) e = (Map.differenceWith f c e, Map.intersection i e)
+      (h : t)    = map (uncurry $ flip Map.union) e
+  in Map.intersection c i
 
 changeProperty n prop text = do
   maybeVal <- if null text
