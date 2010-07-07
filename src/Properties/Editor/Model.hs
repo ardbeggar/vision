@@ -22,6 +22,9 @@ module Properties.Editor.Model
   , store
   , populateModel
   , propertyText
+  , getNavEnables
+  , prevTrack
+  , nextTrack
   ) where
 
 import Prelude hiding (lookup)
@@ -131,7 +134,33 @@ configFile = "property-editor.conf"
 populateModel list = do
   setupState list
 
-propertyText prop =
-  withState $ do
-    (b, c) <- gets sCurrent
-    return $ maybe "" id $ lookup prop c `mplus` lookup prop b
+propertyText prop = withState $ do
+  (b, c) <- gets sCurrent
+  return $ maybe "" id $ lookup prop c `mplus` lookup prop b
+
+getNavEnables = withState $ do
+  p <- gets sPos
+  s <- gets sSize
+  return (p > 0, p < s - 1)
+
+prevTrack = stepTrack (-1)
+nextTrack = stepTrack 1
+
+stepTrack inc = do
+  withState $ modify $ \s ->
+    let e = Map.insert (sIds s ! sPos s) (sCurrent s) (sEntries s)
+        p = sPos s + inc
+        c = e Map.! (sIds s ! p) in
+    s { sEntries = e
+      , sPos     = p
+      , sCurrent = c
+      }
+  touchAll
+
+touchAll = do
+  s <- listStoreGetSize store
+  mapM_ touch [0 .. s - 1]
+
+touch n = do
+  Just iter <- treeModelGetIter store [n]
+  treeModelRowChanged store [n] iter

@@ -40,6 +40,8 @@ import Properties.Editor.View
 data UI
   = UI { uLock   :: MVar ()
        , uDialog :: Dialog
+       , uPrevB  :: Button
+       , uNextB  :: Button
        }
 
 dialog = uDialog context
@@ -47,6 +49,8 @@ dialog = uDialog context
 tryLock f = maybe (return ()) (const f) =<< tryTakeMVar (uLock context)
 unlock    = putMVar (uLock context) ()
 
+prevB = uPrevB context
+nextB = uNextB context
 
 
 initEditorUI = do
@@ -73,6 +77,19 @@ initEditorUI = do
   upper <- dialogGetUpper dialog
   boxPackStartDefaults upper box
 
+  bbox <- hButtonBoxNew
+  buttonBoxSetLayout bbox ButtonboxStart
+  boxSetSpacing bbox 7
+  boxPackStart box bbox PackNatural 7
+
+  prevB `onClicked` (prevTrack >> updateNavButtons)
+  widgetSetCanFocus prevB False
+  containerAdd bbox prevB
+
+  nextB `onClicked` (nextTrack >> updateNavButtons)
+  widgetSetCanFocus nextB False
+  containerAdd bbox nextB
+
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   scrolledWindowSetShadowType scroll ShadowIn
@@ -88,13 +105,23 @@ showPropertyEditor ids = do
         f _               = Nothing
     list <- mapMaybe f . zip ids <$> mapM getInfo ids
     populateModel list
+    updateNavButtons
   widgetHide dialog
   windowPresent dialog
 
 initContext = do
   lock   <- newMVar ()
   dialog <- dialogNew
+  prevB  <- buttonNewWithMnemonic "_Previous track"
+  nextB  <- buttonNewWithMnemonic "_Next track"
   return $ augmentContext
     UI { uLock   = lock
        , uDialog = dialog
+       , uPrevB  = prevB
+       , uNextB  = nextB
        }
+
+updateNavButtons = do
+  (ep, en) <- getNavEnables
+  widgetSetSensitive prevB ep
+  widgetSetSensitive nextB en
