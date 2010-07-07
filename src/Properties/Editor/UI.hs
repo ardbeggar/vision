@@ -40,17 +40,15 @@ import Properties.Editor.View
 
 
 data UI
-  = UI { uLock   :: MVar ()
-       , uDialog :: Dialog
-       , uPrevB  :: Button
-       , uNextB  :: Button
-       , uPtrkB  :: ToggleButton
+  = UI { uVisible :: MVar (Maybe Dialog)
+       , uDialog  :: Dialog
+       , uPrevB   :: Button
+       , uNextB   :: Button
+       , uPtrkB   :: ToggleButton
        }
 
-dialog = uDialog context
-
-tryLock f = maybe (return ()) (const f) =<< tryTakeMVar (uLock context)
-unlock    = putMVar (uLock context) ()
+dialog  = uDialog context
+visible = uVisible context
 
 prevB = uPrevB context
 nextB = uNextB context
@@ -122,38 +120,46 @@ initEditorUI = do
         resetModel
         withSignalBlocked cid $
           toggleButtonSetActive ptrkB True
-        unlock
+        modifyMVar_ visible $ const $ return Nothing
       _             -> do
         widgetHide dialog
         resetModel
         withSignalBlocked cid $
           toggleButtonSetActive ptrkB True
-        unlock
+        modifyMVar_ visible $ const $ return Nothing
 
   widgetShowAll box
   return ?context
 
-showPropertyEditor ids = do
-  tryLock $ withMediaInfo ids $ \list -> do
-    populateModel list
-    dialogSetResponseSensitive dialog ResponseApply False
-    updateNavButtons
-    resetView
-    widgetHide dialog
-    windowPresent dialog
+showPropertyEditor ids =
+  modifyMVar_ visible $ \maybeVis ->
+    case maybeVis of
+      Just vis -> do
+        widgetHide vis
+        windowSetTransientFor vis window
+        windowPresent vis
+        return $ Just vis
+      Nothing  -> withMediaInfo ids $ \list -> do
+        populateModel list
+        dialogSetResponseSensitive dialog ResponseApply False
+        updateNavButtons
+        resetView
+        windowSetTransientFor dialog window
+        windowPresent dialog
+        modifyMVar_ visible $ const $ return $ Just dialog
 
 initContext = do
-  lock   <- newMVar ()
-  dialog <- dialogNew
-  prevB  <- buttonNewWithMnemonic "_Previous track"
-  nextB  <- buttonNewWithMnemonic "_Next track"
-  ptrkB  <- toggleButtonNewWithMnemonic "Per _track"
+  visible <- newMVar Nothing
+  dialog  <- dialogNew
+  prevB   <- buttonNewWithMnemonic "_Previous track"
+  nextB   <- buttonNewWithMnemonic "_Next track"
+  ptrkB   <- toggleButtonNewWithMnemonic "Per _track"
   return $ augmentContext
-    UI { uLock   = lock
-       , uDialog = dialog
-       , uPrevB  = prevB
-       , uNextB  = nextB
-       , uPtrkB  = ptrkB
+    UI { uVisible = visible
+       , uDialog  = dialog
+       , uPrevB   = prevB
+       , uNextB   = nextB
+       , uPtrkB   = ptrkB
        }
 
 updateNavButtons = do
@@ -196,7 +202,8 @@ withMediaInfo ids f = do
           else do
           let ctr' = ctr + 1
           when (ctr' `mod` step == 0) $
-            progressBarSetFraction pbar $ fromIntegral ctr' / fromIntegral len
+            progressBarSetFraction pbar $
+              fromIntegral ctr' / fromIntegral len
           requestInfo $ head is
           writeIORef ref (ctr', is, (id, info) : ready)
           return True
@@ -206,7 +213,9 @@ withMediaInfo ids f = do
   dialog `onResponse` \_ -> do
     onMediaInfo $ remove hid
     widgetDestroy dialog
-    unlock
+    modifyMVar_ visible $ const $ return Nothing
 
   widgetShowAll dialog
   requestInfo $ head ids
+
+  return $ Just dialog
