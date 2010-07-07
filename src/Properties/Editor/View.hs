@@ -20,6 +20,7 @@
 module Properties.Editor.View
   ( initEditorView
   , view
+  , onPropertyEdited
   ) where
 
 import Graphics.UI.Gtk
@@ -30,9 +31,14 @@ import Properties.Editor.Model
 
 
 data View
-  = View { vView :: TreeView }
+  = View { vView    :: TreeView
+         , vValCell :: CellRendererText
+         }
 
-view = vView context
+view    = vView context
+valCell = vValCell context
+
+onPropertyEdited = valCell `on` edited
 
 
 initEditorView = do
@@ -54,14 +60,18 @@ initEditorView = do
 
   column <- treeViewColumnNew
   treeViewAppendColumn view column
-  cell <- cellRendererTextNew
-  treeViewColumnPackStart column cell True
-  cellLayoutSetAttributes column cell store $ \prop ->
-    [ cellText :=> propertyText prop ]
+  treeViewColumnPackStart column valCell True
+  cellLayoutSetAttributes column valCell store $ \prop ->
+    [ cellText         :=> propertyText prop
+    , cellTextEditable :=  not $ propReadOnly prop
+    ]
 
   return ?context
 
 initContext = do
-  view <- treeViewNewWithModel store
+  view    <- treeViewNewWithModel store
+  valCell <- cellRendererTextNew
   return $ augmentContext
-    View { vView = view }
+    View { vView    = view
+         , vValCell = valCell
+         }

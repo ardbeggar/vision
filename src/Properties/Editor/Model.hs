@@ -27,6 +27,7 @@ module Properties.Editor.Model
   , prevTrack
   , nextTrack
   , togglePerTrack
+  , changeProperty
   ) where
 
 import Prelude hiding (lookup)
@@ -43,7 +44,7 @@ import qualified Data.Map as Map
 
 import Graphics.UI.Gtk hiding (add, Entry)
 
-import XMMS2.Client hiding (Property)
+import qualified XMMS2.Client as X
 
 import Context
 import Config
@@ -59,8 +60,8 @@ type Entry = (MediaInfo, MediaInfo)
 data State
   = State { sPos      :: Int
           , sSize     :: Int
-          , sIds      :: Array Int MediaId
-          , sEntries  :: Map MediaId Entry
+          , sIds      :: Array Int X.MediaId
+          , sEntries  :: Map X.MediaId Entry
           , sCurrent  :: Entry
           , sPerTrack :: Bool
           }
@@ -200,3 +201,16 @@ common e =
   let (h : t) = map (uncurry $ flip Map.union) e
       f a b = if a == b then Just a else Nothing
   in foldl (Map.differenceWith f) h t
+
+changeProperty n prop text = do
+  maybeVal <- if null text
+              then return $ Just (X.PropString "")
+              else readValue prop text
+  case maybeVal of
+    Nothing  ->
+      return False
+    Just val -> do
+      withState $ modify $ \s ->
+        s { sCurrent = mapSnd (Map.insert (propKey prop) val) $ sCurrent s }
+      touch n
+      return True

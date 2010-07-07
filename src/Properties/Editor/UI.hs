@@ -98,6 +98,11 @@ initEditorUI = do
   containerAdd scroll view
   boxPackStartDefaults box scroll
 
+  onPropertyEdited $ \[n] t -> do
+    prop <- listStoreGetValue store n
+    chok <- changeProperty n prop t
+    when chok $ dialogSetResponseSensitive dialog ResponseApply True
+
   dialog `onResponse` \resp ->
     unless (resp == ResponseApply) $ do
       widgetHide dialog
@@ -115,6 +120,7 @@ showPropertyEditor ids = do
         f _               = Nothing
     list <- mapMaybe f . zip ids <$> mapM getInfo ids
     populateModel list
+    dialogSetResponseSensitive dialog ResponseApply False
     updateNavButtons
   widgetHide dialog
   windowPresent dialog

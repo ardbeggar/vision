@@ -22,6 +22,7 @@ module Utils
   , makeHandlerMVar
   , onHandler
   , mapFst
+  , mapSnd
   , decodeURL
   , trd
   , trim
@@ -59,6 +60,7 @@ makeHandlerMVar = newMVar make
 onHandler = modifyMVar
 
 mapFst f (a, b) = (f a, b)
+mapSnd f (a, b) = (a, f b)
 
 decodeURL = decodeString . decodeURL'
 decodeURL' []         = []
