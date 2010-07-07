@@ -201,7 +201,7 @@ withMediaInfo ids f = do
           return False
           else do
           let ctr' = ctr + 1
-          when (ctr' `mod` step == 0) $
+          when (step == 0 || ctr' `mod` step == 0) $
             progressBarSetFraction pbar $
               fromIntegral ctr' / fromIntegral len
           requestInfo $ head is
