@@ -51,5 +51,7 @@
     <separator/>
     <menuitem action="select-all"/>
     <menuitem action="invert-selection"/>
+    <separator/>
+    <menuitem action="edit-properties"/>
   </popup>
 </ui>
