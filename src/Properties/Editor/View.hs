@@ -20,6 +20,7 @@
 module Properties.Editor.View
   ( initEditorView
   , view
+  , resetView
   , onPropertyEdited
   ) where
 
@@ -32,13 +33,19 @@ import Properties.Editor.Model
 
 data View
   = View { vView    :: TreeView
+         , vValCol  :: TreeViewColumn
          , vValCell :: CellRendererText
          }
 
 view    = vView context
+valCol  = vValCol context
 valCell = vValCell context
 
 onPropertyEdited = valCell `on` edited
+
+resetView = do
+  treeViewSetCursor view [0] $ Just (valCol, False)
+  widgetGrabFocus view
 
 
 initEditorView = do
@@ -58,10 +65,9 @@ initEditorView = do
     , cellTextWeight := 800
     ]
 
-  column <- treeViewColumnNew
-  treeViewAppendColumn view column
-  treeViewColumnPackStart column valCell True
-  cellLayoutSetAttributes column valCell store $ \prop ->
+  treeViewAppendColumn view valCol
+  treeViewColumnPackStart valCol valCell True
+  cellLayoutSetAttributes valCol valCell store $ \prop ->
     [ cellText         :=> propertyText prop
     , cellTextEditable :=  not $ propReadOnly prop
     ]
@@ -70,8 +76,10 @@ initEditorView = do
 
 initContext = do
   view    <- treeViewNewWithModel store
+  valCol  <- treeViewColumnNew
   valCell <- cellRendererTextNew
   return $ augmentContext
     View { vView    = view
+         , vValCol  = valCol
          , vValCell = valCell
          }
