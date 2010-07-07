@@ -23,6 +23,7 @@ module Medialib
   , initMedialib
   , requestInfo
   , onMediaInfo
+  , getInfo
   ) where
 
 import Control.Concurrent.MVar
@@ -125,3 +126,9 @@ handleInfo id = do
                     , cNextStamp = succ stamp }, stamp)
     onMediaInfo $ invoke (fromIntegral id, stamp, info)
   return False
+
+getInfo id =
+  withMVar cache $ \cache ->
+    return $ case IntMap.lookup (fromIntegral id) $ cEntries cache of
+      Just (CEReady _ info) -> Just info
+      _                     -> Nothing

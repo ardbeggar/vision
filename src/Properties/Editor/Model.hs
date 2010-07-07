@@ -20,30 +20,57 @@
 module Properties.Editor.Model
   ( initEditorModel
   , store
+  , populateModel
+  , propertyText
   ) where
 
+import Prelude hiding (lookup)
+
 import Control.Concurrent.MVar
-import Control.Monad.State hiding (State)
+import Control.Monad.State hiding (State, withState)
 import Control.Applicative
 
 import Data.Maybe
-import Data.List
+import Data.List hiding (lookup)
+import Data.Array
+import Data.Map (Map)
+import qualified Data.Map as Map
 
-import Graphics.UI.Gtk hiding (add)
+import Graphics.UI.Gtk hiding (add, Entry)
+
+import XMMS2.Client hiding (Property)
 
 import Context
 import Config
 import Utils
 import Handler
+import Medialib
 import Properties.Property
 import Properties.Model
 
 
-data State
-  = State { sPos :: Int }
+type Entry = (MediaInfo, MediaInfo)
 
-makeState =
-  State { sPos = 0 }
+data State
+  = State { sPos      :: Int
+          , sSize     :: Int
+          , sIds      :: Array Int MediaId
+          , sEntries  :: Map MediaId Entry
+          , sCurrent  :: Entry
+          }
+
+makeState list =
+  let size    = length list
+      ids     = array (0, size - 1) $ zip [0 .. ] $ map fst list
+      entries = Map.fromList $
+        map (\(id, info) -> (id, (info, Map.empty))) list
+      current = fromJust $ Map.lookup (ids ! 0) entries
+  in State { sPos     = 0
+           , sSize    = size
+           , sIds     = ids
+           , sEntries = entries
+           , sCurrent = current
+           }
 
 data Model
   = Model { mState :: MVar (Maybe State)
@@ -53,8 +80,8 @@ data Model
 state = mState context
 store = mStore context
 
-setupState =
-  modifyMVar_ state . const . return $ Just makeState
+setupState list =
+  modifyMVar_ state . const . return . Just $ makeState list
 
 withState f =
   modifyMVar state $ \(Just s) -> do
@@ -100,3 +127,11 @@ populateStore cur = do
     unionBy (eqBy propName) (catMaybes cur) all
 
 configFile = "property-editor.conf"
+
+populateModel list = do
+  setupState list
+
+propertyText prop =
+  withState $ do
+    (b, c) <- gets sCurrent
+    return $ maybe "" id $ lookup prop c `mplus` lookup prop b

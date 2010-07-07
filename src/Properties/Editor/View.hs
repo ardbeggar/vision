@@ -52,6 +52,13 @@ initEditorView = do
     , cellTextWeight := 800
     ]
 
+  column <- treeViewColumnNew
+  treeViewAppendColumn view column
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributes column cell store $ \prop ->
+    [ cellText :=> propertyText prop ]
+
   return ?context
 
 initContext = do

@@ -24,11 +24,16 @@ module Properties.Editor.UI
 
 import Control.Concurrent.MVar
 import Control.Monad
+import Control.Applicative
+
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
 import Context
 import Utils
+import Medialib
+import Properties.Editor.Model
 import Properties.Editor.View
 
 
@@ -77,9 +82,12 @@ initEditorUI = do
   widgetShowAll box
   return ?context
 
-showPropertyEditor _ = do
+showPropertyEditor ids = do
   tryLock $ do
-    putStrLn "Locked!"
+    let f (id, Just info) = Just (id, info)
+        f _               = Nothing
+    list <- mapMaybe f . zip ids <$> mapM getInfo ids
+    populateModel list
   widgetHide dialog
   windowPresent dialog
 

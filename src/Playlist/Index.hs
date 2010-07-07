@@ -32,7 +32,7 @@ import qualified Data.IntMap as IntMap
 
 import Graphics.UI.Gtk hiding (add)
 
-import Medialib
+import Medialib hiding (getInfo)
 import Context
 import Handler
 import Playlist.Model
