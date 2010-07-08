@@ -96,10 +96,14 @@ setupState list =
 resetState =
   modifyMVar_ state . const $ return Nothing
 
-withState f =
-  modifyMVar state $ \(Just s) -> do
-    (a, s') <- runStateT f s
-    return (Just s', a)
+withState d f =
+  modifyMVar state $ \state ->
+    case state of
+      Just s  -> do
+        (a, s') <- runStateT f s
+        return (Just s', a)
+      Nothing ->
+        return (Nothing, d)
 
 initEditorModel = do
   context <- initContext
@@ -108,6 +112,12 @@ initEditorModel = do
   cid <- store `on` rowDeleted $ const saveConfig
   onProperties . add . ever . const $
     withSignalBlocked cid updateProperties
+
+  onServerConnection . add . ever $ \conn ->
+    unless conn $ do
+      resetModel
+      touchAll
+
   loadConfig
 
   return ?context
@@ -147,11 +157,11 @@ populateModel list = do
 resetModel =
   resetState
 
-propertyText prop = withState $ do
+propertyText prop = withState "" $ do
   (b, c) <- gets sCurrent
   return $ maybe "" id $ lookup prop c `mplus` lookup prop b
 
-getNavEnables = withState $ do
+getNavEnables = withState (False, False) $ do
   t <- gets sPerTrack
   p <- gets sPos
   s <- gets sSize
@@ -161,7 +171,7 @@ prevTrack = stepTrack (-1)
 nextTrack = stepTrack 1
 
 stepTrack inc = do
-  withState $ modify $ \s ->
+  withState () $ modify $ \s ->
     let e = Map.insert (sIds s ! sPos s) (sCurrent s) (sEntries s)
         p = sPos s + inc
         c = e Map.! (sIds s ! p) in
@@ -180,7 +190,7 @@ touch n = do
   treeModelRowChanged store [n] iter
 
 togglePerTrack = do
-  withState $ modify $ \s ->
+  withState () $ modify $ \s ->
     if sPerTrack s
     then let
       e = Map.insert (sIds s ! sPos s) (sCurrent s) (sEntries s)
@@ -214,13 +224,13 @@ changeProperty n prop text = do
     Nothing  ->
       return False
     Just val -> do
-      withState $ modify $ \s ->
+      withState () $ modify $ \s ->
         s { sCurrent = mapSnd (Map.insert (propKey prop) val) $ sCurrent s }
       touch n
       return True
 
 writeProperties = do
-  changes <- withState extractChanges
+  changes <- withState [] extractChanges
   mapM_ writeForId changes
   where writeForId (id, cs) =
           mapM_ (writeProperty id) cs

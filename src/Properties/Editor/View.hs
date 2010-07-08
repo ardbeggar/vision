@@ -27,6 +27,7 @@ module Properties.Editor.View
 import Graphics.UI.Gtk
 
 import Context
+import XMMS
 import Properties.Property
 import Properties.Editor.Model
 
@@ -69,7 +70,9 @@ initEditorView = do
   treeViewColumnPackStart valCol valCell True
   cellLayoutSetAttributes valCol valCell store $ \prop ->
     [ cellText         :=> propertyText prop
-    , cellTextEditable :=  not $ propReadOnly prop
+    , cellTextEditable :=> do
+      c <- connected
+      return $ c && (not $ propReadOnly prop)
     ]
 
   return ?context

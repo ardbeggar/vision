@@ -90,8 +90,7 @@ initEditorUI = do
   widgetSetCanFocus nextB False
   containerAdd bbox nextB
 
-  toggleButtonSetActive ptrkB True
-  cid <- ptrkB `onToggled` (togglePerTrack >> updateNavButtons)
+  ptrkB `onToggled` (togglePerTrack >> updateNavButtons)
   widgetSetCanFocus ptrkB False
   containerAdd bbox ptrkB
 
@@ -104,35 +103,51 @@ initEditorUI = do
   onPropertyEdited $ \[n] t -> do
     prop <- listStoreGetValue store n
     chok <- changeProperty n prop t
-    when chok $ dialogSetResponseSensitive dialog ResponseApply True
+    when chok $ do
+      dialogSetResponseSensitive dialog ResponseApply True
+      updateTitle True
 
   dialog `onResponse` \resp ->
     case resp of
       ResponseApply -> do
-        dialogSetResponseSensitive dialog ResponseApply False
-        dialogSetResponseSensitive dialog ResponseOk False
-        writeProperties
+        doWriteProperties
         dialogSetResponseSensitive dialog ResponseOk True
         widgetGrabFocus view
       ResponseOk    -> do
-        dialogSetResponseSensitive dialog ResponseApply False
-        dialogSetResponseSensitive dialog ResponseOk False
-        writeProperties
-        widgetHide dialog
-        dialogSetResponseSensitive dialog ResponseOk True
-        resetModel
-        withSignalBlocked cid $
-          toggleButtonSetActive ptrkB True
-        setVisible Nothing
-      _             -> do
-        widgetHide dialog
-        resetModel
-        withSignalBlocked cid $
-          toggleButtonSetActive ptrkB True
-        setVisible Nothing
+        doWriteProperties
+        hideEditor
+      _             ->
+        hideEditor
+
+  onServerConnection . add . ever $ \conn ->
+    unless conn $ do
+      widgetSetSensitive prevB False
+      widgetSetSensitive nextB False
+      widgetSetSensitive ptrkB False
+      dialogSetResponseSensitive dialog ResponseApply False
+      dialogSetResponseSensitive dialog ResponseOk False
+      updateTitle False
 
   widgetShowAll box
   return ?context
+
+doWriteProperties = do
+  dialogSetResponseSensitive dialog ResponseApply False
+  dialogSetResponseSensitive dialog ResponseOk False
+  writeProperties
+  updateTitle False
+
+hideEditor = do
+  widgetHide dialog
+  resetModel
+  setVisible Nothing
+
+updateTitle m = do
+  c <- connected
+  windowSetTitle dialog $ case c of
+    False    -> "Edit properties (disconnected)"
+    True | m -> "Edit properties (modified)"
+    _        -> "Edit properties"
 
 showPropertyEditor ids =
   modifyMVar_ visible $ \maybeVis ->
@@ -143,11 +158,15 @@ showPropertyEditor ids =
         windowPresent vis
         return $ Just vis
       Nothing  -> withMediaInfo ids $ \list -> do
+        toggleButtonSetActive ptrkB True
+        widgetSetSensitive ptrkB True
         populateModel list
         dialogSetResponseSensitive dialog ResponseApply False
+        dialogSetResponseSensitive dialog ResponseOk True
         updateNavButtons
         resetView
         windowSetTransientFor dialog window
+        updateTitle False
         windowPresent dialog
         return $ Just dialog
 
