@@ -35,6 +35,7 @@ import Utils
 import Medialib
 import Handler
 import UI
+import XMMS
 import Properties.Editor.Model
 import Properties.Editor.View
 
@@ -216,6 +217,16 @@ withMediaInfo ids f = do
     onMediaInfo $ remove hid
     widgetDestroy dialog
     setVisible Nothing
+
+  did <- onServerConnection . add . once $ \conn ->
+    unless conn $ do
+      flip timeoutAdd 0 $ do
+        onMediaInfo $ remove hid
+        widgetDestroy dialog
+        setVisible Nothing
+        return False
+      return ()
+  dialog `onDestroy` (onServerConnection $ remove did)
 
   widgetShowAll dialog
   requestInfo $ head ids
