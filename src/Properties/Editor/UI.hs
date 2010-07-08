@@ -38,20 +38,24 @@ import Properties.Editor.View
 
 
 data UI
-  = UI { uVisible :: MVar (Maybe Dialog)
+  = UI { uLock    :: MVar ()
        , uDialog  :: Dialog
        , uPrevB   :: Button
        , uNextB   :: Button
        , uPtrkB   :: ToggleButton
+       , uPBar    :: ProgressBar
        }
 
-visible = uVisible context
+tryLock f =
+  maybe (return ()) (const f) =<< (tryTakeMVar $ uLock context)
+unlock  = putMVar (uLock context) ()
 
 dialog = uDialog context
 
 prevB = uPrevB context
 nextB = uNextB context
 ptrkB = uPtrkB context
+pBar  = uPBar  context
 
 
 initEditorUI = do
@@ -73,10 +77,15 @@ initEditorUI = do
   upper <- dialogGetUpper dialog
   boxPackStartDefaults upper box
 
+  hbox <- hBoxNew False 15
+  boxPackStart box hbox PackNatural 7
+
   bbox <- hButtonBoxNew
   buttonBoxSetLayout bbox ButtonboxStart
   boxSetSpacing bbox 7
-  boxPackStart box bbox PackNatural 7
+  boxPackStart hbox bbox PackNatural 0
+
+  boxPackStartDefaults hbox pBar
 
   prevB `onClicked` (prevTrack >> updateNavButtons)
   widgetSetCanFocus prevB False
@@ -122,9 +131,9 @@ initEditorUI = do
       widgetSetSensitive ptrkB False
       dialogSetResponseSensitive dialog ResponseApply False
       dialogSetResponseSensitive dialog ResponseOk False
+      progressBarSetFraction pBar 0
+      progressBarSetText pBar "Disconnected"
       updateTitle False
-
-  setupOnHide visible dialog
 
   widgetShowAll box
   return ?context
@@ -138,6 +147,7 @@ doWriteProperties = do
 hideEditor = do
   widgetHide dialog
   resetModel
+  unlock
 
 updateTitle m = do
   c <- connected
@@ -146,31 +156,41 @@ updateTitle m = do
     True | m -> "Edit properties (modified)"
     _        -> "Edit properties"
 
-showPropertyEditor =
-  showWithMediaInfo visible $ \list -> do
-    toggleButtonSetActive ptrkB True
-    widgetSetSensitive ptrkB True
-    populateModel list
+showPropertyEditor ids = do
+  tryLock $ do
     dialogSetResponseSensitive dialog ResponseApply False
-    dialogSetResponseSensitive dialog ResponseOk True
+    dialogSetResponseSensitive dialog ResponseOk False
+    widgetSetSensitive ptrkB False
     updateNavButtons
-    resetView
-    windowSetTransientFor dialog window
-    updateTitle False
-    return $ Just dialog
+    widgetShow pBar
+    retrieveProperties pBar ids $ \list -> do
+      toggleButtonSetActive ptrkB True
+      widgetSetSensitive ptrkB True
+      populateModel list
+      dialogSetResponseSensitive dialog ResponseApply False
+      dialogSetResponseSensitive dialog ResponseOk True
+      updateNavButtons
+      resetView
+      widgetHide pBar
+  widgetHide dialog
+  windowSetTransientFor dialog window
+  updateTitle False
+  windowPresent dialog
 
 initContext = do
-  visible <- newMVar Nothing
+  lock    <- newMVar ()
   dialog  <- dialogNew
   prevB   <- buttonNewWithMnemonic "_Previous track"
   nextB   <- buttonNewWithMnemonic "_Next track"
   ptrkB   <- toggleButtonNewWithMnemonic "Per _track"
+  pBar    <- progressBarNew
   return $ augmentContext
-    UI { uVisible = visible
+    UI { uLock    = lock
        , uDialog  = dialog
        , uPrevB   = prevB
        , uNextB   = nextB
        , uPtrkB   = ptrkB
+       , uPBar    = pBar
        }
 
 updateNavButtons = do
