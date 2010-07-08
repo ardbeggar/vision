@@ -25,17 +25,14 @@ module Properties.Editor.UI
 import Control.Concurrent.MVar
 import Control.Monad
 
-import Data.IORef
-import Data.List
-
 import Graphics.UI.Gtk hiding (add, remove)
 
 import Context
 import Utils
-import Medialib
 import Handler
 import UI
 import XMMS
+import WithMediaInfo
 import Properties.Editor.Model
 import Properties.Editor.View
 
@@ -48,8 +45,7 @@ data UI
        , uPtrkB   :: ToggleButton
        }
 
-visible    = uVisible context
-setVisible = modifyMVar_ visible . const . return
+visible = uVisible context
 
 dialog = uDialog context
 
@@ -128,7 +124,7 @@ initEditorUI = do
       dialogSetResponseSensitive dialog ResponseOk False
       updateTitle False
 
-  dialog `onHide` (tryModifyMVar_ visible . const $ return Nothing)
+  setupOnHide visible dialog
 
   widgetShowAll box
   return ?context
@@ -150,26 +146,18 @@ updateTitle m = do
     True | m -> "Edit properties (modified)"
     _        -> "Edit properties"
 
-showPropertyEditor ids =
-  modifyMVar_ visible $ \maybeVis ->
-    case maybeVis of
-      Just vis -> do
-        widgetHide vis
-        windowSetTransientFor vis window
-        windowPresent vis
-        return $ Just vis
-      Nothing  -> withMediaInfo ids $ \list -> do
-        toggleButtonSetActive ptrkB True
-        widgetSetSensitive ptrkB True
-        populateModel list
-        dialogSetResponseSensitive dialog ResponseApply False
-        dialogSetResponseSensitive dialog ResponseOk True
-        updateNavButtons
-        resetView
-        windowSetTransientFor dialog window
-        updateTitle False
-        windowPresent dialog
-        return $ Just dialog
+showPropertyEditor =
+  showWithMediaInfo visible $ \list -> do
+    toggleButtonSetActive ptrkB True
+    widgetSetSensitive ptrkB True
+    populateModel list
+    dialogSetResponseSensitive dialog ResponseApply False
+    dialogSetResponseSensitive dialog ResponseOk True
+    updateNavButtons
+    resetView
+    windowSetTransientFor dialog window
+    updateTitle False
+    return $ Just dialog
 
 initContext = do
   visible <- newMVar Nothing
@@ -190,65 +178,3 @@ updateNavButtons = do
   widgetSetSensitive prevB ep
   widgetSetSensitive nextB en
 
-withMediaInfo ids f = do
-  let ids' = nub ids
-      len  = length ids'
-      step = len `div` 100
-
-  dialog <- dialogNew
-  windowSetDefaultSize dialog 200 (-1)
-  dialogSetHasSeparator dialog False
-  windowSetTitle dialog "Retrieving properties"
-  windowSetTransientFor dialog window
-
-  dialogAddButton dialog "gtk-cancel" ResponseCancel
-
-  upper <- dialogGetUpper dialog
-  box   <- vBoxNew False 0
-  containerSetBorderWidth box 7
-  boxPackStart upper box PackNatural 0
-
-  pbar <- progressBarNew
-  progressBarSetText pbar "Retrieving properties"
-  boxPackStart box pbar PackNatural 0
-
-  ref <- newIORef (0, ids', [])
-  hid <- onMediaInfo . add $ \(id, _, info) -> do
-    (ctr, todo, ready) <- readIORef ref
-    case todo of
-      (i:is) | i == id -> do
-        if null is
-          then do
-          setVisible =<< (f $ reverse ((id, info) : ready))
-          widgetDestroy dialog
-          return False
-          else do
-          let ctr' = ctr + 1
-          when (step == 0 || ctr' `mod` step == 0) $
-            progressBarSetFraction pbar $
-              fromIntegral ctr' / fromIntegral len
-          requestInfo $ head is
-          writeIORef ref (ctr', is, (id, info) : ready)
-          return True
-      _ ->
-        return True
-
-  dialog `onResponse` \_ -> do
-    onMediaInfo $ remove hid
-    widgetDestroy dialog
-    setVisible Nothing
-
-  did <- onServerConnection . add . once $ \conn ->
-    unless conn $ do
-      flip timeoutAdd 0 $ do
-        onMediaInfo $ remove hid
-        widgetDestroy dialog
-        setVisible Nothing
-        return False
-      return ()
-  dialog `onDestroy` (onServerConnection $ remove did)
-
-  widgetShowAll dialog
-  requestInfo $ head ids
-
-  return $ Just dialog
