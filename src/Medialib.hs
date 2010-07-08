@@ -80,7 +80,8 @@ initMedialib = do
   let ?context = context
 
   onServerConnectionAdd . ever $ \conn ->
-    when conn $ do
+    if conn
+    then do
       broadcastMedialibEntryChanged xmms >>* do
         id <- result
         let id' = fromIntegral id
@@ -89,6 +90,9 @@ initMedialib = do
             when (isJust . IntMap.lookup id' $ cEntries cache) $
               medialibGetInfo xmms id >>* handleInfo id'
         return True
+    else
+      modifyMVar_ cache $ \cache ->
+        return cache { cEntries = IntMap.empty }
 
   return ?context
 
