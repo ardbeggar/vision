@@ -34,6 +34,7 @@ module Utils
   , withSignalBlocked
   , hideOnDeleteEvent
   , eqBy
+  , tryModifyMVar_
   ) where
 
 import Prelude hiding (catch)
@@ -142,3 +143,15 @@ hideOnDeleteEvent window =
     return True
 
 eqBy f a b = f a == f b
+
+{-# INLINE tryModifyMVar_ #-}
+tryModifyMVar_ :: MVar a -> (a -> IO a) -> IO ()
+tryModifyMVar_ m io =
+  block $ do
+    maybeA <- tryTakeMVar m
+    case maybeA of
+      Just a  -> do
+        a' <- unblock (io a) `onException` putMVar m a
+        putMVar m a'
+      Nothing ->
+        return ()

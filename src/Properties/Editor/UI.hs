@@ -128,6 +128,8 @@ initEditorUI = do
       dialogSetResponseSensitive dialog ResponseOk False
       updateTitle False
 
+  dialog `onHide` (tryModifyMVar_ visible . const $ return Nothing)
+
   widgetShowAll box
   return ?context
 
@@ -140,7 +142,6 @@ doWriteProperties = do
 hideEditor = do
   widgetHide dialog
   resetModel
-  setVisible Nothing
 
 updateTitle m = do
   c <- connected
