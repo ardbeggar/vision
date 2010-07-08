@@ -153,6 +153,7 @@ configFile = "property-editor.conf"
 
 populateModel list = do
   setupState list
+  touchAll
 
 resetModel =
   resetState

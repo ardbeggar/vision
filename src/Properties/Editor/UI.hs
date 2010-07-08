@@ -47,8 +47,8 @@ data UI
        }
 
 tryLock f =
-  maybe (return ()) (const f) =<< (tryTakeMVar $ uLock context)
-unlock  = putMVar (uLock context) ()
+  maybe (return False) (const $ f >> return True) =<< (tryTakeMVar $ uLock context)
+unlock  = tryPutMVar (uLock context) () >> return ()
 
 dialog = uDialog context
 
@@ -110,7 +110,7 @@ initEditorUI = do
     chok <- changeProperty n prop t
     when chok $ do
       dialogSetResponseSensitive dialog ResponseApply True
-      updateTitle True
+      updateTitle True False
 
   dialog `onResponse` \resp ->
     case resp of
@@ -133,7 +133,8 @@ initEditorUI = do
       dialogSetResponseSensitive dialog ResponseOk False
       progressBarSetFraction pBar 0
       progressBarSetText pBar "Disconnected"
-      updateTitle False
+      updateTitle False False
+      unlock
 
   widgetShowAll box
   return ?context
@@ -142,27 +143,29 @@ doWriteProperties = do
   dialogSetResponseSensitive dialog ResponseApply False
   dialogSetResponseSensitive dialog ResponseOk False
   writeProperties
-  updateTitle False
+  updateTitle False False
 
 hideEditor = do
   widgetHide dialog
   resetModel
   unlock
 
-updateTitle m = do
+updateTitle m r = do
   c <- connected
   windowSetTitle dialog $ case c of
     False    -> "Edit properties (disconnected)"
     True | m -> "Edit properties (modified)"
+    _    | r -> "Edit properties (retrieving)"
     _        -> "Edit properties"
 
 showPropertyEditor ids = do
-  tryLock $ do
+  retr <- tryLock $ do
     dialogSetResponseSensitive dialog ResponseApply False
     dialogSetResponseSensitive dialog ResponseOk False
     widgetSetSensitive ptrkB False
     updateNavButtons
     widgetShow pBar
+    resetView
     retrieveProperties pBar ids $ \list -> do
       toggleButtonSetActive ptrkB True
       widgetSetSensitive ptrkB True
@@ -170,11 +173,11 @@ showPropertyEditor ids = do
       dialogSetResponseSensitive dialog ResponseApply False
       dialogSetResponseSensitive dialog ResponseOk True
       updateNavButtons
-      resetView
       widgetHide pBar
+      updateTitle False False
   widgetHide dialog
   windowSetTransientFor dialog window
-  updateTitle False
+  updateTitle False retr
   windowPresent dialog
 
 initContext = do
