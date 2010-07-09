@@ -160,7 +160,9 @@ resetModel =
 
 propertyText prop = withState "" $ do
   (b, c) <- gets sCurrent
-  return $ maybe "" id $ lookup prop c `mplus` lookup prop b
+  let key = propKey prop
+      val = Map.lookup key c `mplus` Map.lookup key b
+  return $ maybe "" (showValue prop) val
 
 getNavEnables = withState (False, False) $ do
   t <- gets sPerTrack
@@ -218,17 +220,20 @@ common e =
   in Map.intersection c i
 
 changeProperty n prop text = do
-  maybeVal <- if null text
-              then return $ Just (X.PropString "")
-              else readValue prop text
+  maybeVal <- case trim text of
+    [] -> return . Just $ X.PropString ""
+    st -> readValue prop st
   case maybeVal of
-    Nothing  ->
-      return False
-    Just val -> do
-      withState () $ modify $ \s ->
-        s { sCurrent = mapSnd (Map.insert (propKey prop) val) $ sCurrent s }
-      touch n
-      return True
+    Nothing  -> return False
+    Just val -> withState False $ do
+      (b, c) <- gets sCurrent
+      let key = propKey prop
+          cur = Map.lookup key c `mplus` Map.lookup key b
+          res = maybeVal /= cur
+      when res $ do
+        modify $ \s -> s { sCurrent = (b, Map.insert key val c) }
+        liftIO $ touch n
+      return res
 
 writeProperties = do
   changes <- withState [] extractChanges
