@@ -24,6 +24,7 @@ module Medialib
   , requestInfo
   , onMediaInfo
   , getInfo
+  , retrieveProperties
   ) where
 
 import Control.Concurrent.MVar
@@ -34,8 +35,10 @@ import Data.Map (Map)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Maybe
+import Data.List
+import Data.IORef
 
-import Graphics.UI.Gtk hiding (add)
+import Graphics.UI.Gtk hiding (add, remove)
 
 import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
@@ -136,3 +139,34 @@ getInfo id =
     return $ case IntMap.lookup (fromIntegral id) $ cEntries cache of
       Just (CEReady _ info) -> Just info
       _                     -> Nothing
+
+retrieveProperties pbar ids f = do
+  let ids'       = nub ids
+      len        = length ids'
+      step       = len `div` 100
+
+  ref <- newIORef (0, ids', [])
+  hid <- onMediaInfo . add $ \(id, _, info) -> do
+    (ctr, todo, ready) <- readIORef ref
+    case todo of
+      (i:is) | i == id -> do
+        if null is
+          then do
+          f $ reverse ((id, info) : ready)
+          return False
+          else do
+          let ctr' = ctr + 1
+          when (step == 0 || ctr' `mod` step == 0) $
+            progressBarSetFraction pbar $
+              fromIntegral ctr' / fromIntegral len
+          requestInfo $ head is
+          writeIORef ref (ctr', is, (id, info) : ready)
+          return True
+      _ ->
+        return True
+
+  progressBarSetFraction pbar 0
+  progressBarSetText pbar "Retrieving properties"
+  requestInfo $ head ids
+
+  return . onMediaInfo $ remove hid

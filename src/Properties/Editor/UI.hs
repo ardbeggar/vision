@@ -34,7 +34,7 @@ import Utils
 import Handler
 import UI
 import XMMS
-import WithMediaInfo
+import Medialib
 import Properties.Editor.Model
 import Properties.Editor.View
 
