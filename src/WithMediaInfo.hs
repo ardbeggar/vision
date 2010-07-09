@@ -28,7 +28,6 @@ import Control.Monad
 
 import Data.IORef
 import Data.List
-import Data.Maybe
 
 import Graphics.UI.Gtk hiding (add, remove)
 
@@ -126,14 +125,12 @@ retrieveProperties pbar ids f = do
       step       = len `div` 100
 
   ref <- newIORef (0, ids', [])
-  did <- newIORef Nothing
   hid <- onMediaInfo . add $ \(id, _, info) -> do
     (ctr, todo, ready) <- readIORef ref
     case todo of
       (i:is) | i == id -> do
         if null is
           then do
-          onServerConnection . remove . fromJust =<< readIORef did
           f $ reverse ((id, info) : ready)
           return False
           else do
@@ -146,11 +143,9 @@ retrieveProperties pbar ids f = do
           return True
       _ ->
         return True
-  writeIORef did . Just =<< do
-    onServerConnection . add . once $ \conn ->
-      unless conn $ onMediaInfo $ remove hid
 
   progressBarSetFraction pbar 0
   progressBarSetText pbar "Retrieving properties"
-
   requestInfo $ head ids
+
+  return . onMediaInfo $ remove hid

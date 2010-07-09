@@ -25,6 +25,8 @@ module Properties.Editor.UI
 import Control.Concurrent.MVar
 import Control.Monad
 
+import Data.IORef
+
 import Graphics.UI.Gtk hiding (add, remove)
 
 import Context
@@ -44,10 +46,12 @@ data UI
        , uNextB   :: Button
        , uPtrkB   :: ToggleButton
        , uPBar    :: ProgressBar
+       , uCancel  :: IORef (Maybe (IO ()))
        }
 
 tryLock f =
-  maybe (return False) (const $ f >> return True) =<< (tryTakeMVar $ uLock context)
+  maybe (return False) (const $ f >> return True)
+  =<< (tryTakeMVar $ uLock context)
 unlock  = tryPutMVar (uLock context) () >> return ()
 
 dialog = uDialog context
@@ -56,6 +60,12 @@ prevB = uPrevB context
 nextB = uNextB context
 ptrkB = uPtrkB context
 pBar  = uPBar  context
+
+setRetrievalCancel = writeIORef (uCancel context) . Just
+cancelRetrieval    = do
+  cancel' <- readIORef (uCancel context)
+  fmaybeM_ cancel' id
+  writeIORef (uCancel context) Nothing
 
 
 initEditorUI = do
@@ -68,9 +78,9 @@ initEditorUI = do
   windowSetDefaultSize dialog 800 600
   dialogSetHasSeparator dialog False
 
-  dialogAddButton   dialog "gtk-apply"  ResponseApply
-  dialogAddButton   dialog "gtk-cancel" ResponseCancel
-  dialogAddButtonCR dialog "gtk-ok"     ResponseOk
+  dialogAddButton   dialog stockApply  ResponseApply
+  dialogAddButton   dialog stockCancel ResponseCancel
+  dialogAddButtonCR dialog stockOk     ResponseOk
 
   box <- vBoxNew False 0
   containerSetBorderWidth box 7
@@ -121,11 +131,13 @@ initEditorUI = do
       ResponseOk    -> do
         doWriteProperties
         hideEditor
-      _             ->
+      _             -> do
+        cancelRetrieval
         hideEditor
 
   onServerConnection . add . ever $ \conn ->
     unless conn $ do
+      cancelRetrieval
       widgetSetSensitive prevB False
       widgetSetSensitive nextB False
       widgetSetSensitive ptrkB False
@@ -166,15 +178,16 @@ showPropertyEditor ids = do
     updateNavButtons
     widgetShow pBar
     resetView
-    retrieveProperties pBar ids $ \list -> do
-      toggleButtonSetActive ptrkB True
-      widgetSetSensitive ptrkB True
-      populateModel list
-      dialogSetResponseSensitive dialog ResponseApply False
-      dialogSetResponseSensitive dialog ResponseOk True
-      updateNavButtons
-      widgetHide pBar
-      updateTitle False False
+    setRetrievalCancel =<< do
+      retrieveProperties pBar ids $ \list -> do
+        toggleButtonSetActive ptrkB True
+        widgetSetSensitive ptrkB True
+        populateModel list
+        dialogSetResponseSensitive dialog ResponseApply False
+        dialogSetResponseSensitive dialog ResponseOk True
+        updateNavButtons
+        widgetHide pBar
+        updateTitle False False
   widgetHide dialog
   windowSetTransientFor dialog window
   updateTitle False retr
@@ -187,6 +200,7 @@ initContext = do
   nextB   <- buttonNewWithMnemonic "_Next track"
   ptrkB   <- toggleButtonNewWithMnemonic "Per _track"
   pBar    <- progressBarNew
+  cancel  <- newIORef Nothing
   return $ augmentContext
     UI { uLock    = lock
        , uDialog  = dialog
@@ -194,6 +208,7 @@ initContext = do
        , uNextB   = nextB
        , uPtrkB   = ptrkB
        , uPBar    = pBar
+       , uCancel  = cancel
        }
 
 updateNavButtons = do
