@@ -346,4 +346,12 @@ srvActions =
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = showPropertyExport
     }
+  , ActionEntry
+    { actionEntryName        = "import-properties"
+    , actionEntryLabel       = "_Import properties"
+    , actionEntryStockId     = Just stockOpen
+    , actionEntryAccelerator = Just ""
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyImport
+    }
   ]

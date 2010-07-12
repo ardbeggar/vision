@@ -30,6 +30,7 @@ module Properties
   , showPropertyEditor
   , onProperties
   , showPropertyExport
+  , showPropertyImport
   ) where
 
 import Prelude hiding (lookup)

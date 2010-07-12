@@ -23,6 +23,7 @@ module Utils
   , onHandler
   , mapFst
   , mapSnd
+  , encodeURL
   , decodeURL
   , trd
   , trim
@@ -62,6 +63,25 @@ onHandler = modifyMVar
 
 mapFst f (a, b) = (f a, b)
 mapSnd f (a, b) = (a, f b)
+
+encodeURL = encodeURL' . encodeString
+encodeURL' [] = []
+encodeURL' (' ':cs) = '+' : encodeURL' cs
+encodeURL' (c:cs)
+  | goodChar c =
+    c : encodeURL' cs
+  | otherwise  =
+    let code = ord c
+        c1   = intToDigit $ code `div` 16
+        c2   = intToDigit $ code `rem` 16 in
+    '%' : c1 : c2 : encodeURL' cs
+
+goodChar ':' = True
+goodChar '/' = True
+goodChar '-' = True
+goodChar '.' = True
+goodChar '_' = True
+goodChar c   = isAsciiUpper c || isAsciiLower c || isDigit c
 
 decodeURL = decodeString . decodeURL'
 decodeURL' []         = []

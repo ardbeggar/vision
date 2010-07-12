@@ -31,6 +31,7 @@
       <menu action="properties">
         <menuitem action="edit-properties"/>
         <menuitem action="export-properties"/>
+        <menuitem action="import-properties"/>
         <separator/>
         <menuitem action="manage-properties"/>
       </menu>
