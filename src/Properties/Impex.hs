@@ -79,24 +79,8 @@ initContext = do
           , iImportDlg = importDlg
           }
 
-makeExportDlg ids = do
-  chooser <- fileChooserDialogNew
-             (Just "Export properties")
-             Nothing
-             FileChooserActionSave
-             [ (stockCancel, ResponseCancel)
-             , (stockOk,     ResponseAccept) ]
-  addFilters chooser
-  chooser `onResponse` \resp -> do
-    case resp of
-      ResponseAccept -> do
-        name <- fileChooserGetFilename chooser
-        fmaybeM_ name $ exportProps ids
-      _ ->
-        return ()
-    widgetDestroy chooser
-
-  return chooser
+makeExportDlg ids =
+  makeChooser "Export properties" FileChooserActionSave $ exportProps ids
 
 exportProps ids file = do
   pbar <- progressBarNew -- FIXME
@@ -124,24 +108,8 @@ readOnlyProps =
   , "samplerate", "size", "status", "timesplayed", "url"
   , "startms", "stopms", "isdir", "intsort" ]
 
-makeImportDlg = do
-  chooser <- fileChooserDialogNew
-             (Just "Import properties")
-             Nothing
-             FileChooserActionOpen
-             [ (stockCancel, ResponseCancel)
-             , (stockOk,     ResponseAccept) ]
-  addFilters chooser
-  chooser `onResponse` \resp -> do
-    case resp of
-      ResponseAccept -> do
-        name <- fileChooserGetFilename chooser
-        fmaybeM_ name importProps
-      _ ->
-        return ()
-    widgetDestroy chooser
-
-  return chooser
+makeImportDlg =
+  makeChooser "Import properties" FileChooserActionOpen importProps
 
 importProps name =
   importAll `catch` (erep . ioeGetErrorString)
@@ -170,6 +138,25 @@ setProps id props = mapM_ set $ Map.toList props
   where set (k, v) = medialibEntryPropertySet xmms id src k v
         src        = Just "client/generic/override/vision"
 
+
+makeChooser title action onAccept = do
+  chooser <- fileChooserDialogNew
+             (Just title)
+             Nothing
+             action
+             [ (stockCancel, ResponseCancel)
+             , (stockOk,     ResponseAccept) ]
+  addFilters chooser
+  chooser `onResponse` \resp -> do
+    case resp of
+      ResponseAccept -> do
+        name <- fileChooserGetFilename chooser
+        fmaybeM_ name onAccept
+      _ ->
+        return ()
+    widgetDestroy chooser
+
+  return chooser
 
 addFilters chooser = do
   vpfFilter <- fileFilterNew
