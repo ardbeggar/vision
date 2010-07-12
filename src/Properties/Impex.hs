@@ -2,9 +2,9 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 31 Oct. 2009
+--  Created: 12 Jul. 2010
 --
---  Copyright (C) 2009-2010 Oleg Belozeorov
+--  Copyright (C) 2010 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -17,10 +17,121 @@
 --  General Public License for more details.
 --
 
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
+
 module Properties.Impex
-  ( setupImpex
+  ( initImpex
+  , showPropertyExport
   ) where
 
+import Data.Char
+import qualified Data.Map as Map
+import Data.Maybe
+import Data.List
+
+import Codec.Binary.UTF8.String
+
+import System.FilePath
+import System.IO.Error
+
+import Text.JSON
+
+import Graphics.UI.Gtk
+
+import XMMS2.Client (MediaId)
+import qualified XMMS2.Client as X
+
+import CODW
+import Context
+import Medialib
+import Utils
+
+
+data Impex
+  = Impex { iExportDlg :: CODW [MediaId] FileChooserDialog }
+
+
+showPropertyExport ids = do
+  showCODW ids (iExportDlg context)
+
+
+initImpex = do
+  context <- initContext
+  let ?context = context
+
+  return ?context
+
+initContext = do
+  exportDlg <- makeCODW makeExportDlg
+  return $ augmentContext
+    Impex { iExportDlg = exportDlg }
+
+makeExportDlg ids = do
+  chooser <- fileChooserDialogNew
+             (Just "Export properties")
+             Nothing
+             FileChooserActionSave
+             [ ("gtk-cancel", ResponseCancel)
+             , ("gtk-ok", ResponseAccept) ]
+  addFilters chooser
+  chooser `onResponse` \resp -> do
+    case resp of
+      ResponseAccept -> do
+        name <- fileChooserGetFilename chooser
+        fmaybeM_ name $ exportProps ids
+      _ ->
+        return ()
+    widgetDestroy chooser
+
+  return chooser
+
+exportProps ids file = do
+  pbar <- progressBarNew -- FIXME
+  retrieveProperties pbar ids $ \list -> do
+    let base = dropFileName $ decodeString file
+        text = encodeStrict $ showJSON $ map (exConv base . snd) list
+    widgetDestroy pbar -- FIXME
+    writeFile file text `catch` \e ->
+      putStrLn $ "Export failed" ++
+      (decodeString file) ++ ": " ++ ioeGetErrorString e
+
+exConv base info = ((url', args), Map.difference info readOnlyProps)
+  where url'             = stripBase $ decodeURL path
+        (path, args)     = break (== '?') url
+        X.PropString url = fromJust $ Map.lookup "url" info
+        stripBase url
+          | Just path <- stripPrefix "file://" url
+          , Just tail <- stripPrefix base path = tail
+          | otherwise = url
+
+readOnlyProps =
+  Map.fromList $ map (, undefined)
+  [ "added", "bitrate", "chain", "channels", "duration"
+  , "id", "laststarted", "lmod", "mime", "sample_format"
+  , "samplerate", "size", "status", "timesplayed", "url"
+  , "startms", "stopms", "isdir", "intsort" ]
+
+
+addFilters chooser = do
+  vpfFilter <- fileFilterNew
+  fileFilterSetName vpfFilter "Vision property files"
+  fileFilterAddCustom vpfFilter [FileFilterFilename] $ \name _ _ _ ->
+    return $ maybe False ((==) ".vpf" . map toLower . takeExtension) name
+  fileChooserAddFilter chooser vpfFilter
+
+  allFilter <- fileFilterNew
+  fileFilterSetName allFilter "All files"
+  fileFilterAddCustom allFilter [] $ \_ _ _ _ -> return True
+  fileChooserAddFilter chooser allFilter
+
+
+instance JSON X.Property where
+  showJSON (X.PropInt32 i)  = showJSON i
+  showJSON (X.PropString s) = showJSON s
+  readJSON (JSRational _ i) = return $ X.PropInt32  $ truncate i
+  readJSON (JSString s)     = return $ X.PropString $ fromJSString s
+
+{-
 import Prelude hiding (catch)
 
 import Control.Monad
@@ -214,12 +325,7 @@ initContext = do
              , eAllFilter   = allFilter }
 
 
-instance JSON X.Property where
-  showJSON (X.PropInt32 i)  = showJSON i
-  showJSON (X.PropString s) = showJSON s
-  readJSON (JSRational _ i) = return $ X.PropInt32  $ truncate i
-  readJSON (JSString s)     = return $ X.PropString $ fromJSString s
-
+-}
 
 
 

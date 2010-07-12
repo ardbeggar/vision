@@ -30,8 +30,8 @@ import Graphics.UI.Gtk
 import UI
 
 
-data WindowClass w => CODW w
-  = CODW { cMake :: IO w
+data WindowClass w => CODW d w
+  = CODW { cMake :: d -> IO w
          , cMVar :: MVar (Maybe w)
          }
 
@@ -41,13 +41,13 @@ makeCODW make = do
               , cMVar = mVar
               }
 
-showCODW codw =
+showCODW dta codw =
   modifyMVar_ (cMVar codw) $ \maybeW -> do
     w <- case maybeW of
       Just w  ->
         return w
       Nothing -> do
-        w <- cMake codw
+        w <- cMake codw dta
         w `onDestroy` do
           modifyMVar_ (cMVar codw) $ const $ return Nothing
         return w
@@ -55,4 +55,3 @@ showCODW codw =
     widgetHide w
     windowPresent w
     return $ Just w
-

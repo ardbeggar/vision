@@ -34,7 +34,7 @@ import Volume
 import Utils
 import Clipboard
 import Location
-import Properties hiding (showPropertyEditor)
+import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
@@ -83,9 +83,11 @@ setupUI = do
   copy   <- getAction srvAG "copy"
   delete <- getAction srvAG "delete"
   editp  <- getAction srvAG "edit-properties"
+  expp   <- getAction srvAG "export-properties"
   let setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
-        mapM_ (flip actionSetSensitive (n /= 0)) [cut, copy, delete, editp]
+        mapM_ (flip actionSetSensitive (n /= 0))
+          [cut, copy, delete, editp, expp]
 
   paste  <- getAction srvAG "paste"
   append <- getAction srvAG "append"
@@ -335,5 +337,13 @@ srvActions =
     , actionEntryAccelerator = Just "<Alt>Return"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = showPropertyEditor
+    }
+  , ActionEntry
+    { actionEntryName        = "export-properties"
+    , actionEntryLabel       = "E_xport properties"
+    , actionEntryStockId     = Just stockSave
+    , actionEntryAccelerator = Just ""
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyExport
     }
   ]

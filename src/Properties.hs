@@ -29,6 +29,7 @@ module Properties
   , showPropertyManager
   , showPropertyEditor
   , onProperties
+  , showPropertyExport
   ) where
 
 import Prelude hiding (lookup)
@@ -37,6 +38,7 @@ import Properties.Property
 import Properties.Model
 import Properties.Manager
 import Properties.Editor
+import Properties.Impex
 
 
 initProperties = do
@@ -47,6 +49,9 @@ initProperties = do
   let ?context = context
 
   context <- initPropertyEditor
+  let ?context = context
+
+  context <- initImpex
   let ?context = context
 
   return ?context

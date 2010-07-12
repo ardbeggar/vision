@@ -43,10 +43,10 @@ main = do
   context <- initXMMS
   let ?context = context
 
-  context <- initProperties
+  context <- initMedialib
   let ?context = context
 
-  context <- initMedialib
+  context <- initProperties
   let ?context = context
 
   context <- initPlayback

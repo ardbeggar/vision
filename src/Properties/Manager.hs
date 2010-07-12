@@ -43,15 +43,15 @@ import Properties.Model
 
 
 data Manager
-  = Manager { pManager :: CODW Dialog }
+  = Manager { pManager :: CODW () Dialog }
 
 initPropertyManager = do
-  manager <- makeCODW makePropertyManager
+  manager <- makeCODW $ const makePropertyManager
   return $ augmentContext
     Manager { pManager = manager }
 
 showPropertyManager =
-  showCODW $ pManager context
+  showCODW () $ pManager context
 
 makePropertyManager = do
   dialog <- makeConfigDialog makePropertyManagerWidget

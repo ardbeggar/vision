@@ -32,15 +32,15 @@ import Playlist.Format.Config
 
 
 data Config
-  = Config { cDialog :: CODW Dialog }
+  = Config { cDialog :: CODW () Dialog }
 
 initPlaylistConfig = do
-  dialog <- makeCODW makePlaylistConfigDialog
+  dialog <- makeCODW $ const makePlaylistConfigDialog
   return $ augmentContext
     Config { cDialog = dialog }
 
 showPlaylistConfigDialog =
-  showCODW $ cDialog context
+  showCODW () (cDialog context)
 
 makePlaylistConfigDialog = do
   dialog <- makeConfigDialog makePlaylistFormatView

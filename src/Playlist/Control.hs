@@ -25,6 +25,7 @@ module Playlist.Control
   , moveTracks
   , playTrack
   , showPropertyEditor
+  , showPropertyExport
   ) where
 
 import Control.Monad
@@ -70,6 +71,9 @@ playTrack n = do
   playlistSetNext xmms $ fromIntegral n
   startPlayback True
 
-showPropertyEditor = do
-  ids <- playlistGetIds =<< getSelectedTracks
-  P.showPropertyEditor ids
+showPropertyEditor = withSelectedIds P.showPropertyEditor
+
+showPropertyExport = withSelectedIds P.showPropertyExport
+
+withSelectedIds f =
+  f =<< playlistGetIds =<< getSelectedTracks

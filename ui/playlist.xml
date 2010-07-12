@@ -30,6 +30,7 @@
       </menu>
       <menu action="properties">
         <menuitem action="edit-properties"/>
+        <menuitem action="export-properties"/>
         <separator/>
         <menuitem action="manage-properties"/>
       </menu>
