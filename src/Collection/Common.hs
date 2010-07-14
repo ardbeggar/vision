@@ -17,35 +17,23 @@
 --  General Public License for more details.
 --
 
-module Collection
-  ( initCollection
-  , browseCollection
+module Collection.Common
+  ( initCommon
+  , universe
   ) where
 
-import Graphics.UI.Gtk
+import XMMS2.Client
 
-import UI
-import Collection.Common
-import Collection.Model
-import Collection.View
-import Collection.UI
+import Context
 
 
-initCollection =
-  initCommon
+data Common
+  = Common { cUniverse :: Coll }
 
-browseCollection _ = do
-  let f = browseCollection
+universe = cUniverse context
 
-  context <- initUI
-  let ?context = context
 
-  context <- initModel
-  let ?context = context
-
-  context <- initView
-  let ?context = context
-
-  setupUI f
-
-  widgetShowAll window
+initCommon = do
+  universe <- collUniverse
+  return $ augmentContext
+    Common { cUniverse = universe }

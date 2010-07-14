@@ -10,5 +10,6 @@ AC_CONFIG_FILES(Makefile
                 src/Properties/Editor/Makefile
                 src/Playlist/Makefile
                 src/Playlist/Format/Makefile
-                src/Location/Makefile)
+                src/Location/Makefile
+                src/Collection/Makefile)
 AC_OUTPUT

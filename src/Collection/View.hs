@@ -17,35 +17,32 @@
 --  General Public License for more details.
 --
 
-module Collection
-  ( initCollection
-  , browseCollection
+module Collection.View
+  ( initView
+  , collView
   ) where
 
 import Graphics.UI.Gtk
 
-import UI
-import Collection.Common
+import Context
 import Collection.Model
-import Collection.View
-import Collection.UI
 
 
-initCollection =
-  initCommon
+data View
+  = View { vView :: TreeView }
 
-browseCollection _ = do
-  let f = browseCollection
+collView = vView context
 
-  context <- initUI
+
+initView = do
+  context <- initContext
   let ?context = context
 
-  context <- initModel
-  let ?context = context
+  return ?context
 
-  context <- initView
-  let ?context = context
 
-  setupUI f
+initContext = do
+  view <- treeViewNewWithModel collStore
+  return $ augmentContext
+    View { vView = view }
 
-  widgetShowAll window

@@ -31,6 +31,7 @@ import Volume
 import Playtime
 import Clipboard
 import Location
+import Collection
 import Playlist
 
 
@@ -62,6 +63,9 @@ main = do
   let ?context = context
 
   context <- initLocation
+  let ?context = context
+
+  context <- initCollection
   let ?context = context
 
   context <- initPlaylist

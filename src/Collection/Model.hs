@@ -17,35 +17,50 @@
 --  General Public License for more details.
 --
 
-module Collection
-  ( initCollection
-  , browseCollection
+module Collection.Model
+  ( initModel
+  , collStore
   ) where
+
+import Control.Concurrent.MVar
 
 import Graphics.UI.Gtk
 
-import UI
+import XMMS2.Client
+
+import Context
 import Collection.Common
-import Collection.Model
-import Collection.View
-import Collection.UI
 
 
-initCollection =
-  initCommon
+data State
+  = State { sCurColl :: Coll
+          , sCurName :: String
+          }
 
-browseCollection _ = do
-  let f = browseCollection
+makeState =
+  State { sCurColl = universe
+        , sCurName = ""
+        }
 
-  context <- initUI
+data Model
+  = Model { mState :: MVar State
+          , mStore :: ListStore MediaId
+          }
+
+collStore = mStore context
+
+
+initModel = do
+  context <- initContext
   let ?context = context
 
-  context <- initModel
-  let ?context = context
+  return ?context
 
-  context <- initView
-  let ?context = context
 
-  setupUI f
-
-  widgetShowAll window
+initContext = do
+  state <- newMVar makeState
+  store <- listStoreNewDND [] Nothing Nothing
+  return $ augmentContext
+    Model { mState = state
+          , mStore = store
+          }

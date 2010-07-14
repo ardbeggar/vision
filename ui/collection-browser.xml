@@ -1,0 +1,12 @@
+<ui>
+  <menubar action="menubar">
+    <placeholder name="entries">
+      <menu action="collection">
+        <menuitem action="new-window"/>
+        <separator/>
+        <menuitem action="close-window"/>
+        <menuitem action="quit"/>
+      </menu>
+    </placeholder>
+  </menubar>
+</ui>
