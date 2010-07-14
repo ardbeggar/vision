@@ -22,6 +22,7 @@
       </menu>
       <menu action="browse">
         <menuitem action="browse-location"/>
+        <menuitem action="browse-collection"/>
       </menu>
       <menu action="playlist">
         <menuitem action="clear-playlist"/>

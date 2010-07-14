@@ -34,6 +34,7 @@ import Volume
 import Utils
 import Clipboard
 import Location
+import Collection
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
@@ -321,6 +322,14 @@ srvActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = browseLocation SortAscending Nothing
+    }
+  , ActionEntry
+    { actionEntryName        = "browse-collection"
+    , actionEntryLabel       = "Browse _collection"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = browseCollection Nothing
     }
   , ActionEntry
     { actionEntryName        = "clear-playlist"
