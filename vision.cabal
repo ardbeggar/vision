@@ -46,6 +46,7 @@ executable vision
                     Volume,
                     Playtime,
                     Clipboard,
+                    Index,
                     Location,
                     Location.History,
                     Location.Model,

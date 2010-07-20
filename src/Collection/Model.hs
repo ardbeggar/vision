@@ -20,6 +20,7 @@
 module Collection.Model
   ( initModel
   , collStore
+  , getInfo
   ) where
 
 import Control.Concurrent.MVar
@@ -29,6 +30,9 @@ import Graphics.UI.Gtk
 import XMMS2.Client
 
 import Context
+import Index hiding (getInfo)
+import qualified Index as Index
+import Medialib hiding (getInfo)
 import Collection.Common
 
 
@@ -45,9 +49,12 @@ makeState =
 data Model
   = Model { mState :: MVar State
           , mStore :: ListStore MediaId
+          , mIndex :: Index MediaInfo
           }
 
 collStore = mStore context
+
+getInfo = Index.getInfo (mIndex context)
 
 
 initModel = do
@@ -60,7 +67,9 @@ initModel = do
 initContext = do
   state <- newMVar makeState
   store <- listStoreNewDND [] Nothing Nothing
+  index <- makeIndex store return
   return $ augmentContext
     Model { mState = state
           , mStore = store
+          , mIndex = index
           }
