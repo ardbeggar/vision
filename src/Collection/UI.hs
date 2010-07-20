@@ -18,7 +18,7 @@
 --
 
 module Collection.UI
-  ( setupUI
+  ( initCollectionUI
   ) where
 
 import Graphics.UI.Gtk hiding (add)
@@ -31,7 +31,10 @@ import Collection.List.View
 import Collection.Control
 
 
-setupUI browse = do
+initCollectionUI browse = do
+  context <- initListView
+  let ?context = context
+
   addUIActions $ uiActions browse
 
   srvAG <- actionGroupNew "server"
@@ -41,10 +44,9 @@ setupUI browse = do
 
   addUIFromFile "collection-browser"
 
-  context <- initListView
-  let ?context = context
-
-  onCollectionActivated $ loadCurrent
+  onCollectionActivated $ loadSelected
+  onCollectionListMidClick $ browseSelected browse
+  onCollectionListCR $ browseSelected browse
 
   paned <- hPanedNew
   boxPackStartDefaults contents paned
@@ -61,7 +63,7 @@ setupUI browse = do
   containerAdd scroll collView
   panedAdd2 paned scroll
 
-  return ()
+  return ?context
 
 
 uiActions browse =

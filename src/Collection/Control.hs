@@ -18,7 +18,10 @@
 --
 
 module Collection.Control
-  ( loadCurrent
+  ( loadSelected
+  , loadNamed
+  , loadCurrent
+  , browseSelected
   ) where
 
 import Control.Monad.Trans
@@ -26,8 +29,27 @@ import Control.Monad.Trans
 import XMMS2.Client
 
 import XMMS
+import Collection.Common
 import Collection.Model
+import Collection.List.View
 
+
+loadSelected = do
+  maybeName <- getSelectedCollection
+  case maybeName of
+    Just name ->
+      loadNamed name
+    Nothing   -> do
+      setCurColl universe
+      loadCurrent
+
+loadNamed name =
+  collGet xmms name "Collections" >>* do
+    coll <- result
+    liftIO $ do
+      setCurColl coll
+      loadCurrent
+    return False
 
 loadCurrent = do
   coll <- getCurColl
@@ -35,3 +57,6 @@ loadCurrent = do
     ids <- result
     liftIO $ populateModel ids
     return False
+
+browseSelected browse =
+  browse =<< getSelectedCollection

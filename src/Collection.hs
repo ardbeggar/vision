@@ -29,6 +29,7 @@ import Collection.Common
 import Collection.List
 import Collection.Model
 import Collection.View
+import Collection.Control
 import Collection.UI
 
 
@@ -42,7 +43,7 @@ initCollection = do
   return ?context
 
 
-browseCollection _ = do
+browseCollection maybeName = do
   let f = browseCollection
 
   context <- initUI
@@ -54,6 +55,10 @@ browseCollection _ = do
   context <- initView
   let ?context = context
 
-  setupUI f
+  context <- initCollectionUI f
+  let ?context = context
 
   widgetShowAll window
+  case maybeName of
+    Just name -> loadNamed name >> widgetGrabFocus collView
+    Nothing   -> widgetGrabFocus listView
