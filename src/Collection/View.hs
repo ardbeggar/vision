@@ -21,6 +21,7 @@ module Collection.View
   ( initView
   , collView
   , collSel
+  , collFilter
   ) where
 
 import Prelude hiding (lookup)
@@ -34,12 +35,14 @@ import Collection.Model
 
 
 data View
-  = View { vView :: TreeView
-         , vSel  :: TreeSelection
+  = View { vView   :: TreeView
+         , vSel    :: TreeSelection
+         , vFilter :: Entry
          }
 
-collView = vView context
-collSel  = vSel  context
+collView   = vView context
+collSel    = vSel  context
+collFilter = vFilter context
 
 
 initView = do
@@ -55,11 +58,13 @@ initView = do
 
 
 initContext = do
-  view <- treeViewNewWithModel collStore
-  sel  <- treeViewGetSelection view
+  view   <- treeViewNewWithModel collStore
+  sel    <- treeViewGetSelection view
+  filter <- entryNew
   return $ augmentContext
-    View { vView = view
-         , vSel  = sel
+    View { vView   = view
+         , vSel    = sel
+         , vFilter = filter
          }
 
 addColumns =

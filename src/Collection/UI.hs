@@ -26,7 +26,6 @@ import Graphics.UI.Gtk hiding (add)
 import UI
 import XMMS
 import Handler
-import Collection.Model
 import Collection.View
 import Collection.List.View
 import Collection.Control
@@ -61,12 +60,8 @@ initCollectionUI browse = do
   box <- vBoxNew False 5
   panedAdd2 paned box
 
-  filter <- entryNew
-  boxPackStart box filter PackNatural 0
-  filter `onEntryActivate` do
-    text <- entryGetText filter
-    setFilter text
-    loadCurrent
+  boxPackStart box collFilter PackNatural 0
+  collFilter `onEntryActivate` applyFilter
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
@@ -93,6 +88,14 @@ uiActions browse =
     , actionEntryAccelerator = Just "<Control>n"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = newWindow browse
+    }
+  , ActionEntry
+    { actionEntryName        = "edit-filter"
+    , actionEntryLabel       = "_Edit filter"
+    , actionEntryStockId     = Just stockEdit
+    , actionEntryAccelerator = Just "<Control>l"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editFilter
     }
   ]
 

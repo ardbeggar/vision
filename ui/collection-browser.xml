@@ -3,6 +3,7 @@
     <placeholder name="entries">
       <menu action="collection">
         <menuitem action="new-window"/>
+        <menuitem action="edit-filter"/>
         <menuitem action="browse-in-new-window"/>
         <separator/>
         <menuitem action="add-to-playlist"/>

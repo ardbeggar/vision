@@ -24,18 +24,22 @@ module Collection.Control
   , browseSelected
   , addToPlaylist
   , replacePlaylist
+  , applyFilter
+  , editFilter
   ) where
 
 import Prelude hiding (catch)
 import Control.Monad.CatchIO
-
+import Control.Monad
 import Control.Monad.Trans
+import Control.Applicative
 
 import Graphics.UI.Gtk
 
 import XMMS2.Client
 
 import XMMS
+import Utils
 import Collection.Common
 import Collection.Model
 import Collection.View
@@ -97,3 +101,15 @@ replacePlaylist = do
 getSelectedIds =
   mapM (listStoreGetValue collStore . head)
   =<< treeSelectionGetSelectedRows collSel
+
+applyFilter = do
+  conn <- connected
+  when conn $ do
+    text <- trim <$> entryGetText collFilter
+    entrySetText collFilter text
+    setFilter text
+    loadCurrent
+
+editFilter = do
+  editableSelectRegion collFilter 0 (-1)
+  widgetGrabFocus collFilter
