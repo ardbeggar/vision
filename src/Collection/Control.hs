@@ -22,15 +22,20 @@ module Collection.Control
   , loadNamed
   , loadCurrent
   , browseSelected
+  , addToPlaylist
+  , replacePlaylist
   ) where
 
 import Control.Monad.Trans
+
+import Graphics.UI.Gtk
 
 import XMMS2.Client
 
 import XMMS
 import Collection.Common
 import Collection.Model
+import Collection.View
 import Collection.List.View
 
 
@@ -60,3 +65,26 @@ loadCurrent = do
 
 browseSelected browse =
   browse =<< getSelectedCollection
+
+
+addToPlaylist = do
+  ids  <- getSelectedIds
+  coll <- case ids of
+    [] -> getCurColl
+    _  -> do
+      cur <- getCurColl
+      sel <- collNewIdlist ids
+      int <- collNew TypeIntersection
+      collAddOperand int cur
+      collAddOperand int sel
+      return int
+  playlistAddCollection xmms Nothing coll []
+  return ()
+
+replacePlaylist = do
+  playlistClear xmms Nothing
+  addToPlaylist
+
+getSelectedIds =
+  mapM (listStoreGetValue collStore . head)
+  =<< treeSelectionGetSelectedRows collSel

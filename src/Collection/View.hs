@@ -20,6 +20,7 @@
 module Collection.View
   ( initView
   , collView
+  , collSel
   ) where
 
 import Prelude hiding (lookup)
@@ -33,9 +34,12 @@ import Collection.Model
 
 
 data View
-  = View { vView :: TreeView }
+  = View { vView :: TreeView
+         , vSel  :: TreeSelection
+         }
 
 collView = vView context
+collSel  = vSel  context
 
 
 initView = do
@@ -45,13 +49,18 @@ initView = do
   treeViewSetRulesHint collView True
   addColumns
 
+  treeSelectionSetMode collSel SelectionMultiple
+
   return ?context
 
 
 initContext = do
   view <- treeViewNewWithModel collStore
+  sel  <- treeViewGetSelection view
   return $ augmentContext
-    View { vView = view }
+    View { vView = view
+         , vSel  = sel
+         }
 
 addColumns =
   mapM_ addOne ["Artist", "Album", "Track", "Title"]

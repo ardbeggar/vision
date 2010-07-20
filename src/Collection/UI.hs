@@ -85,7 +85,33 @@ uiActions browse =
     }
   ]
 
-srvActions _browse = []
+srvActions browse =
+  [ ActionEntry
+    { actionEntryName        = "browse-in-new-window"
+    , actionEntryLabel       = "_Browse in new window"
+    , actionEntryStockId     = Just stockOpen
+    , actionEntryAccelerator = Just "<Control>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = browseSelected browse
+    }
+  , ActionEntry
+    { actionEntryName        = "add-to-playlist"
+    , actionEntryLabel       = "_Add to playlist"
+    , actionEntryStockId     = Just stockAdd
+    , actionEntryAccelerator = Just "<Control>p"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = addToPlaylist
+    }
+  , ActionEntry
+    { actionEntryName        = "replace-playlist"
+    , actionEntryLabel       = "_Replace to playlist"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Just "<Control><Shift>p"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = replacePlaylist
+    }
+  ]
+
 
 newWindow browse =
   browse Nothing
