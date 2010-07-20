@@ -53,6 +53,8 @@ executable vision
                     Location.Control,
                     Location.UI,
                     Collection,
+                    Collection.List,
+                    Collection.List.Model,
                     Collection.Common,
                     Collection.Model,
                     Collection.View,

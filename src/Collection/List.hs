@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 14 Jul. 2010
+--  Created: 20 Jul. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,43 +17,12 @@
 --  General Public License for more details.
 --
 
-module Collection
-  ( initCollection
-  , browseCollection
+module Collection.List
+  ( initList
+  , listStore
   ) where
 
-import Graphics.UI.Gtk
-
-import UI
-import Collection.Common
-import Collection.List
-import Collection.Model
-import Collection.View
-import Collection.UI
+import Collection.List.Model
 
 
-initCollection = do
-  context <- initCommon
-  let ?context = context
-
-  context <- initList
-  let ?context = context
-
-  return ?context
-
-
-browseCollection _ = do
-  let f = browseCollection
-
-  context <- initUI
-  let ?context = context
-
-  context <- initModel
-  let ?context = context
-
-  context <- initView
-  let ?context = context
-
-  setupUI f
-
-  widgetShowAll window
+initList = initListModel
