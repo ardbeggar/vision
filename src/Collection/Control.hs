@@ -26,6 +26,9 @@ module Collection.Control
   , replacePlaylist
   ) where
 
+import Prelude hiding (catch)
+import Control.Monad.CatchIO
+
 import Control.Monad.Trans
 
 import Graphics.UI.Gtk
@@ -56,7 +59,9 @@ loadNamed name =
       loadCurrent
     return False
 
-loadCurrent = do
+loadCurrent = loadCurrent' `catch` \ParseError -> return ()
+
+loadCurrent' = do
   coll <- getCurColl
   collQueryIds xmms coll [] 0 0 >>* do
     ids <- result
@@ -69,7 +74,9 @@ browseSelected browse =
   browse =<< getSelectedCollection
 
 
-addToPlaylist = do
+addToPlaylist = addToPlaylist' `catch` \ParseError -> return ()
+
+addToPlaylist' = do
   ids  <- getSelectedIds
   coll <- case ids of
     [] -> getCurColl

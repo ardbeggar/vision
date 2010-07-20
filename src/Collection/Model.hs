@@ -24,6 +24,8 @@ module Collection.Model
   , populateModel
   , getCurColl
   , setCurColl
+  , getFilter
+  , setFilter
   ) where
 
 import Control.Concurrent.MVar
@@ -42,11 +44,13 @@ import Collection.Common
 data State
   = State { sCurColl :: Coll
           , sCurName :: String
+          , sFilter  :: String
           }
 
 makeState =
   State { sCurColl = universe
         , sCurName = ""
+        , sFilter  = ""
         }
 
 data Model
@@ -61,11 +65,25 @@ collStore = mStore context
 collIndex = mIndex context
 
 getCurColl =
-  withMVar state $ return . sCurColl
+  withMVar state $ \s -> do
+    case sFilter s of
+      []   -> return $ sCurColl s
+      text -> do
+        fil <- collParse text
+        int <- collNew TypeIntersection
+        collAddOperand int $ sCurColl s
+        collAddOperand int fil
+        return int
 
 setCurColl coll =
   modifyMVar_ state $ \s ->
     return s { sCurColl = coll }
+
+getFilter = withMVar state $ return . sFilter
+
+setFilter text =
+  modifyMVar_ state $ \s ->
+    return s { sFilter = text }
 
 getInfo = Index.getInfo (mIndex context)
 

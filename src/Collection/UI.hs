@@ -26,6 +26,7 @@ import Graphics.UI.Gtk hiding (add)
 import UI
 import XMMS
 import Handler
+import Collection.Model
 import Collection.View
 import Collection.List.View
 import Collection.Control
@@ -57,11 +58,21 @@ initCollectionUI browse = do
   containerAdd scroll listView
   panedAdd1 paned scroll
 
+  box <- vBoxNew False 5
+  panedAdd2 paned box
+
+  filter <- entryNew
+  boxPackStart box filter PackNatural 0
+  filter `onEntryActivate` do
+    text <- entryGetText filter
+    setFilter text
+    loadCurrent
+
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   scrolledWindowSetShadowType scroll ShadowIn
   containerAdd scroll collView
-  panedAdd2 paned scroll
+  boxPackStartDefaults box scroll
 
   return ?context
 
