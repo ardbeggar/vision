@@ -22,9 +22,13 @@ module Collection.View
   , collView
   ) where
 
+import Prelude hiding (lookup)
+
 import Graphics.UI.Gtk
 
 import Context
+import Properties
+import Utils
 import Collection.Model
 
 
@@ -38,6 +42,9 @@ initView = do
   context <- initContext
   let ?context = context
 
+  treeViewSetRulesHint collView True
+  addColumns
+
   return ?context
 
 
@@ -46,3 +53,29 @@ initContext = do
   return $ augmentContext
     View { vView = view }
 
+addColumns =
+  mapM_ addOne ["Artist", "Album", "Track", "Title"]
+  where addOne name = do
+          prop <- property name
+          fmaybeM_ prop addColumn
+
+addColumn prop = do
+  column <- treeViewColumnNew
+  treeViewAppendColumn collView column
+  treeViewColumnSetTitle column $ propName prop
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributeFunc column cell collStore $ \iter -> do
+    maybeInfo <- getInfoIfNeeded iter
+    let text = case maybeInfo of
+          Just info -> maybe "" id (lookup prop info)
+          Nothing   -> ""
+    cell `set` [ cellText := text ]
+
+getInfoIfNeeded iter = do
+  [n] <- treeModelGetPath collStore iter
+  mid <- listStoreGetValue collStore n
+  rng <- treeViewGetVisibleRange collView
+  getInfo mid $ case rng of
+    ([f], [t]) -> n >= f && t >= n
+    _          -> False

@@ -60,6 +60,7 @@ executable vision
                     Collection.Common,
                     Collection.Model,
                     Collection.View,
+                    Collection.Control,
                     Collection.UI,
                     Playlist,
                     Playlist.Model,

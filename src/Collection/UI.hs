@@ -27,7 +27,8 @@ import UI
 import XMMS
 import Handler
 import Collection.View
-import Collection.List
+import Collection.List.View
+import Collection.Control
 
 
 setupUI browse = do
@@ -42,6 +43,8 @@ setupUI browse = do
 
   context <- initListView
   let ?context = context
+
+  onCollectionActivated $ loadCurrent
 
   paned <- hPanedNew
   boxPackStartDefaults contents paned

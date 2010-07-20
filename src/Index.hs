@@ -24,6 +24,7 @@ module Index
   , makeIndex
   , getInfo
   , addToIndex
+  , clearIndex
   ) where
 
 import Control.Concurrent.MVar
@@ -107,3 +108,6 @@ addToIndex index id n =
     Just ref <- treeRowReferenceNew (iStore index) [n]
     return $ IntMap.insertWith iw (fromIntegral id) (IENone, [ref]) ix
   where iw (_, [new]) (entry, old) = (entry, new : old)
+
+clearIndex index =
+  modifyMVar_ (iTable index) . const $ return IntMap.empty

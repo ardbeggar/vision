@@ -21,6 +21,9 @@ module Collection.Model
   ( initModel
   , collStore
   , getInfo
+  , populateModel
+  , getCurColl
+  , setCurColl
   ) where
 
 import Control.Concurrent.MVar
@@ -52,7 +55,17 @@ data Model
           , mIndex :: Index MediaInfo
           }
 
+state = mState context
+
 collStore = mStore context
+collIndex = mIndex context
+
+getCurColl =
+  withMVar state $ return . sCurColl
+
+setCurColl coll =
+  modifyMVar_ state $ \s ->
+    return s { sCurColl = coll }
 
 getInfo = Index.getInfo (mIndex context)
 
@@ -73,3 +86,11 @@ initContext = do
           , mStore = store
           , mIndex = index
           }
+
+populateModel ids = do
+  clearIndex collIndex
+  listStoreClear collStore
+  mapM_ addOne ids
+  where addOne id = do
+          n <- listStoreAppend collStore id
+          addToIndex collIndex id n
