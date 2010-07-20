@@ -60,7 +60,9 @@ loadCurrent = do
   coll <- getCurColl
   collQueryIds xmms coll [] 0 0 >>* do
     ids <- result
-    liftIO $ populateModel ids
+    liftIO $ do
+      populateModel ids
+      widgetGrabFocus collView
     return False
 
 browseSelected browse =

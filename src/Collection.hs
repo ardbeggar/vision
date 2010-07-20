@@ -60,5 +60,5 @@ browseCollection maybeName = do
 
   widgetShowAll window
   case maybeName of
-    Just name -> loadNamed name >> widgetGrabFocus collView
+    Just name -> loadNamed name
     Nothing   -> widgetGrabFocus listView
