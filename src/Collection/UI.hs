@@ -26,6 +26,7 @@ import Graphics.UI.Gtk hiding (add)
 import UI
 import XMMS
 import Handler
+import Utils
 import Collection.View
 import Collection.List.View
 import Collection.Control
@@ -69,6 +70,9 @@ initCollectionUI browse = do
   containerAdd scroll collView
   boxPackStartDefaults box scroll
 
+  popup <- getWidget castToMenu "ui/collection-popup"
+  setupTreeViewPopup collView popup
+
   return ?context
 
 
@@ -96,6 +100,14 @@ uiActions browse =
     , actionEntryAccelerator = Just "<Control>l"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = editFilter
+    }
+  , ActionEntry
+    { actionEntryName        = "collection-popup"
+    , actionEntryLabel       = ""
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
     }
   ]
 

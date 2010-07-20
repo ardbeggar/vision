@@ -14,4 +14,8 @@
       </menu>
     </placeholder>
   </menubar>
+  <popup action="collection-popup">
+    <menuitem action="add-to-playlist"/>
+    <menuitem action="replace-playlist"/>
+  </popup>
 </ui>
