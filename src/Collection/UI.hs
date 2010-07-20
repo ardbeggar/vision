@@ -27,6 +27,7 @@ import UI
 import XMMS
 import Handler
 import Collection.View
+import Collection.List
 
 
 setupUI browse = do
@@ -39,10 +40,23 @@ setupUI browse = do
 
   addUIFromFile "collection-browser"
 
+  context <- initListView
+  let ?context = context
+
+  paned <- hPanedNew
+  boxPackStartDefaults contents paned
+
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
+  containerAdd scroll listView
+  panedAdd1 paned scroll
+
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
   containerAdd scroll collView
-  boxPackStartDefaults contents scroll
+  panedAdd2 paned scroll
 
   return ()
 

@@ -55,6 +55,7 @@ executable vision
                     Collection,
                     Collection.List,
                     Collection.List.Model,
+                    Collection.List.View,
                     Collection.Common,
                     Collection.Model,
                     Collection.View,
