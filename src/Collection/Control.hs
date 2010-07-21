@@ -53,14 +53,14 @@ loadSelected = do
     Just name ->
       loadNamed name
     Nothing   -> do
-      setCurColl universe
+      setCurColl universe ""
       loadCurrent
 
 loadNamed name =
   collGet xmms name "Collections" >>* do
     coll <- result
     liftIO $ do
-      setCurColl coll
+      setCurColl coll name
       loadCurrent
     return False
 
@@ -117,6 +117,6 @@ editFilter = do
 
 allMedia = do
   resetModel
-  treeViewSetCursor listView [0] Nothing
+  resetListView
   entrySetText collFilter ""
   widgetGrabFocus collFilter

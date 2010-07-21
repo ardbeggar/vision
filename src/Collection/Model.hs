@@ -22,6 +22,7 @@ module Collection.Model
   , collStore
   , getInfo
   , populateModel
+  , getCurName
   , getCurColl
   , setCurColl
   , getFilter
@@ -65,6 +66,9 @@ state = mState context
 collStore = mStore context
 collIndex = mIndex context
 
+getCurName =
+  withMVar state $ return . sCurName
+
 getCurColl =
   withMVar state $ \s -> do
     case sFilter s of
@@ -76,9 +80,11 @@ getCurColl =
         collAddOperand int fil
         return int
 
-setCurColl coll =
+setCurColl coll name =
   modifyMVar_ state $ \s ->
-    return s { sCurColl = coll }
+    return s { sCurColl = coll
+             , sCurName = name
+             }
 
 getFilter = withMVar state $ return . sFilter
 
