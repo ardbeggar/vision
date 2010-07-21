@@ -87,6 +87,8 @@ initCollectionUI browse = do
     en <- isJust <$> getSelectedCollection
     mapM_ (flip actionSetSensitive en) acts
 
+  updateWindowTitle
+
   return ?context
 
 uiActions browse =

@@ -28,6 +28,8 @@ module Collection.Model
   , getFilter
   , setFilter
   , resetModel
+  , getLoaded
+  , setLoaded
   ) where
 
 import Control.Concurrent.MVar
@@ -47,12 +49,14 @@ data State
   = State { sCurColl :: Coll
           , sCurName :: String
           , sFilter  :: String
+          , sLoaded  :: Bool
           }
 
 makeState =
   State { sCurColl = universe
         , sCurName = ""
         , sFilter  = ""
+        , sLoaded  = False
         }
 
 data Model
@@ -91,6 +95,13 @@ getFilter = withMVar state $ return . sFilter
 setFilter text =
   modifyMVar_ state $ \s ->
     return s { sFilter = text }
+
+getLoaded =
+  withMVar state $ return . sLoaded
+
+setLoaded loaded =
+  modifyMVar_ state $ \s ->
+    return s { sLoaded = loaded }
 
 getInfo = Index.getInfo (mIndex context)
 

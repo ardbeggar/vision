@@ -30,6 +30,7 @@ module Collection.Control
   , saveCollection
   , renameCollection
   , removeCollection
+  , updateWindowTitle
   ) where
 
 import Prelude hiding (catch)
@@ -77,6 +78,8 @@ loadCurrent' = do
   collQueryIds xmms coll [] 0 0 >>* do
     ids <- result
     liftIO $ do
+      setLoaded True
+      updateWindowTitle
       populateModel ids
       widgetGrabFocus collView
     return False
@@ -126,6 +129,7 @@ allMedia = do
   resetListView
   entrySetText collFilter ""
   widgetGrabFocus collFilter
+  updateWindowTitle
 
 saveCollection = do
   name <- trim <$> getCurName
@@ -192,3 +196,13 @@ runDlg title enable isOk init = do
     ResponseOk -> return $ Just new
     _          -> return Nothing
 
+updateWindowTitle = do
+  name   <- getCurName
+  loaded <- getLoaded
+  filter <- getFilter
+  let t = if loaded then f ++ n ++ " - " else ""
+      n = case name of
+        "" -> "All media"
+        _  -> name
+      f = if null filter then "" else "*"
+  setWindowTitle $ t ++ "Vision collection browser"
