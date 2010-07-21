@@ -7,6 +7,8 @@
         <menuitem action="browse-in-new-window"/>
         <menuitem action="all-media"/>
         <separator/>
+        <menuitem action="save-collection"/>
+        <separator/>
         <menuitem action="add-to-playlist"/>
         <menuitem action="replace-playlist"/>
         <separator/>

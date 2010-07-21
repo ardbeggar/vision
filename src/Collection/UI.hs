@@ -75,7 +75,6 @@ initCollectionUI browse = do
 
   return ?context
 
-
 uiActions browse =
   [ ActionEntry
     { actionEntryName        = "collection"
@@ -127,6 +126,14 @@ srvActions browse =
     , actionEntryAccelerator = Just "<Control>Return"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = browseSelected browse
+    }
+  , ActionEntry
+    { actionEntryName        = "save-collection"
+    , actionEntryLabel       = "_Save collection"
+    , actionEntryStockId     = Just stockSave
+    , actionEntryAccelerator = Just "<Control>s"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = saveCollection
     }
   , ActionEntry
     { actionEntryName        = "add-to-playlist"

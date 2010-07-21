@@ -29,6 +29,7 @@ module UI
   , insertActionGroup
   , addUIActions
   , getAction
+  , windowGroup
   ) where
 
 import Control.Applicative
@@ -46,17 +47,20 @@ data UI
        , uContents    :: VBox
        , uManager     :: UIManager
        , uActionGroup :: ActionGroup
+       , uWindowGroup :: WindowGroup
        }
 
 window        = uWindow context
 contents      = uContents context
 uiManager     = uManager context
 uiActionGroup = uActionGroup context
+windowGroup   = uWindowGroup context
 
 initUI = do
   context <- initContext
   let ?context = context
 
+  windowGroupAddWindow windowGroup window
   containerAdd window contents
 
   windowAddAccelGroup window =<< uiManagerGetAccelGroup uiManager
@@ -75,11 +79,13 @@ initContext = do
   contents      <- vBoxNew False 0
   uiManager     <- uiManagerNew
   uiActionGroup <- actionGroupNew "ui"
+  windowGroup   <- windowGroupNew
   return $ augmentContext
     UI { uWindow      = window
        , uContents    = contents
        , uManager     = uiManager
        , uActionGroup = uiActionGroup
+       , uWindowGroup = windowGroup
        }
 
 setWindowTitle = windowSetTitle window

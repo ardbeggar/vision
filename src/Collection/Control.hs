@@ -27,6 +27,7 @@ module Collection.Control
   , applyFilter
   , editFilter
   , allMedia
+  , saveCollection
   ) where
 
 import Prelude hiding (catch)
@@ -41,6 +42,7 @@ import XMMS2.Client
 
 import XMMS
 import Utils
+import UI
 import Collection.Common
 import Collection.Model
 import Collection.View
@@ -120,3 +122,71 @@ allMedia = do
   resetListView
   entrySetText collFilter ""
   widgetGrabFocus collFilter
+
+saveCollection = do
+  name <- trim <$> getCurName
+  coll <- getCurColl
+  res  <- runDlg "Save collection" (not $ null name) (const True) name
+  fmaybeM_ res $ \name -> do
+    collSave xmms coll name "Collections"
+    return ()
+
+-- renameCollection = do
+--   old <- fromJust <$> getSelectedCollection
+--   res <- runDlg "Rename collection" False (/= old) old
+--   fmaybeM_ res $ \new -> do
+--     collRename xmms old new "Collections"
+--     return ()
+
+-- removeCollection = do
+--   sc <- getSelectedCollection
+--   fmaybeM_ sc $ \name -> do
+--     collRemove xmms name "Collections"
+--     return ()
+
+
+runDlg title enable isOk init = do
+  dialog <- dialogNew
+  windowSetTitle dialog title
+  windowSetTransientFor dialog window
+  windowSetModal dialog True
+  windowGroupAddWindow windowGroup dialog
+
+  dialogSetHasSeparator dialog False
+  dialogAddButton dialog "gtk-cancel" ResponseCancel
+  dialogAddButtonCR dialog "gtk-ok" ResponseOk
+  dialogSetDefaultResponse dialog ResponseOk
+  dialogSetResponseSensitive dialog ResponseOk enable
+
+  box <- vBoxNew False 0
+  containerSetBorderWidth box 7
+  upper <- dialogGetUpper dialog
+  containerAdd upper box
+
+  entry <- entryNew
+  entrySetText entry init
+  editableSelectRegion entry 0 (-1)
+  editableSetPosition entry (-1)
+  boxPackStart box entry PackNatural 0
+
+  let ok = do
+        new <- trim <$> entryGetText entry
+        return $ not (null new) && isOk new
+      check = dialogSetResponseSensitive dialog ResponseOk =<< ok
+      checkInsert str pos = check >> return (length str + pos)
+      checkDelete _ _     = check
+  entry `onEntryActivate` do
+    ok <- ok
+    when ok $ dialogResponse dialog ResponseOk
+  entry `afterInsertText` checkInsert
+  entry `afterDeleteText` checkDelete
+
+  widgetShowAll dialog
+  resp <- dialogRun dialog
+  new  <- trim <$> entryGetText entry
+  widgetDestroy dialog
+
+  case resp of
+    ResponseOk -> return $ Just new
+    _          -> return Nothing
+
