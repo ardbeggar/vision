@@ -8,6 +8,7 @@
         <menuitem action="all-media"/>
         <separator/>
         <menuitem action="save-collection"/>
+        <menuitem action="rename-collection"/>
         <separator/>
         <menuitem action="add-to-playlist"/>
         <menuitem action="replace-playlist"/>

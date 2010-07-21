@@ -28,6 +28,7 @@ module Collection.Control
   , editFilter
   , allMedia
   , saveCollection
+  , renameCollection
   ) where
 
 import Prelude hiding (catch)
@@ -35,6 +36,8 @@ import Control.Monad.CatchIO
 import Control.Monad
 import Control.Monad.Trans
 import Control.Applicative
+
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
@@ -131,12 +134,12 @@ saveCollection = do
     collSave xmms coll name "Collections"
     return ()
 
--- renameCollection = do
---   old <- fromJust <$> getSelectedCollection
---   res <- runDlg "Rename collection" False (/= old) old
---   fmaybeM_ res $ \new -> do
---     collRename xmms old new "Collections"
---     return ()
+renameCollection = do
+  old <- fromJust <$> getSelectedCollection
+  res <- runDlg "Rename collection" False (/= old) old
+  fmaybeM_ res $ \new -> do
+    collRename xmms old new "Collections"
+    return ()
 
 -- removeCollection = do
 --   sc <- getSelectedCollection

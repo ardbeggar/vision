@@ -21,6 +21,9 @@ module Collection.UI
   ( initCollectionUI
   ) where
 
+import Control.Applicative
+import Data.Maybe
+
 import Graphics.UI.Gtk hiding (add)
 
 import UI
@@ -72,6 +75,11 @@ initCollectionUI browse = do
 
   popup <- getWidget castToMenu "ui/collection-popup"
   setupTreeViewPopup collView popup
+
+  acts <- mapM (getAction srvAG) ["rename-collection"]
+  onCollectionSelectionChanged $ do
+    en <- isJust <$> getSelectedCollection
+    mapM_ (flip actionSetSensitive en) acts
 
   return ?context
 
@@ -134,6 +142,14 @@ srvActions browse =
     , actionEntryAccelerator = Just "<Control>s"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = saveCollection
+    }
+  , ActionEntry
+    { actionEntryName        = "rename-collection"
+    , actionEntryLabel       = "Rena_me collection"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = renameCollection
     }
   , ActionEntry
     { actionEntryName        = "add-to-playlist"
