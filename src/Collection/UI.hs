@@ -161,7 +161,7 @@ srvActions browse =
     }
   , ActionEntry
     { actionEntryName        = "replace-playlist"
-    , actionEntryLabel       = "_Replace to playlist"
+    , actionEntryLabel       = "_Replace playlist"
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Just "<Control><Shift>p"
     , actionEntryTooltip     = Nothing
