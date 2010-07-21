@@ -192,9 +192,9 @@ runDlg title enable isOk init = do
   new  <- trim <$> entryGetText entry
   widgetDestroy dialog
 
-  case resp of
-    ResponseOk -> return $ Just new
-    _          -> return Nothing
+  return $ case resp of
+    ResponseOk -> Just new
+    _          -> Nothing
 
 updateWindowTitle = do
   name   <- getCurName
