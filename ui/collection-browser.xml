@@ -20,10 +20,13 @@
     </placeholder>
   </menubar>
   <popup action="collection-popup">
-    <menuitem action="add-to-playlist"/>
-    <menuitem action="replace-playlist"/>
+    <menuitem action="coll-add-to-playlist"/>
+    <menuitem action="coll-replace-playlist"/>
   </popup>
   <popup action="list-popup">
+    <menuitem action="list-add-to-playlist"/>
+    <menuitem action="list-replace-playlist"/>
+    <separator/>
     <menuitem action="rename-collection"/>
     <menuitem action="remove-collection"/>
     <separator/>

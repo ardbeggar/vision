@@ -22,6 +22,8 @@ module Collection.UI
   ) where
 
 import Control.Applicative
+import Control.Monad.Trans
+
 import Data.Maybe
 
 import Graphics.UI.Gtk hiding (add)
@@ -87,8 +89,23 @@ initCollectionUI browse = do
     en <- isJust <$> getSelectedCollection
     mapM_ (flip actionSetSensitive en) acts
 
-  updateWindowTitle
+  acts <- mapM (getAction srvAG)
+          [ "add-to-playlist"
+          , "replace-playlist"
+          ]
+  let updatePA = liftIO $ do
+        list <- widgetGetIsFocus listView
+        coll <- widgetGetIsFocus collView
+        mapM_ (flip actionSetSensitive (list || coll)) acts
+        return False
+      setupPA w = do
+        w `on` focusInEvent $ updatePA
+        w `on` focusOutEvent $ updatePA
+  setupPA listView
+  setupPA collView
+  updatePA
 
+  updateWindowTitle
   return ?context
 
 uiActions browse =
@@ -173,7 +190,7 @@ srvActions browse =
     , actionEntryStockId     = Just stockAdd
     , actionEntryAccelerator = Just "<Control>p"
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = addToPlaylist
+    , actionEntryCallback    = addToPlaylist False
     }
   , ActionEntry
     { actionEntryName        = "replace-playlist"
@@ -181,7 +198,39 @@ srvActions browse =
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Just "<Control><Shift>p"
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = replacePlaylist
+    , actionEntryCallback    = addToPlaylist True
+    }
+  , ActionEntry
+    { actionEntryName        = "coll-add-to-playlist"
+    , actionEntryLabel       = "_Add to playlist"
+    , actionEntryStockId     = Just stockAdd
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = collAddToPlaylist False
+    }
+  , ActionEntry
+    { actionEntryName        = "coll-replace-playlist"
+    , actionEntryLabel       = "_Replace playlist"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = collAddToPlaylist True
+    }
+  , ActionEntry
+    { actionEntryName        = "list-add-to-playlist"
+    , actionEntryLabel       = "_Add to playlist"
+    , actionEntryStockId     = Just stockAdd
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = listAddToPlaylist False
+    }
+  , ActionEntry
+    { actionEntryName        = "list-replace-playlist"
+    , actionEntryLabel       = "_Replace playlist"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = listAddToPlaylist True
     }
   ]
 

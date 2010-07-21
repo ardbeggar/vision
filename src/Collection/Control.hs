@@ -23,7 +23,8 @@ module Collection.Control
   , loadCurrent
   , browseSelected
   , addToPlaylist
-  , replacePlaylist
+  , collAddToPlaylist
+  , listAddToPlaylist
   , applyFilter
   , editFilter
   , allMedia
@@ -88,25 +89,38 @@ browseSelected browse =
   browse =<< getSelectedCollection
 
 
-addToPlaylist = addToPlaylist' `catch` \ParseError -> return ()
+addToPlaylist replace = do
+  list <- widgetGetIsFocus listView
+  if list
+    then listAddToPlaylist replace
+    else do
+    coll <- widgetGetIsFocus collView
+    when coll $ collAddToPlaylist replace
 
-addToPlaylist' = do
-  ids  <- getSelectedIds
-  coll <- case ids of
-    [] -> getCurColl
-    _  -> do
-      cur <- getCurColl
-      sel <- collNewIdlist ids
-      int <- collNew TypeIntersection
-      collAddOperand int cur
-      collAddOperand int sel
-      return int
+collAddToPlaylist replace =
+  add `catch` \ParseError -> return ()
+  where add = do
+          ids <- getSelectedIds
+          cur <- getCurColl
+          sel <- collNewIdlist ids
+          int <- collNew TypeIntersection
+          collAddOperand int cur
+          collAddOperand int sel
+          addCollection replace int
+
+listAddToPlaylist replace = do
+  maybeName <- getSelectedCollection
+  case maybeName of
+    Nothing   -> addCollection replace universe
+    Just name -> collGet xmms name "Collections" >>* do
+      coll <- result
+      liftIO $ addCollection replace coll
+      return False
+
+addCollection replace coll = do
+  when replace $ playlistClear xmms Nothing >> return ()
   playlistAddCollection xmms Nothing coll []
   return ()
-
-replacePlaylist = do
-  playlistClear xmms Nothing
-  addToPlaylist
 
 getSelectedIds =
   mapM (listStoreGetValue collStore . head)
