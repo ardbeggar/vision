@@ -26,6 +26,7 @@ module Collection.Model
   , setCurColl
   , getFilter
   , setFilter
+  , resetModel
   ) where
 
 import Control.Concurrent.MVar
@@ -112,3 +113,7 @@ populateModel ids = do
   where addOne id = do
           n <- listStoreAppend collStore id
           addToIndex collIndex id n
+
+resetModel = do
+  listStoreClear collStore
+  modifyMVar_ state . const $ return makeState

@@ -102,6 +102,14 @@ uiActions browse =
     , actionEntryCallback    = editFilter
     }
   , ActionEntry
+    { actionEntryName        = "all-media"
+    , actionEntryLabel       = "A_ll media"
+    , actionEntryStockId     = Just stockNew
+    , actionEntryAccelerator = Just "<Control>u"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = allMedia
+    }
+  , ActionEntry
     { actionEntryName        = "collection-popup"
     , actionEntryLabel       = ""
     , actionEntryStockId     = Nothing

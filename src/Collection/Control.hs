@@ -26,6 +26,7 @@ module Collection.Control
   , replacePlaylist
   , applyFilter
   , editFilter
+  , allMedia
   ) where
 
 import Prelude hiding (catch)
@@ -112,4 +113,10 @@ applyFilter = do
 
 editFilter = do
   editableSelectRegion collFilter 0 (-1)
+  widgetGrabFocus collFilter
+
+allMedia = do
+  resetModel
+  treeViewSetCursor listView [0] Nothing
+  entrySetText collFilter ""
   widgetGrabFocus collFilter
