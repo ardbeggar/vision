@@ -29,6 +29,7 @@ module Collection.Control
   , allMedia
   , saveCollection
   , renameCollection
+  , removeCollection
   ) where
 
 import Prelude hiding (catch)
@@ -141,12 +142,10 @@ renameCollection = do
     collRename xmms old new "Collections"
     return ()
 
--- removeCollection = do
---   sc <- getSelectedCollection
---   fmaybeM_ sc $ \name -> do
---     collRemove xmms name "Collections"
---     return ()
-
+removeCollection = do
+  name <- fromJust <$> getSelectedCollection
+  collRemove xmms name "Collections"
+  return ()
 
 runDlg title enable isOk init = do
   dialog <- dialogNew

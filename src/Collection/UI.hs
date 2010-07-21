@@ -76,7 +76,10 @@ initCollectionUI browse = do
   popup <- getWidget castToMenu "ui/collection-popup"
   setupTreeViewPopup collView popup
 
-  acts <- mapM (getAction srvAG) ["rename-collection"]
+  acts <- mapM (getAction srvAG)
+          [ "rename-collection"
+          , "remove-collection"
+          ]
   onCollectionSelectionChanged $ do
     en <- isJust <$> getSelectedCollection
     mapM_ (flip actionSetSensitive en) acts
@@ -150,6 +153,14 @@ srvActions browse =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = renameCollection
+    }
+  , ActionEntry
+    { actionEntryName        = "remove-collection"
+    , actionEntryLabel       = "Remo_ve collection"
+    , actionEntryStockId     = Just stockDelete
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = removeCollection
     }
   , ActionEntry
     { actionEntryName        = "add-to-playlist"
