@@ -76,6 +76,9 @@ initCollectionUI browse = do
   popup <- getWidget castToMenu "ui/collection-popup"
   setupTreeViewPopup collView popup
 
+  popup <- getWidget castToMenu "ui/list-popup"
+  setupTreeViewPopup listView popup
+
   acts <- mapM (getAction srvAG)
           [ "rename-collection"
           , "remove-collection"

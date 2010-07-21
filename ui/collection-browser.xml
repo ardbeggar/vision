@@ -23,4 +23,10 @@
     <menuitem action="add-to-playlist"/>
     <menuitem action="replace-playlist"/>
   </popup>
+  <popup action="list-popup">
+    <menuitem action="rename-collection"/>
+    <menuitem action="remove-collection"/>
+    <separator/>
+    <menuitem action="browse-in-new-window"/>
+  </popup>
 </ui>
