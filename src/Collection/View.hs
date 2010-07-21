@@ -77,6 +77,7 @@ addColumn prop = do
   column <- treeViewColumnNew
   treeViewAppendColumn collView column
   treeViewColumnSetTitle column $ propName prop
+  treeViewColumnSetResizable column True
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
   cellLayoutSetAttributeFunc column cell collStore $ \iter -> do
