@@ -17,11 +17,22 @@
         <menuitem action="close-window"/>
         <menuitem action="quit"/>
       </menu>
+      <menu action="edit">
+        <menuitem action="copy"/>
+        <separator/>
+        <menuitem action="select-all"/>
+        <menuitem action="invert-selection"/>
+      </menu>
     </placeholder>
   </menubar>
   <popup action="collection-popup">
     <menuitem action="coll-add-to-playlist"/>
     <menuitem action="coll-replace-playlist"/>
+    <separator/>
+    <menuitem action="copy"/>
+    <separator/>
+    <menuitem action="select-all"/>
+    <menuitem action="invert-selection"/>
   </popup>
   <popup action="list-popup">
     <menuitem action="list-add-to-playlist"/>

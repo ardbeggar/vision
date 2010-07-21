@@ -32,6 +32,9 @@ module Collection.Control
   , renameCollection
   , removeCollection
   , updateWindowTitle
+  , editCopy
+  , editSelectAll
+  , editInvertSelection
   ) where
 
 import Prelude hiding (catch)
@@ -49,6 +52,8 @@ import XMMS2.Client
 import XMMS
 import Utils
 import UI
+import Atoms
+import Clipboard
 import Collection.Common
 import Collection.Model
 import Collection.View
@@ -220,3 +225,19 @@ updateWindowTitle = do
         _  -> name
       f = if null filter then "" else "*"
   setWindowTitle $ t ++ "Vision collection browser"
+
+editCopy = do
+  ids <- getSelectedIds
+  clipboardSetWithData clipboard
+    [(xmms2MlibId, 0)]
+    (const $ selectionDataSet selectionTypeInteger ids)
+    (return ())
+  return ()
+
+editSelectAll =
+  treeSelectionSelectAll collSel
+
+editInvertSelection = do
+  rows <- treeSelectionGetSelectedRows collSel
+  treeSelectionSelectAll collSel
+  mapM_ (treeSelectionUnselectPath collSel) rows

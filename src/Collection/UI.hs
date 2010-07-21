@@ -105,6 +105,13 @@ initCollectionUI browse = do
   setupPA collView
   updatePA
 
+  acts <- mapM (getAction srvAG) ["copy"]
+  let updateE = do
+        en <- (/= 0) <$> treeSelectionCountSelectedRows collSel
+        mapM_ (flip actionSetSensitive en) acts
+  collSel `onSelectionChanged` updateE
+  updateE
+
   updateWindowTitle
   return ?context
 
@@ -140,6 +147,14 @@ uiActions browse =
     , actionEntryAccelerator = Just "<Control>u"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = allMedia
+    }
+  , ActionEntry
+    { actionEntryName        = "edit"
+    , actionEntryLabel       = "_Edit"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
     }
   , ActionEntry
     { actionEntryName        = "collection-popup"
@@ -231,6 +246,30 @@ srvActions browse =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = listAddToPlaylist True
+    }
+  , ActionEntry
+    { actionEntryName        = "copy"
+    , actionEntryLabel       = "_Copy"
+    , actionEntryStockId     = Just stockCopy
+    , actionEntryAccelerator = Just "<Control>c"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editCopy
+    }
+  , ActionEntry
+    { actionEntryName        = "select-all"
+    , actionEntryLabel       = "_Select all"
+    , actionEntryStockId     = Just stockSelectAll
+    , actionEntryAccelerator = Just "<Control>a"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editSelectAll
+    }
+  , ActionEntry
+    { actionEntryName        = "invert-selection"
+    , actionEntryLabel       = "_Invert selection"
+    , actionEntryStockId     = Just stockSelectAll
+    , actionEntryAccelerator = Just "<Control><Shift>a"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = editInvertSelection
     }
   ]
 
