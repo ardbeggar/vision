@@ -65,12 +65,11 @@ showPropertyManager =
       Nothing -> do
         dialog <- makePropertyManager
         return MD { mDialog = dialog, mShown = False }
-    unless (mShown md) $ do
-      let dialog = mDialog md
-          outerw = outer dialog
-      prepareToShow dialog
-      windowSetTransientFor outerw window
-      windowPresent outerw
+    let dialog = mDialog md
+        outerw = outer dialog
+    unless (mShown md) $ prepareToShow dialog
+    windowSetTransientFor outerw window
+    windowPresent outerw
     return $ Just md { mShown = True }
 
 makePropertyManager = do
@@ -107,6 +106,7 @@ instance ConfigWidget PM where
     let store = pStore pm
     listStoreClear store
     mapM_ (listStoreAppend store) config
+    treeViewSetCursor (pView pm) [0] Nothing
   clearConfig pm = listStoreClear $ pStore pm
   getChanged = readIORef .  pChanged
   clearChanged pm = writeIORef (pChanged pm) False
