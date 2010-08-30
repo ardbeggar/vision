@@ -67,9 +67,10 @@ showPropertyManager =
         return MD { mDialog = dialog, mShown = False }
     let dialog = mDialog md
         outerw = outer dialog
-    unless (mShown md) $ prepareToShow dialog
-    windowSetTransientFor outerw window
-    windowPresent outerw
+    unless (mShown md) $ do
+      prepareToShow dialog
+      windowSetTransientFor outerw window
+      windowPresent outerw
     return $ Just md { mShown = True }
 
 makePropertyManager = do
@@ -112,7 +113,7 @@ instance ConfigWidget PM where
   clearChanged pm = writeIORef (pChanged pm) False
   grabFocus = widgetGrabFocus . pView
 
-makePropertyManagerWidget parent windowGroup onChanged = do
+makePropertyManagerWidget parent onChanged = do
   store  <- listStoreNewDND [] Nothing Nothing
   sorted <- treeModelSortNewWithModel store
 
@@ -169,7 +170,7 @@ makePropertyManagerWidget parent windowGroup onChanged = do
         setChanged
         return ()
 
-  runE <- makePropertyEntryDialog parent windowGroup addProperty
+  runE <- makePropertyEntryDialog parent addProperty
   addB <- buttonNewFromStock stockAdd
   addB `onClicked` runE
 
@@ -215,13 +216,10 @@ makePropertyManagerWidget parent windowGroup onChanged = do
             }
 
 
-makePropertyEntryDialog parent windowGroup addProperty = do
+makePropertyEntryDialog parent addProperty = do
   dialog <- dialogNew
-  windowGroupAddWindow windowGroup dialog
-  windowSetTransientFor dialog parent
-  windowSetModal dialog True
+
   parent `onDestroy` do widgetDestroy dialog
-  parent `on` hideSignal $ widgetHide dialog
   dialogSetHasSeparator dialog False
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
@@ -291,6 +289,8 @@ makePropertyEntryDialog parent windowGroup addProperty = do
   keyE  `afterInsertText` checkInsert
   keyE  `afterDeleteText` checkDelete
 
+  windowGroup <- windowGroupNew
+
   return $ do
     dialogSetDefaultResponse dialog ResponseOk
     dialogSetResponseSensitive dialog ResponseOk False
@@ -298,10 +298,15 @@ makePropertyEntryDialog parent windowGroup addProperty = do
     entrySetText keyE ""
     comboSet typeC Nothing PropertyString
     comboSet roC Nothing False
+    windowSetTransientFor dialog parent
+    windowGroupAddWindow windowGroup parent
+    windowGroupAddWindow windowGroup dialog
     windowPresent dialog
     widgetGrabFocus nameE
     resp <- dialogRun dialog
     widgetHide dialog
+    windowGroupRemoveWindow windowGroup parent
+    windowGroupRemoveWindow windowGroup dialog
     when (resp == ResponseOk) $ do
       pname  <- entryGetText nameE
       pkey   <- entryGetText keyE

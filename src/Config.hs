@@ -83,10 +83,7 @@ instance CompoundWidget ConfigDialog where
   outer = cDialog
 
 makeConfigDialog make destroy getc setc = do
-  windowGroup <- windowGroupNew
-
   dialog <- dialogNew
-  windowGroupAddWindow windowGroup dialog
   windowSetModal dialog False
   dialogSetHasSeparator dialog False
 
@@ -96,8 +93,7 @@ makeConfigDialog make destroy getc setc = do
   dialogSetResponseSensitive dialog ResponseApply False
 
   upper <- dialogGetUpper dialog
-  cw <- make dialog windowGroup $
-    dialogSetResponseSensitive dialog ResponseApply True
+  cw <- make dialog $ dialogSetResponseSensitive dialog ResponseApply True
   widgetShowAll $ outer cw
   boxPackStartDefaults upper $ outer cw
 

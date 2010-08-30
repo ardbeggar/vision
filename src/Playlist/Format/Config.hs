@@ -55,7 +55,7 @@ instance ConfigWidget FormatView where
   grabFocus    = fFocus
 
 
-makePlaylistFormatView parent windowGroup onChanged = do
+makePlaylistFormatView parent onChanged = do
   box <- hBoxNew False 5
   containerSetBorderWidth box 7
 
@@ -125,7 +125,7 @@ makePlaylistFormatView parent windowGroup onChanged = do
         mapM_ signalUnblock [insId, chgId, delId]
 
   editPosRef <- newIORef Nothing
-  editor     <- makeFormatEditor parent windowGroup $ \text ->
+  editor     <- makeFormatEditor parent $ \text ->
     fmaybeM_ text $ \text -> do
       editPos <- readIORef editPosRef
       case editPos of
@@ -167,12 +167,10 @@ makePlaylistFormatView parent windowGroup onChanged = do
                     , fFocus   = focus
                     }
 
-makeFormatEditor parent windowGroup onDone = do
+makeFormatEditor parent onDone = do
   dialog <- dialogNew
-  windowGroupAddWindow windowGroup dialog
-  windowSetTransientFor dialog parent
+
   parent `onDestroy` do widgetDestroy dialog
-  windowSetModal dialog True
   windowSetTitle dialog "Edit format"
   windowSetDefaultSize dialog 500 400
   dialogSetHasSeparator dialog False
@@ -190,14 +188,21 @@ makeFormatEditor parent windowGroup onDone = do
   view <- textViewNewWithBuffer buff
   containerAdd scroll view
 
+  windowGroup <- windowGroupNew
+
   return $ \text -> do
     textBufferSetText buff text
     textBufferSetModified buff False
     dialogSetDefaultResponse dialog ResponseOk
+    windowSetTransientFor dialog parent
+    windowGroupAddWindow windowGroup parent
+    windowGroupAddWindow windowGroup dialog
     widgetShowAll dialog
     widgetGrabFocus view
     resp <- dialogRun dialog
     widgetHide dialog
+    windowGroupRemoveWindow windowGroup parent
+    windowGroupRemoveWindow windowGroup dialog
     onDone =<< case resp of
       ResponseOk -> do
         modified <- textBufferGetModified buff
