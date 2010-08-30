@@ -219,12 +219,12 @@ makePropertyEntryDialog parent windowGroup addProperty = do
   dialog <- dialogNew
   windowGroupAddWindow windowGroup dialog
   windowSetTransientFor dialog parent
+  windowSetModal dialog True
   parent `onDestroy` do widgetDestroy dialog
+  parent `on` hideSignal $ widgetHide dialog
   dialogSetHasSeparator dialog False
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
-  windowSetTransientFor dialog parent
-  windowSetModal dialog True
 
   table <- tableNew 4 2 False
   containerSetBorderWidth table 7
