@@ -106,6 +106,9 @@ makeConfigDialog make destroy getc setc = do
         clearConfig cw
         clearChanged cw
         when destroy $ widgetDestroy dialog
+      prepareToShow = do
+        setConfig cw =<< getc
+        grabFocus cw
 
   dialog `onResponse` \resp ->
     case resp of
@@ -122,8 +125,6 @@ makeConfigDialog make destroy getc setc = do
       _ ->
         hide
 
-  return ConfigDialog { cDialog = dialog
-                      , prepareToShow = do
-                          setConfig cw =<< getc
-                          grabFocus cw
+  return ConfigDialog { cDialog       = dialog
+                      , prepareToShow = prepareToShow
                       }
