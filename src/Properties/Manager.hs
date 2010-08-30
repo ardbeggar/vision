@@ -22,6 +22,7 @@ module Properties.Manager
   , showPropertyManager
   ) where
 
+import Control.Concurrent.MVar
 import Control.Applicative
 import Control.Monad
 
@@ -37,27 +38,54 @@ import Utils
 import Compound
 import Config
 import Context
-import CODW
+import UI
 import Properties.Property
 import Properties.Model
 
 
+data MD
+  = MD { mDialog :: ConfigDialog
+       , mShown  :: Bool
+       }
+
 data Manager
-  = Manager { pManager :: CODW () Dialog }
+  = Manager { pManager :: MVar (Maybe MD) }
+
+manager = pManager context
 
 initPropertyManager = do
-  manager <- makeCODW $ const makePropertyManager
+  manager <- newMVar Nothing
   return $ augmentContext
     Manager { pManager = manager }
 
 showPropertyManager =
-  showCODW () $ pManager context
+  modifyMVar_ manager $ \m -> do
+    md <- case m of
+      Just md -> return md
+      Nothing -> do
+        dialog <- makePropertyManager
+        return MD { mDialog = dialog, mShown = False }
+    unless (mShown md) $ do
+      let dialog = mDialog md
+          outerw = outer dialog
+      prepareToShow dialog
+      windowSetTransientFor outerw window
+      windowPresent outerw
+    return $ Just md { mShown = True }
 
 makePropertyManager = do
-  dialog <- makeConfigDialog makePropertyManagerWidget
+  dialog <- makeConfigDialog makePropertyManagerWidget False
             getProperties setProperties
-  windowSetTitle dialog "Manage properties"
-  windowSetDefaultSize dialog 500 400
+  let outerw = outer dialog
+  hideOnDeleteEvent outerw
+  outerw `on` hideSignal $ modifyMVar_ manager $ \maybeMD ->
+    case maybeMD of
+      Just md ->
+        return $ Just md { mShown = False }
+      Nothing ->
+        return Nothing
+  windowSetTitle outerw "Manage properties"
+  windowSetDefaultSize outerw 500 400
   return dialog
 
 
@@ -79,6 +107,7 @@ instance ConfigWidget PM where
     let store = pStore pm
     listStoreClear store
     mapM_ (listStoreAppend store) config
+  clearConfig pm = listStoreClear $ pStore pm
   getChanged = readIORef .  pChanged
   clearChanged pm = writeIORef (pChanged pm) False
   grabFocus = widgetGrabFocus . pView

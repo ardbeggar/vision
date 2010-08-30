@@ -27,6 +27,7 @@ import Graphics.UI.Gtk
 import CODW
 import Config
 import Context
+import Compound
 import Playlist.Format
 import Playlist.Format.Config
 
@@ -43,8 +44,10 @@ showPlaylistConfigDialog =
   showCODW () (cDialog context)
 
 makePlaylistConfigDialog = do
-  dialog <- makeConfigDialog makePlaylistFormatView
+  dialog <- makeConfigDialog makePlaylistFormatView True
             getFormatDefs putFormatDefs
-  windowSetTitle dialog "Configure playlist"
-  windowSetDefaultSize dialog 500 400
-  return dialog
+  prepareToShow dialog
+  let outerw = outer dialog
+  windowSetTitle outerw "Configure playlist"
+  windowSetDefaultSize outerw 500 400
+  return outerw

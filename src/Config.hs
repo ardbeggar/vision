@@ -22,6 +22,8 @@ module Config
   , writeConfig
   , ConfigWidget (..)
   , makeConfigDialog
+  , ConfigDialog
+  , prepareToShow
   ) where
 
 import Control.Monad
@@ -65,12 +67,22 @@ class CompoundWidget cw => ConfigWidget cw where
   type Config cw
   getConfig    :: cw -> IO (Config cw)
   setConfig    :: cw -> Config cw -> IO ()
+  clearConfig  :: cw -> IO ()
   getChanged   :: cw -> IO Bool
   clearChanged :: cw -> IO ()
   grabFocus    :: cw -> IO ()
 
 
-makeConfigDialog make getc setc = do
+data ConfigDialog
+  = ConfigDialog { cDialog       :: Dialog
+                 , prepareToShow :: IO ()
+                 }
+
+instance CompoundWidget ConfigDialog where
+  type Outer ConfigDialog = Dialog
+  outer = cDialog
+
+makeConfigDialog make destroy getc setc = do
   windowGroup <- windowGroupNew
 
   dialog <- dialogNew
@@ -89,6 +101,12 @@ makeConfigDialog make getc setc = do
   widgetShowAll $ outer cw
   boxPackStartDefaults upper $ outer cw
 
+  let hide = do
+        widgetHide dialog
+        clearConfig cw
+        clearChanged cw
+        when destroy $ widgetDestroy dialog
+
   dialog `onResponse` \resp ->
     case resp of
       ResponseApply -> do
@@ -100,11 +118,12 @@ makeConfigDialog make getc setc = do
       ResponseOk    -> do
         changed <- getChanged cw
         when changed $ setc =<< getConfig cw
-        widgetDestroy dialog
+        hide
       _ ->
-        widgetDestroy dialog
+        hide
 
-  setConfig cw =<< getc
-  grabFocus cw
-
-  return dialog
+  return ConfigDialog { cDialog = dialog
+                      , prepareToShow = do
+                          setConfig cw =<< getc
+                          grabFocus cw
+                      }
