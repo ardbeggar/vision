@@ -49,6 +49,7 @@ instance ConfigWidget FormatView where
   type Config FormatView = [String]
   getConfig    = fGet
   setConfig    = fSet
+  clearConfig  = const $ return ()
   getChanged   = fChanged
   clearChanged = fResetChanged
   grabFocus    = fFocus
