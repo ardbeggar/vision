@@ -58,8 +58,8 @@ makeEditorDialog makeEditor = do
   hideOnDeleteEvent dialog
 
   dialogSetHasSeparator dialog False
-  dialogAddButton dialog "gtk-cancel" ResponseCancel
-  dialogAddButtonCR dialog "gtk-ok" ResponseOk
+  dialogAddButton dialog stockCancel ResponseCancel
+  dialogAddButtonCR dialog stockOk ResponseOk
 
   editor <- makeEditor $ \modified valid -> do
     dialogSetResponseSensitive dialog ResponseOk valid
