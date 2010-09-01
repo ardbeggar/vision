@@ -45,7 +45,6 @@ data (WindowClass p, EditorWidget e) => EditorDialog p e
   = EditorDialog
     { eParent      :: p
     , eDialog      :: Dialog
-    , eWindowGroup :: WindowGroup
     , eEditor      :: e
     }
 
@@ -72,20 +71,17 @@ makeEditorDialog parent makeEditor = do
   boxPackStartDefaults upper $ outer editor
   widgetShowAll $ outer editor
 
-  windowGroup <- windowGroupNew
-
   return EditorDialog { eParent      = parent
                       , eDialog      = dialog
-                      , eWindowGroup = windowGroup
                       , eEditor      = editor
                       }
 
 runEditorDialog e get set = do
   let parent      = eParent e
       dialog      = eDialog e
-      windowGroup = eWindowGroup e
       editor      = eEditor e
 
+  windowGroup <- windowGroupNew
   windowSetTransientFor dialog parent
   windowSetModal dialog True
   windowGroupAddWindow windowGroup parent
@@ -95,8 +91,6 @@ runEditorDialog e get set = do
   rec { cid <- dialog `onResponse` \resp -> do
            signalDisconnect cid
            widgetHide dialog
-           windowGroupRemoveWindow windowGroup parent
-           windowGroupRemoveWindow windowGroup dialog
            when (resp == ResponseOk) $ set =<< getData editor
       }
   windowPresent dialog
