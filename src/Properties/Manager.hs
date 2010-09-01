@@ -173,11 +173,10 @@ makePropertyManagerWidget parent onChanged = do
         setChanged
         return ()
 
-  edlg <- makeEditorDialog parent $
-    makePropertyEntry $ liftM isJust . property
+  edlg <- makeEditorDialog $ makePropertyEntry $ liftM isJust . property
   addB <- buttonNewFromStock stockAdd
   addB `onClicked`
-    runEditorDialog edlg (return nullProperty) addProperty True
+    runEditorDialog edlg (return nullProperty) addProperty True parent
 
   delB <- buttonNewFromStock stockRemove
   delB `onClicked` do

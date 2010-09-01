@@ -41,23 +41,21 @@ class CompoundWidget w => EditorWidget w where
   setupView :: w -> IO ()
 
 
-data (WindowClass p, EditorWidget e) => EditorDialog p e
+data EditorWidget e => EditorDialog e
   = EditorDialog
-    { eParent      :: p
-    , eDialog      :: Dialog
+    { eDialog      :: Dialog
     , eEditor      :: e
     }
 
-instance (WindowClass p, EditorWidget e) => CompoundWidget (EditorDialog p e) where
-  type Outer (EditorDialog p e) = Dialog
+instance EditorWidget e => CompoundWidget (EditorDialog e) where
+  type Outer (EditorDialog e) = Dialog
   outer = eDialog
 
 
-makeEditorDialog parent makeEditor = do
+makeEditorDialog makeEditor = do
   dialog <- dialogNew
 
   hideOnDeleteEvent dialog
-  parent `onDestroy` do widgetDestroy dialog
 
   dialogSetHasSeparator dialog False
   dialogAddButton dialog "gtk-cancel" ResponseCancel
@@ -71,19 +69,16 @@ makeEditorDialog parent makeEditor = do
   boxPackStartDefaults upper $ outer editor
   widgetShowAll $ outer editor
 
-  return EditorDialog { eParent      = parent
-                      , eDialog      = dialog
+  return EditorDialog { eDialog      = dialog
                       , eEditor      = editor
                       }
 
-runEditorDialog e get set modal = do
-  let parent      = eParent e
-      dialog      = eDialog e
-      editor      = eEditor e
+runEditorDialog e get set modal parent = do
+  let dialog = eDialog e
+      editor = eEditor e
 
-  windowSetTransientFor dialog parent
   windowSetModal dialog modal
-
+  windowSetTransientFor dialog parent
   when modal $ do
     windowGroup <- windowGroupNew
     windowGroupAddWindow windowGroup parent
