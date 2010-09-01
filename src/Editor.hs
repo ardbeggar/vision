@@ -76,16 +76,19 @@ makeEditorDialog parent makeEditor = do
                       , eEditor      = editor
                       }
 
-runEditorDialog e get set = do
+runEditorDialog e get set modal = do
   let parent      = eParent e
       dialog      = eDialog e
       editor      = eEditor e
 
-  windowGroup <- windowGroupNew
   windowSetTransientFor dialog parent
-  windowSetModal dialog True
-  windowGroupAddWindow windowGroup parent
-  windowGroupAddWindow windowGroup dialog
+  windowSetModal dialog modal
+
+  when modal $ do
+    windowGroup <- windowGroupNew
+    windowGroupAddWindow windowGroup parent
+    windowGroupAddWindow windowGroup dialog
+
   setData editor =<< get
   setupView editor
   rec { cid <- dialog `onResponse` \resp -> do
