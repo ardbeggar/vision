@@ -172,9 +172,10 @@ makePropertyManagerWidget parent onChanged = do
         setChanged
         return ()
 
-  edlg <- makePropertyEntryDialog parent
+  edlg <- makeEditorDialog parent $
+    makePropertyEntry (\name -> isJust <$> property name)
   addB <- buttonNewFromStock stockAdd
-  addB `onClicked` runPropertyEntryDialog edlg addProperty
+  addB `onClicked` runEditorDialog edlg (return nullProperty) addProperty
 
   delB <- buttonNewFromStock stockRemove
   delB `onClicked` do
@@ -217,15 +218,19 @@ makePropertyManagerWidget parent onChanged = do
             , pChanged = changed
             }
 
-data PropertyEntryDialog
-  = PropertyEntryDialog
-    { dParent      :: Dialog
-    , dDialog      :: Dialog
-    , dWindowGroup :: WindowGroup
-    , dEntry       :: PropertyEntry
+data (WindowClass p, EditorWidget e) => EditorDialog p e
+  = EditorDialog
+    { eParent      :: p
+    , eDialog      :: Dialog
+    , eWindowGroup :: WindowGroup
+    , eEditor      :: PropertyEntry
     }
 
-makePropertyEntryDialog parent = do
+instance (WindowClass p, EditorWidget e) => CompoundWidget (EditorDialog p e) where
+  type Outer (EditorDialog p e) = Dialog
+  outer = eDialog
+
+makeEditorDialog parent makeEditor = do
   dialog <- dialogNew
 
   hideOnDeleteEvent dialog
@@ -235,39 +240,37 @@ makePropertyEntryDialog parent = do
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
 
-  entry <- makePropertyEntry
-           (dialogSetResponseSensitive dialog ResponseOk)
-           (\name -> isJust <$> property name)
+  editor <- makeEditor $ dialogSetResponseSensitive dialog ResponseOk
   upper <- dialogGetUpper dialog
-  boxPackStartDefaults upper $ outer entry
-  widgetShowAll $ outer entry
+  boxPackStartDefaults upper $ outer editor
+  widgetShowAll $ outer editor
 
   windowGroup <- windowGroupNew
 
-  return PropertyEntryDialog { dParent      = parent
-                             , dDialog      = dialog
-                             , dWindowGroup = windowGroup
-                             , dEntry       = entry
-                             }
+  return EditorDialog { eParent      = parent
+                      , eDialog      = dialog
+                      , eWindowGroup = windowGroup
+                      , eEditor      = editor
+                      }
 
-runPropertyEntryDialog d f = do
-  let parent      = dParent d
-      dialog      = dDialog d
-      windowGroup = dWindowGroup d
-      entry       = dEntry d
+runEditorDialog e get set = do
+  let parent      = eParent e
+      dialog      = eDialog e
+      windowGroup = eWindowGroup e
+      editor      = eEditor e
 
   windowSetTransientFor dialog parent
   windowSetModal dialog True
   windowGroupAddWindow windowGroup parent
   windowGroupAddWindow windowGroup dialog
-  setData entry nullProperty
-  setupView entry
+  setData editor =<< get
+  setupView editor
   rec { cid <- dialog `onResponse` \resp -> do
            signalDisconnect cid
            widgetHide dialog
            windowGroupRemoveWindow windowGroup parent
            windowGroupRemoveWindow windowGroup dialog
-           when (resp == ResponseOk) $ f =<< getData entry
+           when (resp == ResponseOk) $ set =<< getData editor
       }
   windowPresent dialog
 
@@ -354,7 +357,7 @@ propertyEntryValid exists name key = do
   e <- exists name
   return . not $ e || null name || null key
 
-makePropertyEntry valid exists = do
+makePropertyEntry exists valid = do
   table <- tableNew 4 2 False
   containerSetBorderWidth table 7
   tableSetColSpacings table 15
