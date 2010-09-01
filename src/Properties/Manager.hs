@@ -224,6 +224,111 @@ makePropertyEntryDialog parent addProperty = do
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
 
+  entry <- makePropertyEntry
+           (dialogSetResponseSensitive dialog ResponseOk)
+           (\name -> isJust <$> property name)
+  upper <- dialogGetUpper dialog
+  boxPackStartDefaults upper $ outer entry
+  widgetShowAll $ outer entry
+
+  windowGroup <- windowGroupNew
+
+  return $ do
+    windowSetTransientFor dialog parent
+    windowGroupAddWindow windowGroup parent
+    windowGroupAddWindow windowGroup dialog
+    setData entry nullProperty
+    setupView entry
+    resp <- dialogRun dialog
+    widgetHide dialog
+    windowGroupRemoveWindow windowGroup parent
+    windowGroupRemoveWindow windowGroup dialog
+    when (resp == ResponseOk) $ addProperty =<< getData entry
+
+nullProperty =
+  Property { propName      = ""
+           , propKey       = ""
+           , propType      = PropertyString
+           , propReadOnly  = False
+           , propCustom    = True
+           , propReadValue = Nothing
+           , propShowValue = Nothing
+           }
+
+comboGet combo =
+  toEnum <$> comboBoxGetActive combo
+
+comboSet ::
+  Enum a                     =>
+  ComboBox                   ->
+  Maybe (ConnectId ComboBox) ->
+  a                          ->
+  IO ()
+comboSet combo maybeCid =
+  wrap . comboBoxSetActive combo . fromEnum
+  where wrap | Just cid <- maybeCid = withSignalBlocked cid
+             | otherwise            = id
+
+setupCombo combo ref =
+  combo `on` changed $ (writeIORef ref =<< comboGet combo)
+
+
+class CompoundWidget w => EditorWidget w where
+  type Data w
+  setData   :: w -> Data w -> IO ()
+  getData   :: w -> IO (Data w)
+  setupView :: w -> IO ()
+
+data PropertyEntry
+  = PropertyEntry
+    { eTable  :: Table
+    , eName   :: Entry
+    , eKey    :: Entry
+    , eType   :: ComboBox
+    , eRO     :: ComboBox
+    , eExists :: String -> IO Bool
+    , eValid  :: Bool -> IO ()
+    }
+
+instance CompoundWidget PropertyEntry where
+  type Outer PropertyEntry = Table
+  outer = eTable
+
+instance EditorWidget PropertyEntry where
+  type Data PropertyEntry = Property
+  setData   = propertyEntrySetData
+  getData   = propertyEntryGetData
+  setupView = propertyEntrySetupView
+
+propertyEntrySetData e p = do
+  entrySetText (eName e) (propName p)
+  entrySetText (eKey e) (propKey p)
+  comboSet (eType e) Nothing (propType p)
+  comboSet (eRO e) Nothing (propReadOnly p)
+  eValid e =<< propertyEntryValid (eExists e) (propName p) (propKey p)
+
+propertyEntryGetData e = do
+  pname  <- entryGetText $ eName e
+  pkey   <- entryGetText $ eKey e
+  ptype  <- comboGet $ eType e
+  pro    <- comboGet $ eRO e
+  return Property { propName      = trim pname
+                  , propKey       = trim pkey
+                  , propType      = ptype
+                  , propReadOnly  = pro
+                  , propCustom    = True
+                  , propReadValue = Nothing
+                  , propShowValue = Nothing
+                  }
+
+propertyEntrySetupView e =
+  widgetGrabFocus $ eName e
+
+propertyEntryValid exists name key = do
+  e <- exists name
+  return . not $ e || null name || null key
+
+makePropertyEntry valid exists = do
   table <- tableNew 4 2 False
   containerSetBorderWidth table 7
   tableSetColSpacings table 15
@@ -256,16 +361,10 @@ makePropertyEntryDialog parent addProperty = do
   roCid <- setupCombo roC roRef
   addPair "_Read-only" roC 3
 
-  upper <- dialogGetUpper dialog
-  boxPackStartDefaults upper table
-  widgetShowAll table
-
   let check = do
-        name   <- trim <$> entryGetText nameE
-        key    <- trim <$> entryGetText keyE
-        exists <- isJust <$> property name
-        dialogSetResponseSensitive dialog ResponseOk $
-          not $ exists || null name || null key
+        name  <- trim <$> entryGetText nameE
+        key   <- trim <$> entryGetText keyE
+        valid =<< propertyEntryValid exists name key
         case Map.lookup key builtinPropertyMap of
           Just prop -> do
             comboSet typeC (Just typeCid) $ propType prop
@@ -289,52 +388,11 @@ makePropertyEntryDialog parent addProperty = do
   keyE  `afterInsertText` checkInsert
   keyE  `afterDeleteText` checkDelete
 
-  windowGroup <- windowGroupNew
-
-  return $ do
-    dialogSetDefaultResponse dialog ResponseOk
-    dialogSetResponseSensitive dialog ResponseOk False
-    entrySetText nameE ""
-    entrySetText keyE ""
-    comboSet typeC Nothing PropertyString
-    comboSet roC Nothing False
-    windowSetTransientFor dialog parent
-    windowGroupAddWindow windowGroup parent
-    windowGroupAddWindow windowGroup dialog
-    windowPresent dialog
-    widgetGrabFocus nameE
-    resp <- dialogRun dialog
-    widgetHide dialog
-    windowGroupRemoveWindow windowGroup parent
-    windowGroupRemoveWindow windowGroup dialog
-    when (resp == ResponseOk) $ do
-      pname  <- entryGetText nameE
-      pkey   <- entryGetText keyE
-      ptype  <- comboGet typeC
-      pro    <- comboGet roC
-      addProperty Property { propName      = trim pname
-                           , propKey       = trim pkey
-                           , propType      = ptype
-                           , propReadOnly  = pro
-                           , propCustom    = True
-                           , propReadValue = Nothing
-                           , propShowValue = Nothing
-                           }
-
-
-comboGet combo =
-  toEnum <$> comboBoxGetActive combo
-
-comboSet ::
-  Enum a                     =>
-  ComboBox                   ->
-  Maybe (ConnectId ComboBox) ->
-  a                          ->
-  IO ()
-comboSet combo maybeCid =
-  wrap . comboBoxSetActive combo . fromEnum
-  where wrap | Just cid <- maybeCid = withSignalBlocked cid
-             | otherwise            = id
-
-setupCombo combo ref =
-  combo `on` changed $ (writeIORef ref =<< comboGet combo)
+  return PropertyEntry { eTable  = table
+                       , eName   = nameE
+                       , eKey    = keyE
+                       , eType   = typeC
+                       , eRO     = roC
+                       , eExists = exists
+                       , eValid  = valid
+                       }
