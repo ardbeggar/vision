@@ -170,9 +170,9 @@ makePropertyManagerWidget parent onChanged = do
         setChanged
         return ()
 
-  runE <- makePropertyEntryDialog parent addProperty
+  edlg <- makePropertyEntryDialog parent
   addB <- buttonNewFromStock stockAdd
-  addB `onClicked` runE
+  addB `onClicked` runPropertyEntryDialog edlg addProperty
 
   delB <- buttonNewFromStock stockRemove
   delB `onClicked` do
@@ -215,8 +215,15 @@ makePropertyManagerWidget parent onChanged = do
             , pChanged = changed
             }
 
+data PropertyEntryDialog
+  = PropertyEntryDialog
+    { dParent      :: Dialog
+    , dDialog      :: Dialog
+    , dWindowGroup :: WindowGroup
+    , dEntry       :: PropertyEntry
+    }
 
-makePropertyEntryDialog parent addProperty = do
+makePropertyEntryDialog parent = do
   dialog <- dialogNew
 
   parent `onDestroy` do widgetDestroy dialog
@@ -233,17 +240,28 @@ makePropertyEntryDialog parent addProperty = do
 
   windowGroup <- windowGroupNew
 
-  return $ do
-    windowSetTransientFor dialog parent
-    windowGroupAddWindow windowGroup parent
-    windowGroupAddWindow windowGroup dialog
-    setData entry nullProperty
-    setupView entry
-    resp <- dialogRun dialog
-    widgetHide dialog
-    windowGroupRemoveWindow windowGroup parent
-    windowGroupRemoveWindow windowGroup dialog
-    when (resp == ResponseOk) $ addProperty =<< getData entry
+  return PropertyEntryDialog { dParent      = parent
+                             , dDialog      = dialog
+                             , dWindowGroup = windowGroup
+                             , dEntry       = entry
+                             }
+
+runPropertyEntryDialog d f = do
+  let parent      = dParent d
+      dialog      = dDialog d
+      windowGroup = dWindowGroup d
+      entry       = dEntry d
+
+  windowSetTransientFor dialog parent
+  windowGroupAddWindow windowGroup parent
+  windowGroupAddWindow windowGroup dialog
+  setData entry nullProperty
+  setupView entry
+  resp <- dialogRun dialog
+  widgetHide dialog
+  windowGroupRemoveWindow windowGroup parent
+  windowGroupRemoveWindow windowGroup dialog
+  when (resp == ResponseOk) $ f =<< getData entry
 
 nullProperty =
   Property { propName      = ""
