@@ -64,7 +64,10 @@ makeEditorDialog parent makeEditor = do
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
 
-  editor <- makeEditor $ dialogSetResponseSensitive dialog ResponseOk
+  editor <- makeEditor $ \modified valid -> do
+    dialogSetResponseSensitive dialog ResponseOk valid
+    dialogSetResponseSensitive dialog ResponseApply modified
+
   upper <- dialogGetUpper dialog
   boxPackStartDefaults upper $ outer editor
   widgetShowAll $ outer editor

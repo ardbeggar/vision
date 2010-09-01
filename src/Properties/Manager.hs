@@ -255,7 +255,7 @@ data PropertyEntry
     , eType   :: ComboBox
     , eRO     :: ComboBox
     , eExists :: String -> IO Bool
-    , eValid  :: Bool -> IO ()
+    , eNotify :: Bool -> Bool -> IO ()
     }
 
 instance CompoundWidget PropertyEntry where
@@ -273,7 +273,8 @@ propertyEntrySetData e p = do
   entrySetText (eKey e) (propKey p)
   comboSet (eType e) Nothing (propType p)
   comboSet (eRO e) Nothing (propReadOnly p)
-  eValid e =<< propertyEntryValid (eExists e) (propName p) (propKey p)
+  (eNotify e) True =<<
+    propertyEntryValid (eExists e) (propName p) (propKey p)
 
 propertyEntryGetData e = do
   pname  <- entryGetText $ eName e
@@ -296,7 +297,7 @@ propertyEntryValid exists name key = do
   e <- exists name
   return . not $ e || null name || null key
 
-makePropertyEntry exists valid = do
+makePropertyEntry exists notify = do
   table <- tableNew 4 2 False
   containerSetBorderWidth table 7
   tableSetColSpacings table 15
@@ -330,9 +331,9 @@ makePropertyEntry exists valid = do
   addPair "_Read-only" roC 3
 
   let check = do
-        name  <- trim <$> entryGetText nameE
-        key   <- trim <$> entryGetText keyE
-        valid =<< propertyEntryValid exists name key
+        name <- trim <$> entryGetText nameE
+        key  <- trim <$> entryGetText keyE
+        notify True =<< propertyEntryValid exists name key
         case Map.lookup key builtinPropertyMap of
           Just prop -> do
             comboSet typeC (Just typeCid) $ propType prop
@@ -362,5 +363,5 @@ makePropertyEntry exists valid = do
                        , eType   = typeC
                        , eRO     = roC
                        , eExists = exists
-                       , eValid  = valid
+                       , eNotify = notify
                        }
