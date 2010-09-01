@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DoRec #-}
+
 module Properties.Manager
   ( initPropertyManager
   , showPropertyManager
@@ -226,7 +228,9 @@ data PropertyEntryDialog
 makePropertyEntryDialog parent = do
   dialog <- dialogNew
 
+  hideOnDeleteEvent dialog
   parent `onDestroy` do widgetDestroy dialog
+
   dialogSetHasSeparator dialog False
   dialogAddButton dialog "gtk-cancel" ResponseCancel
   dialogAddButtonCR dialog "gtk-ok" ResponseOk
@@ -253,15 +257,19 @@ runPropertyEntryDialog d f = do
       entry       = dEntry d
 
   windowSetTransientFor dialog parent
+  windowSetModal dialog True
   windowGroupAddWindow windowGroup parent
   windowGroupAddWindow windowGroup dialog
   setData entry nullProperty
   setupView entry
-  resp <- dialogRun dialog
-  widgetHide dialog
-  windowGroupRemoveWindow windowGroup parent
-  windowGroupRemoveWindow windowGroup dialog
-  when (resp == ResponseOk) $ f =<< getData entry
+  rec { cid <- dialog `onResponse` \resp -> do
+           signalDisconnect cid
+           widgetHide dialog
+           windowGroupRemoveWindow windowGroup parent
+           windowGroupRemoveWindow windowGroup dialog
+           when (resp == ResponseOk) $ f =<< getData entry
+      }
+  windowPresent dialog
 
 nullProperty =
   Property { propName      = ""
