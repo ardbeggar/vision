@@ -33,6 +33,7 @@ executable vision
                     Config,
                     Compound,
                     CODW,
+                    Editor,
                     Properties,
                     Properties.Property,
                     Properties.Model,

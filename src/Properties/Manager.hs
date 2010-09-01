@@ -41,6 +41,7 @@ import Compound
 import Config
 import Context
 import UI
+import Editor
 import Properties.Property
 import Properties.Model
 
@@ -218,62 +219,6 @@ makePropertyManagerWidget parent onChanged = do
             , pChanged = changed
             }
 
-data (WindowClass p, EditorWidget e) => EditorDialog p e
-  = EditorDialog
-    { eParent      :: p
-    , eDialog      :: Dialog
-    , eWindowGroup :: WindowGroup
-    , eEditor      :: PropertyEntry
-    }
-
-instance (WindowClass p, EditorWidget e) => CompoundWidget (EditorDialog p e) where
-  type Outer (EditorDialog p e) = Dialog
-  outer = eDialog
-
-makeEditorDialog parent makeEditor = do
-  dialog <- dialogNew
-
-  hideOnDeleteEvent dialog
-  parent `onDestroy` do widgetDestroy dialog
-
-  dialogSetHasSeparator dialog False
-  dialogAddButton dialog "gtk-cancel" ResponseCancel
-  dialogAddButtonCR dialog "gtk-ok" ResponseOk
-
-  editor <- makeEditor $ dialogSetResponseSensitive dialog ResponseOk
-  upper <- dialogGetUpper dialog
-  boxPackStartDefaults upper $ outer editor
-  widgetShowAll $ outer editor
-
-  windowGroup <- windowGroupNew
-
-  return EditorDialog { eParent      = parent
-                      , eDialog      = dialog
-                      , eWindowGroup = windowGroup
-                      , eEditor      = editor
-                      }
-
-runEditorDialog e get set = do
-  let parent      = eParent e
-      dialog      = eDialog e
-      windowGroup = eWindowGroup e
-      editor      = eEditor e
-
-  windowSetTransientFor dialog parent
-  windowSetModal dialog True
-  windowGroupAddWindow windowGroup parent
-  windowGroupAddWindow windowGroup dialog
-  setData editor =<< get
-  setupView editor
-  rec { cid <- dialog `onResponse` \resp -> do
-           signalDisconnect cid
-           widgetHide dialog
-           windowGroupRemoveWindow windowGroup parent
-           windowGroupRemoveWindow windowGroup dialog
-           when (resp == ResponseOk) $ set =<< getData editor
-      }
-  windowPresent dialog
-
 nullProperty =
   Property { propName      = ""
            , propKey       = ""
@@ -301,12 +246,6 @@ comboSet combo maybeCid =
 setupCombo combo ref =
   combo `on` changed $ (writeIORef ref =<< comboGet combo)
 
-
-class CompoundWidget w => EditorWidget w where
-  type Data w
-  setData   :: w -> Data w -> IO ()
-  getData   :: w -> IO (Data w)
-  setupView :: w -> IO ()
 
 data PropertyEntry
   = PropertyEntry
