@@ -61,7 +61,7 @@ makeEditorDialog makeEditor = do
   dialogAddButton dialog stockCancel ResponseCancel
   dialogAddButtonCR dialog stockOk ResponseOk
 
-  editor <- makeEditor $ \modified valid -> do
+  editor <- makeEditor dialog $ \modified valid -> do
     dialogSetResponseSensitive dialog ResponseOk valid
     dialogSetResponseSensitive dialog ResponseApply modified
 

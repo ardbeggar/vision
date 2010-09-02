@@ -297,7 +297,7 @@ propertyEntryValid exists name key = do
   e <- exists name
   return . not $ e || null name || null key
 
-makePropertyEntry exists notify = do
+makePropertyEntry exists _ notify = do
   table <- tableNew 4 2 False
   containerSetBorderWidth table 7
   tableSetColSpacings table 15
