@@ -119,7 +119,6 @@ data PropertyEntry
     , eType   :: ComboBox
     , eRO     :: ComboBox
     , eExists :: String -> IO Bool
-    , eNotify :: IO ()
     }
 
 instance CompoundWidget PropertyEntry where
@@ -231,7 +230,6 @@ makePropertyEntry exists _ notify = do
                        , eType   = typeC
                        , eRO     = roC
                        , eExists = exists
-                       , eNotify = notify
                        }
 
 
