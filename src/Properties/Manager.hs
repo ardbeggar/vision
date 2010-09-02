@@ -38,7 +38,6 @@ import Graphics.UI.Gtk
 
 import Utils
 import Compound
-import Config
 import Context
 import UI
 import Editor
@@ -47,7 +46,7 @@ import Properties.Model
 
 
 data MD
-  = MD { mDialog :: ConfigDialog
+  = MD { mDialog :: EditorDialog PM
        , mShown  :: Bool
        }
 
@@ -66,30 +65,11 @@ showPropertyManager =
     md <- case m of
       Just md -> return md
       Nothing -> do
-        dialog <- makePropertyManager
+        dialog <- makePMDialog
         return MD { mDialog = dialog, mShown = False }
-    let dialog = mDialog md
-        outerw = outer dialog
-    unless (mShown md) $ do
-      prepareToShow dialog
-      windowSetTransientFor outerw window
-      windowPresent outerw
+    unless (mShown md) $
+      runEditorDialog (mDialog md) getProperties setProperties False window
     return $ Just md { mShown = True }
-
-makePropertyManager = do
-  dialog <- makeConfigDialog makePropertyManagerWidget False
-            getProperties setProperties
-  let outerw = outer dialog
-  hideOnDeleteEvent outerw
-  outerw `on` hideSignal $ modifyMVar_ manager $ \maybeMD ->
-    case maybeMD of
-      Just md ->
-        return $ Just md { mShown = False }
-      Nothing ->
-        return Nothing
-  windowSetTitle outerw "Manage properties"
-  windowSetDefaultSize outerw 500 400
-  return dialog
 
 
 data PM
@@ -103,20 +83,171 @@ instance CompoundWidget PM where
   type Outer PM = VBox
   outer = pBox
 
-instance ConfigWidget PM where
-  type Config PM = [Property]
-  getConfig = listStoreToList . pStore
-  setConfig pm config = do
+nullProperty =
+  Property { propName      = ""
+           , propKey       = ""
+           , propType      = PropertyString
+           , propReadOnly  = False
+           , propCustom    = True
+           , propReadValue = Nothing
+           , propShowValue = Nothing
+           }
+
+comboGet combo =
+  toEnum <$> comboBoxGetActive combo
+
+comboSet ::
+  Enum a                     =>
+  ComboBox                   ->
+  Maybe (ConnectId ComboBox) ->
+  a                          ->
+  IO ()
+comboSet combo maybeCid =
+  wrap . comboBoxSetActive combo . fromEnum
+  where wrap | Just cid <- maybeCid = withSignalBlocked cid
+             | otherwise            = id
+
+setupCombo combo ref =
+  combo `on` changed $ (writeIORef ref =<< comboGet combo)
+
+
+data PropertyEntry
+  = PropertyEntry
+    { eTable  :: Table
+    , eName   :: Entry
+    , eKey    :: Entry
+    , eType   :: ComboBox
+    , eRO     :: ComboBox
+    , eExists :: String -> IO Bool
+    , eNotify :: IO ()
+    }
+
+instance CompoundWidget PropertyEntry where
+  type Outer PropertyEntry = Table
+  outer = eTable
+
+instance EditorWidget PropertyEntry where
+  type Data PropertyEntry = Property
+  setData       = propertyEntrySetData
+  getData       = propertyEntryGetData
+  setupView     = propertyEntrySetupView
+  getState      = propertyEntryGetState
+  resetModified = const $ return ()
+
+propertyEntrySetData e p = do
+  entrySetText (eName e) (propName p)
+  entrySetText (eKey e) (propKey p)
+  comboSet (eType e) Nothing (propType p)
+  comboSet (eRO e) Nothing (propReadOnly p)
+
+propertyEntryGetData e = do
+  pname  <- entryGetText $ eName e
+  pkey   <- entryGetText $ eKey e
+  ptype  <- comboGet $ eType e
+  pro    <- comboGet $ eRO e
+  return Property { propName      = trim pname
+                  , propKey       = trim pkey
+                  , propType      = ptype
+                  , propReadOnly  = pro
+                  , propCustom    = True
+                  , propReadValue = Nothing
+                  , propShowValue = Nothing
+                  }
+
+propertyEntrySetupView e =
+  widgetGrabFocus $ eName e
+
+propertyEntryGetState e = do
+  name <- trim <$> entryGetText (eName e)
+  key  <- trim <$> entryGetText (eKey e)
+  (, True) <$> propertyEntryValid (eExists e) name key
+
+propertyEntryValid exists name key = do
+  e <- exists name
+  return . not $ e || null name || null key
+
+makePropertyEntry exists _ notify = do
+  table <- tableNew 4 2 False
+  containerSetBorderWidth table 7
+  tableSetColSpacings table 15
+  tableSetRowSpacings table 5
+
+  let addPair m w b = do
+        l <- labelNewWithMnemonic m
+        miscSetAlignment l 0.0 0.5
+        labelSetMnemonicWidget l w
+        tableAttach table l 0 1 b (b + 1) [Fill] [] 0 0
+        tableAttach table w 1 2 b (b + 1) [Expand, Fill] [] 0 0
+
+  nameE <- entryNew
+  addPair "_Name" nameE 0
+
+  keyE <- entryNew
+  addPair "_Key" keyE 1
+
+  typeC <- comboBoxNewText
+  comboBoxInsertText typeC (fromEnum PropertyString) "string"
+  comboBoxInsertText typeC (fromEnum PropertyInt) "integer"
+  typeRef <- newIORef PropertyString
+  typeCid <- setupCombo typeC typeRef
+  addPair "_Type" typeC 2
+
+  roC <- comboBoxNewText
+  comboBoxInsertText roC (fromEnum False) "no"
+  comboBoxInsertText roC (fromEnum True) "yes"
+  roRef <- newIORef False
+  roCid <- setupCombo roC roRef
+  addPair "_Read-only" roC 3
+
+  let check = do
+        notify
+        key <- trim <$> entryGetText keyE
+        case Map.lookup key builtinPropertyMap of
+          Just prop -> do
+            comboSet typeC (Just typeCid) $ propType prop
+            widgetSetSensitive typeC False
+            comboSet roC (Just roCid) $ propReadOnly prop
+            widgetSetSensitive roC False
+          Nothing   -> do
+            comboSet typeC (Just typeCid) =<< readIORef typeRef
+            widgetSetSensitive typeC True
+            comboSet roC (Just roCid) =<< readIORef roRef
+            widgetSetSensitive roC True
+
+      checkInsert str pos = do
+        check
+        return $ (length str) + pos
+
+      checkDelete _ _ = check
+
+  nameE `afterInsertText` checkInsert
+  nameE `afterDeleteText` checkDelete
+  keyE  `afterInsertText` checkInsert
+  keyE  `afterDeleteText` checkDelete
+
+  return PropertyEntry { eTable  = table
+                       , eName   = nameE
+                       , eKey    = keyE
+                       , eType   = typeC
+                       , eRO     = roC
+                       , eExists = exists
+                       , eNotify = notify
+                       }
+
+
+instance EditorWidget PM where
+  type Data PM = [Property]
+  getData = listStoreToList . pStore
+  setData pm props = do
     let store = pStore pm
     listStoreClear store
-    mapM_ (listStoreAppend store) config
+    mapM_ (listStoreAppend store) props
+  setupView pm =
     treeViewSetCursor (pView pm) [0] Nothing
-  clearConfig pm = listStoreClear $ pStore pm
-  getChanged = readIORef .  pChanged
-  clearChanged pm = writeIORef (pChanged pm) False
-  grabFocus = widgetGrabFocus . pView
+  getState pm = (True, ) <$> (readIORef $ pChanged pm)
+  resetModified pm = writeIORef (pChanged pm) False
 
-makePropertyManagerWidget parent onChanged = do
+makePM parent notify = do
   store  <- listStoreNewDND [] Nothing Nothing
   sorted <- treeModelSortNewWithModel store
 
@@ -167,13 +298,13 @@ makePropertyManagerWidget parent onChanged = do
 
   let setChanged = do
         writeIORef changed True
-        onChanged
+        notify
       addProperty prop = do
         listStoreAppend store prop
         setChanged
         return ()
 
-  edlg <- makeEditorDialog $ makePropertyEntry $ liftM isJust . property
+  edlg <- makeEditorDialog [] $ makePropertyEntry $ liftM isJust . property
   addB <- buttonNewFromStock stockAdd
   addB `onClicked`
     runEditorDialog edlg (return nullProperty) addProperty True parent
@@ -219,149 +350,15 @@ makePropertyManagerWidget parent onChanged = do
             , pChanged = changed
             }
 
-nullProperty =
-  Property { propName      = ""
-           , propKey       = ""
-           , propType      = PropertyString
-           , propReadOnly  = False
-           , propCustom    = True
-           , propReadValue = Nothing
-           , propShowValue = Nothing
-           }
-
-comboGet combo =
-  toEnum <$> comboBoxGetActive combo
-
-comboSet ::
-  Enum a                     =>
-  ComboBox                   ->
-  Maybe (ConnectId ComboBox) ->
-  a                          ->
-  IO ()
-comboSet combo maybeCid =
-  wrap . comboBoxSetActive combo . fromEnum
-  where wrap | Just cid <- maybeCid = withSignalBlocked cid
-             | otherwise            = id
-
-setupCombo combo ref =
-  combo `on` changed $ (writeIORef ref =<< comboGet combo)
-
-
-data PropertyEntry
-  = PropertyEntry
-    { eTable  :: Table
-    , eName   :: Entry
-    , eKey    :: Entry
-    , eType   :: ComboBox
-    , eRO     :: ComboBox
-    , eExists :: String -> IO Bool
-    , eNotify :: Bool -> Bool -> IO ()
-    }
-
-instance CompoundWidget PropertyEntry where
-  type Outer PropertyEntry = Table
-  outer = eTable
-
-instance EditorWidget PropertyEntry where
-  type Data PropertyEntry = Property
-  setData   = propertyEntrySetData
-  getData   = propertyEntryGetData
-  setupView = propertyEntrySetupView
-
-propertyEntrySetData e p = do
-  entrySetText (eName e) (propName p)
-  entrySetText (eKey e) (propKey p)
-  comboSet (eType e) Nothing (propType p)
-  comboSet (eRO e) Nothing (propReadOnly p)
-  (eNotify e) True =<<
-    propertyEntryValid (eExists e) (propName p) (propKey p)
-
-propertyEntryGetData e = do
-  pname  <- entryGetText $ eName e
-  pkey   <- entryGetText $ eKey e
-  ptype  <- comboGet $ eType e
-  pro    <- comboGet $ eRO e
-  return Property { propName      = trim pname
-                  , propKey       = trim pkey
-                  , propType      = ptype
-                  , propReadOnly  = pro
-                  , propCustom    = True
-                  , propReadValue = Nothing
-                  , propShowValue = Nothing
-                  }
-
-propertyEntrySetupView e =
-  widgetGrabFocus $ eName e
-
-propertyEntryValid exists name key = do
-  e <- exists name
-  return . not $ e || null name || null key
-
-makePropertyEntry exists _ notify = do
-  table <- tableNew 4 2 False
-  containerSetBorderWidth table 7
-  tableSetColSpacings table 15
-  tableSetRowSpacings table 5
-
-  let addPair m w b = do
-        l <- labelNewWithMnemonic m
-        miscSetAlignment l 0.0 0.5
-        labelSetMnemonicWidget l w
-        tableAttach table l 0 1 b (b + 1) [Fill] [] 0 0
-        tableAttach table w 1 2 b (b + 1) [Expand, Fill] [] 0 0
-
-  nameE <- entryNew
-  addPair "_Name" nameE 0
-
-  keyE <- entryNew
-  addPair "_Key" keyE 1
-
-  typeC <- comboBoxNewText
-  comboBoxInsertText typeC (fromEnum PropertyString) "string"
-  comboBoxInsertText typeC (fromEnum PropertyInt) "integer"
-  typeRef <- newIORef PropertyString
-  typeCid <- setupCombo typeC typeRef
-  addPair "_Type" typeC 2
-
-  roC <- comboBoxNewText
-  comboBoxInsertText roC (fromEnum False) "no"
-  comboBoxInsertText roC (fromEnum True) "yes"
-  roRef <- newIORef False
-  roCid <- setupCombo roC roRef
-  addPair "_Read-only" roC 3
-
-  let check = do
-        name <- trim <$> entryGetText nameE
-        key  <- trim <$> entryGetText keyE
-        notify True =<< propertyEntryValid exists name key
-        case Map.lookup key builtinPropertyMap of
-          Just prop -> do
-            comboSet typeC (Just typeCid) $ propType prop
-            widgetSetSensitive typeC False
-            comboSet roC (Just roCid) $ propReadOnly prop
-            widgetSetSensitive roC False
-          Nothing   -> do
-            comboSet typeC (Just typeCid) =<< readIORef typeRef
-            widgetSetSensitive typeC True
-            comboSet roC (Just roCid) =<< readIORef roRef
-            widgetSetSensitive roC True
-
-      checkInsert str pos = do
-        check
-        return $ (length str) + pos
-
-      checkDelete _ _ = check
-
-  nameE `afterInsertText` checkInsert
-  nameE `afterDeleteText` checkDelete
-  keyE  `afterInsertText` checkInsert
-  keyE  `afterDeleteText` checkDelete
-
-  return PropertyEntry { eTable  = table
-                       , eName   = nameE
-                       , eKey    = keyE
-                       , eType   = typeC
-                       , eRO     = roC
-                       , eExists = exists
-                       , eNotify = notify
-                       }
+makePMDialog = do
+  dialog <- makeEditorDialog [(stockApply, ResponseApply)] makePM
+  let outerw = outer dialog
+  outerw `on` hideSignal $ modifyMVar_ manager $ \maybeMD ->
+    case maybeMD of
+      Just md ->
+        return $ Just md { mShown = False }
+      Nothing ->
+        return Nothing
+  windowSetTitle outerw "Manage properties"
+  windowSetDefaultSize outerw 500 400
+  return dialog

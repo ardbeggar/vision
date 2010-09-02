@@ -36,9 +36,11 @@ import Utils
 
 class CompoundWidget w => EditorWidget w where
   type Data w
-  setData   :: w -> Data w -> IO ()
-  getData   :: w -> IO (Data w)
-  setupView :: w -> IO ()
+  setData       :: w -> Data w -> IO ()
+  getData       :: w -> IO (Data w)
+  setupView     :: w -> IO ()
+  getState      :: w -> IO (Bool, Bool)
+  resetModified :: w -> IO ()
 
 
 data EditorWidget e => EditorDialog e
@@ -52,18 +54,18 @@ instance EditorWidget e => CompoundWidget (EditorDialog e) where
   outer = eDialog
 
 
-makeEditorDialog makeEditor = do
+makeEditorDialog buttons makeEditor = do
   dialog <- dialogNew
 
   hideOnDeleteEvent dialog
 
   dialogSetHasSeparator dialog False
+
+  mapM_ (uncurry $ dialogAddButton dialog) buttons
   dialogAddButton dialog stockCancel ResponseCancel
   dialogAddButtonCR dialog stockOk ResponseOk
 
-  editor <- makeEditor dialog $ \modified valid -> do
-    dialogSetResponseSensitive dialog ResponseOk valid
-    dialogSetResponseSensitive dialog ResponseApply modified
+  rec { editor <- makeEditor dialog $ updateState dialog editor }
 
   upper <- dialogGetUpper dialog
   boxPackStartDefaults upper $ outer editor
@@ -85,10 +87,30 @@ runEditorDialog e get set modal parent = do
     windowGroupAddWindow windowGroup dialog
 
   setData editor =<< get
+  resetModified editor
+  updateState dialog editor
   setupView editor
   rec { cid <- dialog `onResponse` \resp -> do
-           signalDisconnect cid
-           widgetHide dialog
-           when (resp == ResponseOk) $ set =<< getData editor
+           let done = do
+                 signalDisconnect cid
+                 widgetHide dialog
+           case resp of
+             ResponseApply -> do
+               (valid, modified) <- getState editor
+               when (valid && modified) (set =<< getData editor)
+               resetModified editor
+               updateState dialog editor
+               widgetGrabFocus $ outer editor
+             ResponseOk -> do
+               (valid, modified) <- getState editor
+               when valid $ do
+                 when modified (set =<< getData editor)
+                 done
+             _ -> done
       }
   windowPresent dialog
+
+updateState dialog editor = do
+  (valid, modified) <- getState editor
+  dialogSetResponseSensitive dialog ResponseOk valid
+  dialogSetResponseSensitive dialog ResponseApply modified
