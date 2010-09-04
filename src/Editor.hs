@@ -44,9 +44,12 @@ class CompoundWidget w => EditorWidget w where
   type Data w
   setData       :: w -> Data w -> IO ()
   getData       :: w -> IO (Data w)
+  clearData     :: w -> IO ()
   setupView     :: w -> IO ()
   getState      :: w -> IO (Bool, Bool)
   resetModified :: w -> IO ()
+
+  clearData = const $ return ()
 
 
 data EditorWidget e => EditorDialog e
@@ -108,6 +111,7 @@ runEditorDialog e get set modal parent = do
              let done = do
                    signalDisconnect cid
                    widgetHide dialog
+                   clearData editor
                    putMVar lock ()
              case resp of
                ResponseApply -> do
@@ -126,6 +130,7 @@ runEditorDialog e get set modal parent = do
     return ()
 
   windowPresent dialog
+
 
 updateState dialog editor = do
   (valid, modified) <- getState editor
