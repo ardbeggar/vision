@@ -26,8 +26,9 @@ import Control.Applicative
 import Control.Monad
 
 import Data.IORef
-import Data.Maybe
 import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Ord
 import Data.Char
 
@@ -66,6 +67,7 @@ data PropertyManager
                     , pView    :: TreeView
                     , pBox     :: VBox
                     , pChanged :: IORef Bool
+                    , pNames   :: IORef (Set String)
                     }
 
 instance CompoundWidget PropertyManager where
@@ -78,13 +80,19 @@ instance EditorWidget PropertyManager where
   setData pm props = do
     let store = pStore pm
     listStoreClear store
-    mapM_ (listStoreAppend store) props
+    writeIORef (pNames pm) =<<
+      foldM (\names prop -> do
+                listStoreAppend store prop
+                return $ Set.insert (propName prop) names
+            ) Set.empty props
   setupView pm =
     treeViewSetCursor (pView pm) [0] Nothing
   getState pm = (True, ) <$> (readIORef $ pChanged pm)
   resetModified pm = writeIORef (pChanged pm) False
 
 makePropertyManager parent notify = do
+  names <- newIORef Set.empty
+
   store  <- listStoreNewDND [] Nothing Nothing
   sorted <- treeModelSortNewWithModel store
 
@@ -138,11 +146,12 @@ makePropertyManager parent notify = do
         notify
       addProperty prop = do
         listStoreAppend store prop
+        modifyIORef names $ Set.insert (propName prop)
         setChanged
         return ()
+      exists name = Set.member name <$> readIORef names
 
-  edlg <- makeEditorDialog [] (makePropertyEntry $ liftM isJust . property)
-          (const $ return ())
+  edlg <- makeEditorDialog [] (makePropertyEntry exists) (const $ return ())
   addB <- buttonNewFromStock stockAdd
   addB `onClicked`
     runEditorDialog edlg (return nullProperty) addProperty True parent
@@ -156,6 +165,7 @@ makePropertyManager parent notify = do
         prop <- listStoreGetValue store n'
         when (propCustom prop) $ do
           listStoreRemove store n'
+          modifyIORef names $ Set.delete (propName prop)
           s <- listStoreGetSize store
           unless (s < 1) $
             treeViewSetCursor view [min (s - 1) n] Nothing
@@ -186,6 +196,7 @@ makePropertyManager parent notify = do
                          , pView    = view
                          , pBox     = vbox
                          , pChanged = changed
+                         , pNames   = names
                          }
 
 
