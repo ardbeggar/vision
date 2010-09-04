@@ -26,7 +26,13 @@ module Editor
   , runEditorDialog
   ) where
 
+import Control.Applicative
 import Control.Monad
+import Control.Concurrent.MVar
+
+import Data.Maybe
+
+import System.IO.Unsafe
 
 import Graphics.UI.Gtk
 
@@ -45,8 +51,9 @@ class CompoundWidget w => EditorWidget w where
 
 data EditorWidget e => EditorDialog e
   = EditorDialog
-    { eDialog      :: Dialog
-    , eEditor      :: e
+    { eLock   :: MVar ()
+    , eDialog :: Dialog
+    , eEditor :: e
     }
 
 instance EditorWidget e => CompoundWidget (EditorDialog e) where
@@ -54,60 +61,70 @@ instance EditorWidget e => CompoundWidget (EditorDialog e) where
   outer = eDialog
 
 
-makeEditorDialog buttons makeEditor = do
-  dialog <- dialogNew
+makeEditorDialog buttons makeEditor setup =
+  unsafeInterleaveIO $ do
+    lock <- newMVar ()
 
-  hideOnDeleteEvent dialog
+    dialog <- dialogNew
+    hideOnDeleteEvent dialog
+    dialogSetHasSeparator dialog False
 
-  dialogSetHasSeparator dialog False
+    mapM_ (uncurry $ dialogAddButton dialog) buttons
+    dialogAddButton dialog stockCancel ResponseCancel
+    dialogAddButtonCR dialog stockOk ResponseOk
 
-  mapM_ (uncurry $ dialogAddButton dialog) buttons
-  dialogAddButton dialog stockCancel ResponseCancel
-  dialogAddButtonCR dialog stockOk ResponseOk
+    rec { editor <- makeEditor dialog $ updateState dialog editor }
 
-  rec { editor <- makeEditor dialog $ updateState dialog editor }
+    upper <- dialogGetUpper dialog
+    boxPackStartDefaults upper $ outer editor
+    widgetShowAll $ outer editor
 
-  upper <- dialogGetUpper dialog
-  boxPackStartDefaults upper $ outer editor
-  widgetShowAll $ outer editor
-
-  return EditorDialog { eDialog      = dialog
-                      , eEditor      = editor
-                      }
+    let e = EditorDialog { eLock   = lock
+                         , eDialog = dialog
+                         , eEditor = editor
+                         }
+    setup e
+    return e
 
 runEditorDialog e get set modal parent = do
   let dialog = eDialog e
       editor = eEditor e
+      lock   = eLock e
 
-  windowSetModal dialog modal
-  windowSetTransientFor dialog parent
-  when modal $ do
-    windowGroup <- windowGroupNew
-    windowGroupAddWindow windowGroup parent
-    windowGroupAddWindow windowGroup dialog
+  locked <- isJust <$> tryTakeMVar lock
+  when locked $ do
+    windowSetModal dialog modal
+    windowSetTransientFor dialog parent
+    when modal $ do
+      windowGroup <- windowGroupNew
+      windowGroupAddWindow windowGroup parent
+      windowGroupAddWindow windowGroup dialog
 
-  setData editor =<< get
-  resetModified editor
-  updateState dialog editor
-  setupView editor
-  rec { cid <- dialog `onResponse` \resp -> do
-           let done = do
-                 signalDisconnect cid
-                 widgetHide dialog
-           case resp of
-             ResponseApply -> do
-               (valid, modified) <- getState editor
-               when (valid && modified) (set =<< getData editor)
-               resetModified editor
-               updateState dialog editor
-               widgetGrabFocus $ outer editor
-             ResponseOk -> do
-               (valid, modified) <- getState editor
-               when valid $ do
-                 when modified (set =<< getData editor)
-                 done
-             _ -> done
-      }
+    setData editor =<< get
+    resetModified editor
+    updateState dialog editor
+    setupView editor
+    rec { cid <- dialog `onResponse` \resp -> do
+             let done = do
+                   signalDisconnect cid
+                   widgetHide dialog
+                   putMVar lock ()
+             case resp of
+               ResponseApply -> do
+                 (valid, modified) <- getState editor
+                 when (valid && modified) (set =<< getData editor)
+                 resetModified editor
+                 updateState dialog editor
+                 widgetGrabFocus $ outer editor
+               ResponseOk -> do
+                 (valid, modified) <- getState editor
+                 when valid $ do
+                   when modified (set =<< getData editor)
+                   done
+               _ -> done
+        }
+    return ()
+
   windowPresent dialog
 
 updateState dialog editor = do
