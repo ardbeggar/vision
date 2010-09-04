@@ -78,6 +78,7 @@ instance EditorWidget PropertyManager where
   type Data PropertyManager = [Property]
   getData       = propertyManagerGetData
   setData       = propertyManagerSetData
+  clearData     = propertyManagerClearData
   setupView     = propertyManagerSetupView
   getState      = propertyManagerGetState
   resetModified = propertyManagerResetModified
@@ -93,6 +94,10 @@ propertyManagerSetData pm props = do
               listStoreAppend store prop
               return $ Set.insert (propName prop) names
           ) Set.empty props
+
+propertyManagerClearData pm = do
+  listStoreClear $ pStore pm
+  writeIORef (pNames pm) Set.empty
 
 propertyManagerSetupView pm =
   treeViewSetCursor (pView pm) [0] Nothing
