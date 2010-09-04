@@ -76,19 +76,32 @@ instance CompoundWidget PropertyManager where
 
 instance EditorWidget PropertyManager where
   type Data PropertyManager = [Property]
-  getData = listStoreToList . pStore
-  setData pm props = do
-    let store = pStore pm
-    listStoreClear store
-    writeIORef (pNames pm) =<<
-      foldM (\names prop -> do
-                listStoreAppend store prop
-                return $ Set.insert (propName prop) names
-            ) Set.empty props
-  setupView pm =
-    treeViewSetCursor (pView pm) [0] Nothing
-  getState pm = (True, ) <$> (readIORef $ pChanged pm)
-  resetModified pm = writeIORef (pChanged pm) False
+  getData       = propertyManagerGetData
+  setData       = propertyManagerSetData
+  setupView     = propertyManagerSetupView
+  getState      = propertyManagerGetState
+  resetModified = propertyManagerResetModified
+
+propertyManagerGetData =
+  listStoreToList . pStore
+
+propertyManagerSetData pm props = do
+  let store = pStore pm
+  listStoreClear store
+  writeIORef (pNames pm) =<<
+    foldM (\names prop -> do
+              listStoreAppend store prop
+              return $ Set.insert (propName prop) names
+          ) Set.empty props
+
+propertyManagerSetupView pm =
+  treeViewSetCursor (pView pm) [0] Nothing
+
+propertyManagerGetState =
+  liftM (True, ) . readIORef . pChanged
+
+propertyManagerResetModified =
+  flip writeIORef False . pChanged
 
 makePropertyManager parent notify = do
   names <- newIORef Set.empty
