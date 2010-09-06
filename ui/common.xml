@@ -1,5 +1,8 @@
 <ui>
   <menubar name="menubar">
     <placeholder name="entries"/>
+    <menu action="help">
+      <menuitem action="about"/>
+    </menu>
   </menubar>
 </ui>

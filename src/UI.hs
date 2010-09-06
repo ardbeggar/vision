@@ -40,6 +40,7 @@ import Graphics.UI.Gtk
 
 import Context
 import Environment
+import About
 
 
 data UI
@@ -128,5 +129,21 @@ uiActions =
     , actionEntryAccelerator = Just "<Control>w"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = widgetDestroy window
+    }
+  , ActionEntry
+    { actionEntryName        = "help"
+    , actionEntryLabel       = "_Help"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "about"
+    , actionEntryLabel       = "_About"
+    , actionEntryStockId     = Just stockAbout
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showAbout window
     }
   ]
