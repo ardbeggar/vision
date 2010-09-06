@@ -83,6 +83,7 @@ instance EditorWidget PropertyManager where
   setData       = propertyManagerSetData
   clearData     = propertyManagerClearData
   setupView     = propertyManagerSetupView
+  focusView     = propertyManagerFocusView
   getState      = propertyManagerGetState
   resetModified = propertyManagerResetModified
 
@@ -104,6 +105,9 @@ propertyManagerClearData pm = do
 
 propertyManagerSetupView pm =
   treeViewSetCursor (pView pm) [0] Nothing
+
+propertyManagerFocusView =
+  widgetGrabFocus . pView
 
 propertyManagerGetState =
   liftM (True, ) . readIORef . pChanged
