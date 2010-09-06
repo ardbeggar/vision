@@ -32,6 +32,8 @@ import qualified Data.Set as Set
 import Data.Ord
 import Data.Char
 
+import System.IO.Unsafe
+
 import Graphics.UI.Gtk
 
 import Utils
@@ -50,7 +52,8 @@ manager = pManager context
 
 
 initPropertyManager = do
-  manager <- makeEditorDialog [(stockApply, ResponseApply)]
+  manager <- unsafeInterleaveIO $ makeEditorDialog
+             [(stockApply, ResponseApply)]
              makePropertyManager $ \m -> do
     let outerw = outer m
     windowSetTitle outerw "Manage properties"
@@ -169,7 +172,8 @@ makePropertyManager parent notify = do
         return ()
       exists name = Set.member name <$> readIORef names
 
-  edlg <- makeEditorDialog [] (makePropertyEntry exists) (const $ return ())
+  edlg <- unsafeInterleaveIO $ makeEditorDialog []
+          (makePropertyEntry exists) (const $ return ())
   addB <- buttonNewFromStock stockAdd
   addB `onClicked`
     runEditorDialog edlg (return nullProperty) addProperty True parent

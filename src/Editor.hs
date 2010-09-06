@@ -32,8 +32,6 @@ import Control.Concurrent.MVar
 
 import Data.Maybe
 
-import System.IO.Unsafe
-
 import Graphics.UI.Gtk
 
 import Compound
@@ -64,30 +62,29 @@ instance EditorWidget e => CompoundWidget (EditorDialog e) where
   outer = eDialog
 
 
-makeEditorDialog buttons makeEditor setup =
-  unsafeInterleaveIO $ do
-    lock <- newMVar ()
+makeEditorDialog buttons makeEditor setup = do
+  lock <- newMVar ()
 
-    dialog <- dialogNew
-    hideOnDeleteEvent dialog
-    dialogSetHasSeparator dialog False
+  dialog <- dialogNew
+  hideOnDeleteEvent dialog
+  dialogSetHasSeparator dialog False
 
-    mapM_ (uncurry $ dialogAddButton dialog) buttons
-    dialogAddButton dialog stockCancel ResponseCancel
-    dialogAddButtonCR dialog stockOk ResponseOk
+  mapM_ (uncurry $ dialogAddButton dialog) buttons
+  dialogAddButton dialog stockCancel ResponseCancel
+  dialogAddButtonCR dialog stockOk ResponseOk
 
-    rec { editor <- makeEditor dialog $ updateState dialog editor }
+  rec { editor <- makeEditor dialog $ updateState dialog editor }
 
-    upper <- dialogGetUpper dialog
-    boxPackStartDefaults upper $ outer editor
-    widgetShowAll $ outer editor
+  upper <- dialogGetUpper dialog
+  boxPackStartDefaults upper $ outer editor
+  widgetShowAll $ outer editor
 
-    let e = EditorDialog { eLock   = lock
-                         , eDialog = dialog
-                         , eEditor = editor
-                         }
-    setup e
-    return e
+  let e = EditorDialog { eLock   = lock
+                       , eDialog = dialog
+                       , eEditor = editor
+                       }
+  setup e
+  return e
 
 runEditorDialog e get set modal parent = do
   let dialog = eDialog e
