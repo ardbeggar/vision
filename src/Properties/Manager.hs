@@ -244,7 +244,7 @@ instance EditorWidget PropertyEntry where
   type Data PropertyEntry = Property
   setData       = propertyEntrySetData
   getData       = propertyEntryGetData
-  setupView     = propertyEntrySetupView
+  focusView     = propertyEntryFocusView
   getState      = propertyEntryGetState
   resetModified = const $ return ()
 
@@ -268,8 +268,8 @@ propertyEntryGetData e = do
                   , propShowValue = Nothing
                   }
 
-propertyEntrySetupView e =
-  widgetGrabFocus $ eName e
+propertyEntryFocusView =
+  widgetGrabFocus . eName
 
 propertyEntryGetState e = do
   name <- trim <$> entryGetText (eName e)
