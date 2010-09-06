@@ -17,6 +17,7 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DoRec #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Impex
@@ -25,8 +26,10 @@ module Properties.Impex
   , showPropertyImport
   ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+import Control.Concurrent.MVar
 
 import Data.Char
 import qualified Data.Map as Map
@@ -37,6 +40,7 @@ import Codec.Binary.UTF8.String
 
 import System.FilePath
 import System.IO.Error
+import System.IO.Unsafe
 
 import Text.JSON
 
@@ -45,7 +49,7 @@ import Graphics.UI.Gtk
 import XMMS2.Client hiding (Property)
 import qualified XMMS2.Client as X
 
-import CODW
+import UI
 import Context
 import Medialib
 import Utils
@@ -53,16 +57,16 @@ import XMMS
 
 
 data Impex
-  = Impex { iExportDlg :: CODW [MediaId] FileChooserDialog
-          , iImportDlg :: CODW () FileChooserDialog
+  = Impex { iExportDlg :: Chooser
+          , iImportDlg :: Chooser
           }
 
 
-showPropertyExport ids =
-  showCODW ids $ iExportDlg context
+showPropertyExport =
+  runChooser (iExportDlg context) . exportProps
 
 showPropertyImport =
-  showCODW () $ iImportDlg context
+  runChooser (iImportDlg context) importProps
 
 
 initImpex = do
@@ -72,15 +76,15 @@ initImpex = do
   return ?context
 
 initContext = do
-  exportDlg <- makeCODW makeExportDlg
-  importDlg <- makeCODW $ const makeImportDlg
+  exportDlg <- unsafeInterleaveIO makeExportDlg
+  importDlg <- unsafeInterleaveIO makeImportDlg
   return $ augmentContext
     Impex { iExportDlg = exportDlg
           , iImportDlg = importDlg
           }
 
-makeExportDlg ids =
-  makeChooser "Export properties" FileChooserActionSave $ exportProps ids
+makeExportDlg =
+  makeChooser "Export properties" FileChooserActionSave stockSave
 
 exportProps ids file = do
   pbar <- progressBarNew -- FIXME
@@ -109,7 +113,7 @@ readOnlyProps =
   , "startms", "stopms", "isdir", "intsort" ]
 
 makeImportDlg =
-  makeChooser "Import properties" FileChooserActionOpen importProps
+  makeChooser "Import properties" FileChooserActionOpen stockOpen
 
 importProps name =
   importAll `catch` (erep . ioeGetErrorString)
@@ -139,36 +143,54 @@ setProps id props = mapM_ set $ Map.toList props
         src        = Just "client/generic/override/vision"
 
 
-makeChooser title action onAccept = do
+
+data Chooser
+  = Chooser { cLock    :: MVar ()
+            , cChooser :: FileChooserDialog
+            }
+
+makeChooser title action stockId = do
+  lock    <- newMVar ()
   chooser <- fileChooserDialogNew
              (Just title)
              Nothing
              action
              [ (stockCancel, ResponseCancel)
-             , (stockOk,     ResponseAccept) ]
-  addFilters chooser
-  chooser `onResponse` \resp -> do
-    case resp of
-      ResponseAccept -> do
-        name <- fileChooserGetFilename chooser
-        fmaybeM_ name onAccept
-      _ ->
-        return ()
-    widgetDestroy chooser
+             , (stockId,     ResponseAccept) ]
+  hideOnDeleteEvent chooser
 
-  return chooser
-
-addFilters chooser = do
-  vpfFilter <- fileFilterNew
-  fileFilterSetName vpfFilter "Vision property files"
-  fileFilterAddCustom vpfFilter [FileFilterFilename] $ \name _ _ _ ->
+  filter <- fileFilterNew
+  fileFilterSetName filter "Vision property files"
+  fileFilterAddCustom filter [FileFilterFilename] $ \name _ _ _ ->
     return $ maybe False ((==) ".vpf" . map toLower . takeExtension) name
-  fileChooserAddFilter chooser vpfFilter
+  fileChooserAddFilter chooser filter
 
-  allFilter <- fileFilterNew
-  fileFilterSetName allFilter "All files"
-  fileFilterAddCustom allFilter [] $ \_ _ _ _ -> return True
-  fileChooserAddFilter chooser allFilter
+  filter <- fileFilterNew
+  fileFilterSetName filter "All files"
+  fileFilterAddCustom filter [] $ \_ _ _ _ -> return True
+  fileChooserAddFilter chooser filter
+
+  return Chooser { cLock    = lock
+                 , cChooser = chooser
+                 }
+
+runChooser Chooser { cLock = lock, cChooser = chooser } onAccept = do
+  locked <- isJust <$> tryTakeMVar lock
+  when locked $ do
+    windowSetTransientFor chooser window
+    rec { cid <- chooser `onResponse` \resp -> do
+             signalDisconnect cid
+             case resp of
+               ResponseAccept -> do
+                 name <- fileChooserGetFilename chooser
+                 fmaybeM_ name onAccept
+               _ ->
+                 return ()
+             widgetHide chooser
+             putMVar lock ()
+        }
+    return ()
+  windowPresent chooser
 
 
 instance JSON X.Property where
@@ -176,4 +198,3 @@ instance JSON X.Property where
   showJSON (X.PropString s) = showJSON s
   readJSON (JSRational _ i) = return $ X.PropInt32  $ truncate i
   readJSON (JSString s)     = return $ X.PropString $ fromJSString s
-
