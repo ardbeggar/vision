@@ -18,7 +18,8 @@
 --
 
 module Playlist.Format.Config
-  ( makePlaylistFormatView
+  ( FormatView
+  , makePlaylistFormatView
   ) where
 
 import Control.Monad
@@ -30,33 +31,58 @@ import System.IO.Unsafe
 import Graphics.UI.Gtk
 
 import Utils
-import Config
 import Compound
 import Editor
 
 
 data FormatView
   = FormatView { fBox          :: HBox
-               , fSet          :: [String] -> IO ()
-               , fGet          :: IO [String]
-               , fChanged      :: IO Bool
-               , fResetChanged :: IO ()
-               , fFocus        :: IO ()
+               , fStore        :: ListStore String
+               , fView         :: TreeView
+               , fChanged      :: IORef Bool
+               , fCids         :: [ConnectId (ListStore String)]
                }
 
 instance CompoundWidget FormatView where
   type Outer FormatView = HBox
   outer = fBox
 
-instance ConfigWidget FormatView where
-  type Config FormatView = [String]
-  getConfig    = fGet
-  setConfig    = fSet
-  clearConfig  = const $ return ()
-  getChanged   = fChanged
-  clearChanged = fResetChanged
-  grabFocus    = fFocus
+instance EditorWidget FormatView where
+  type Data FormatView = [String]
+  setData       = formatViewSetData
+  getData       = formatViewGetData
+  clearData     = formatViewClearData
+  setupView     = formatViewSetupView
+  focusView     = formatViewFocusView
+  getState      = formatViewGetState
+  resetModified = formatViewResetModified
 
+formatViewSetData f d =
+  withoutChanged f $ do
+    let store = fStore f
+    listStoreClear store
+    mapM_ (listStoreAppend store) d
+
+formatViewGetData =
+  listStoreToList . fStore
+
+formatViewClearData f =
+  withoutChanged f . listStoreClear $ fStore f
+
+formatViewSetupView f =
+  treeViewSetCursor (fView f) [0] Nothing
+
+formatViewFocusView =
+  widgetGrabFocus . fView
+
+formatViewGetState =
+  liftM (True, ) . readIORef . fChanged
+
+formatViewResetModified =
+  flip writeIORef False . fChanged
+
+withoutChanged FormatView { fCids = cids } =
+  bracket_ (mapM_ signalBlock cids) (mapM_ signalUnblock cids)
 
 makePlaylistFormatView parent onChanged = do
   box <- hBoxNew False 5
@@ -122,11 +148,6 @@ makePlaylistFormatView parent onChanged = do
       k -> treeViewSetCursor view [if k > n then n else k - 1] Nothing
     handleChange'
 
-  let withoutChanged f = do
-        mapM_ signalBlock [insId, chgId, delId]
-        f
-        mapM_ signalUnblock [insId, chgId, delId]
-
   editor <- unsafeInterleaveIO $ makeEditorDialog []
             makeFormatEditor $ \fe -> do
     let outerw = outer fe
@@ -157,21 +178,11 @@ makePlaylistFormatView parent onChanged = do
     ([n], _) <- treeViewGetCursor view
     listStoreRemove store n
 
-  let get = listStoreToList store
-      set items = do
-        withoutChanged $ mapM_ (listStoreAppend store) items
-        treeViewSetCursor view [0] Nothing
-      changed = readIORef changedRef
-      resetChanged = writeIORef changedRef False
-      focus = widgetGrabFocus view
-
-  widgetShowAll box
   return FormatView { fBox     = box
-                    , fGet     = get
-                    , fSet     = set
-                    , fChanged = changed
-                    , fResetChanged = resetChanged
-                    , fFocus   = focus
+                    , fStore   = store
+                    , fView    = view
+                    , fChanged = changedRef
+                    , fCids    = [insId, chgId, delId]
                     }
 
 

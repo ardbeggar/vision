@@ -22,10 +22,12 @@ module Playlist.Config
   , showPlaylistConfigDialog
   ) where
 
+import System.IO.Unsafe
+
 import Graphics.UI.Gtk
 
-import CODW
-import Config
+import UI
+import Editor
 import Context
 import Compound
 import Playlist.Format
@@ -33,21 +35,17 @@ import Playlist.Format.Config
 
 
 data Config
-  = Config { cDialog :: CODW () Dialog }
+  = Config { cDialog :: EditorDialog FormatView }
 
 initPlaylistConfig = do
-  dialog <- makeCODW $ const makePlaylistConfigDialog
+  dialog <- unsafeInterleaveIO $ makeEditorDialog
+            [(stockApply, ResponseApply)]
+            makePlaylistFormatView $ \m -> do
+    let outerw = outer m
+    windowSetTitle outerw "Configure playlist"
+    windowSetDefaultSize outerw 500 400
   return $ augmentContext
     Config { cDialog = dialog }
 
 showPlaylistConfigDialog =
-  showCODW () (cDialog context)
-
-makePlaylistConfigDialog = do
-  dialog <- makeConfigDialog makePlaylistFormatView True
-            getFormatDefs putFormatDefs
-  prepareToShow dialog
-  let outerw = outer dialog
-  windowSetTitle outerw "Configure playlist"
-  windowSetDefaultSize outerw 500 400
-  return outerw
+  runEditorDialog (cDialog context) getFormatDefs putFormatDefs False window
