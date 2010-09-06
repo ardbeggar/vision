@@ -177,15 +177,15 @@ makePlaylistFormatView parent onChanged = do
 
 data FormatEditor
   = FormatEditor
-    { fScroll :: ScrolledWindow
-    , fBuff   :: TextBuffer
-    , fView   :: TextView
-    , fCid    :: ConnectId TextBuffer
+    { eScroll :: ScrolledWindow
+    , eBuff   :: TextBuffer
+    , eView   :: TextView
+    , eCid    :: ConnectId TextBuffer
     }
 
 instance CompoundWidget FormatEditor where
   type Outer FormatEditor = ScrolledWindow
-  outer = fScroll
+  outer = eScroll
 
 instance EditorWidget FormatEditor where
   type Data FormatEditor = String
@@ -198,28 +198,28 @@ instance EditorWidget FormatEditor where
   resetModified = formatEditorResetModified
 
 formatEditorSetData =
-  textBufferSetText . fBuff
+  textBufferSetText . eBuff
 
-formatEditorGetData FormatEditor { fBuff = buff } = do
+formatEditorGetData FormatEditor { eBuff = buff } = do
   start <- textBufferGetStartIter buff
   end   <- textBufferGetEndIter buff
   textBufferGetText buff start end False
 
 formatEditorClearData =
-  flip textBufferSetText "" . fBuff
+  flip textBufferSetText "" . eBuff
 
-formatEditorSetupView FormatEditor { fBuff = buff } = do
+formatEditorSetupView FormatEditor { eBuff = buff } = do
   start <- textBufferGetStartIter buff
   textBufferPlaceCursor buff start
 
 formatEditorFocusView =
-  widgetGrabFocus . fView
+  widgetGrabFocus . eView
 
 formatEditorGetState =
-  liftM (True, ) . textBufferGetModified . fBuff
+  liftM (True, ) . textBufferGetModified . eBuff
 
-formatEditorResetModified f =
-  withSignalBlocked (fCid f) $ textBufferSetModified (fBuff f) False
+formatEditorResetModified e =
+  withSignalBlocked (eCid e) $ textBufferSetModified (eBuff e) False
 
 makeFormatEditor _ onStateChanged = do
   buff <- textBufferNew Nothing
@@ -233,8 +233,8 @@ makeFormatEditor _ onStateChanged = do
   containerSetBorderWidth scroll 7
   containerAdd scroll view
 
-  return FormatEditor { fScroll = scroll
-                      , fBuff   = buff
-                      , fView   = view
-                      , fCid    = cid
+  return FormatEditor { eScroll = scroll
+                      , eBuff   = buff
+                      , eView   = view
+                      , eCid    = cid
                       }
