@@ -179,6 +179,7 @@ data FormatEditor
   = FormatEditor
     { fScroll :: ScrolledWindow
     , fBuff   :: TextBuffer
+    , fView   :: TextView
     , fCid    :: ConnectId TextBuffer
     }
 
@@ -192,6 +193,7 @@ instance EditorWidget FormatEditor where
   getData       = formatEditorGetData
   clearData     = formatEditorClearData
   setupView     = formatEditorSetupView
+  focusView     = formatEditorFocusView
   getState      = formatEditorGetState
   resetModified = formatEditorResetModified
 
@@ -206,8 +208,12 @@ formatEditorGetData FormatEditor { fBuff = buff } = do
 formatEditorClearData =
   flip textBufferSetText "" . fBuff
 
-formatEditorSetupView =
-  const $ return ()
+formatEditorSetupView FormatEditor { fBuff = buff } = do
+  start <- textBufferGetStartIter buff
+  textBufferPlaceCursor buff start
+
+formatEditorFocusView =
+  widgetGrabFocus . fView
 
 formatEditorGetState =
   liftM (True, ) . textBufferGetModified . fBuff
@@ -229,6 +235,7 @@ makeFormatEditor _ onStateChanged = do
 
   return FormatEditor { fScroll = scroll
                       , fBuff   = buff
+                      , fView   = view
                       , fCid    = cid
                       }
 
