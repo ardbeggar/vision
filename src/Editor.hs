@@ -44,10 +44,13 @@ class CompoundWidget w => EditorWidget w where
   getData       :: w -> IO (Data w)
   clearData     :: w -> IO ()
   setupView     :: w -> IO ()
+  focusView     :: w -> IO ()
   getState      :: w -> IO (Bool, Bool)
   resetModified :: w -> IO ()
 
   clearData = const $ return ()
+  setupView = const $ return ()
+  focusView = const $ return ()
 
 
 data EditorWidget e => EditorDialog e
@@ -103,13 +106,17 @@ runEditorDialog e get set modal parent = do
     setData editor =<< get
     resetModified editor
     updateState dialog editor
+    dialogSetDefaultResponse dialog ResponseOk
     setupView editor
+    focusView editor
     rec { cid <- dialog `onResponse` \resp -> do
              let done = do
                    signalDisconnect cid
                    widgetHide dialog
                    clearData editor
                    putMVar lock ()
+             dialogSetDefaultResponse dialog ResponseOk
+             focusView editor
              case resp of
                ResponseApply -> do
                  (valid, modified) <- getState editor
