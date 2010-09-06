@@ -32,7 +32,6 @@ executable vision
                     Atoms,
                     Config,
                     Compound,
-                    CODW,
                     Editor,
                     Properties,
                     Properties.Property,
