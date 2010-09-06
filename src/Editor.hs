@@ -123,7 +123,6 @@ runEditorDialog e get set modal parent = do
                  when (valid && modified) (set =<< getData editor)
                  resetModified editor
                  updateState dialog editor
-                 widgetGrabFocus $ outer editor
                ResponseOk -> do
                  (valid, modified) <- getState editor
                  when valid $ do
