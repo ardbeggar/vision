@@ -25,11 +25,14 @@ import Control.Monad
 
 import Data.IORef
 
+import System.IO.Unsafe
+
 import Graphics.UI.Gtk
 
 import Utils
 import Config
 import Compound
+import Editor
 
 
 data FormatView
@@ -124,22 +127,26 @@ makePlaylistFormatView parent onChanged = do
         f
         mapM_ signalUnblock [insId, chgId, delId]
 
-  editPosRef <- newIORef Nothing
-  editor     <- makeFormatEditor parent $ \text ->
-    fmaybeM_ text $ \text -> do
-      editPos <- readIORef editPosRef
-      case editPos of
-        Just pos -> do
-          oldText <- listStoreGetValue store pos
-          unless (text == oldText) $
-            listStoreSetValue store pos text
-        Nothing  -> do
-          listStoreAppend store text
-          return ()
+  editor <- unsafeInterleaveIO $ makeEditorDialog []
+            makeFormatEditor $ \fe -> do
+    let outerw = outer fe
+    windowSetTitle outerw "Edit format"
+    windowSetDefaultSize outerw 500 400
 
-  let startEditing pos = do
-        writeIORef editPosRef pos
-        editor =<< maybe (return "") (listStoreGetValue store) pos
+  let startEditing pos =
+        runEditorDialog editor
+        (case pos of
+            Just pos -> listStoreGetValue store pos
+            Nothing  -> return "")
+        (\text -> case pos of
+            Just pos -> do
+              oldText <- listStoreGetValue store pos
+              unless (text == oldText) $
+                listStoreSetValue store pos text
+            Nothing  -> do
+              listStoreAppend store text
+              return ())
+        True parent
 
   view `onRowActivated` \[n] _ -> startEditing $ Just n
   addB    `onClicked` startEditing Nothing
@@ -167,6 +174,66 @@ makePlaylistFormatView parent onChanged = do
                     , fFocus   = focus
                     }
 
+
+data FormatEditor
+  = FormatEditor
+    { fScroll :: ScrolledWindow
+    , fBuff   :: TextBuffer
+    , fCid    :: ConnectId TextBuffer
+    }
+
+instance CompoundWidget FormatEditor where
+  type Outer FormatEditor = ScrolledWindow
+  outer = fScroll
+
+instance EditorWidget FormatEditor where
+  type Data FormatEditor = String
+  setData       = formatEditorSetData
+  getData       = formatEditorGetData
+  clearData     = formatEditorClearData
+  setupView     = formatEditorSetupView
+  getState      = formatEditorGetState
+  resetModified = formatEditorResetModified
+
+formatEditorSetData =
+  textBufferSetText . fBuff
+
+formatEditorGetData FormatEditor { fBuff = buff } = do
+  start <- textBufferGetStartIter buff
+  end   <- textBufferGetEndIter buff
+  textBufferGetText buff start end False
+
+formatEditorClearData =
+  flip textBufferSetText "" . fBuff
+
+formatEditorSetupView =
+  const $ return ()
+
+formatEditorGetState =
+  liftM (True, ) . textBufferGetModified . fBuff
+
+formatEditorResetModified f =
+  withSignalBlocked (fCid f) $ textBufferSetModified (fBuff f) False
+
+makeFormatEditor _ onStateChanged = do
+  buff <- textBufferNew Nothing
+  cid <- buff `on` modifiedChanged $ onStateChanged
+
+  view <- textViewNewWithBuffer buff
+
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
+  containerSetBorderWidth scroll 7
+  containerAdd scroll view
+
+  return FormatEditor { fScroll = scroll
+                      , fBuff   = buff
+                      , fCid    = cid
+                      }
+
+
+{-
 makeFormatEditor parent onDone = do
   dialog <- dialogNew
 
@@ -216,3 +283,4 @@ makeFormatEditor parent onDone = do
           return Nothing
       _ ->
         return Nothing
+-}
