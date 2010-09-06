@@ -35,6 +35,8 @@ module Collection.Control
   , editCopy
   , editSelectAll
   , editInvertSelection
+  , showPropertyEditor
+  , showPropertyExport
   ) where
 
 import Prelude hiding (catch)
@@ -54,6 +56,7 @@ import Utils
 import UI
 import Atoms
 import Clipboard
+import qualified Properties as P
 import Collection.Common
 import Collection.Model
 import Collection.View
@@ -241,3 +244,11 @@ editInvertSelection = do
   rows <- treeSelectionGetSelectedRows collSel
   treeSelectionSelectAll collSel
   mapM_ (treeSelectionUnselectPath collSel) rows
+
+
+showPropertyEditor = withSelectedIds P.showPropertyEditor
+
+showPropertyExport = withSelectedIds P.showPropertyExport
+
+withSelectedIds f =
+  f =<< getSelectedIds

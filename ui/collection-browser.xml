@@ -23,6 +23,13 @@
         <menuitem action="select-all"/>
         <menuitem action="invert-selection"/>
       </menu>
+      <menu action="properties">
+        <menuitem action="edit-properties"/>
+        <menuitem action="export-properties"/>
+        <menuitem action="import-properties"/>
+        <separator/>
+        <menuitem action="manage-properties"/>
+      </menu>
     </placeholder>
   </menubar>
   <popup action="collection-popup">
@@ -33,6 +40,8 @@
     <separator/>
     <menuitem action="select-all"/>
     <menuitem action="invert-selection"/>
+    <separator/>
+    <menuitem action="edit-properties"/>
   </popup>
   <popup action="list-popup">
     <menuitem action="list-add-to-playlist"/>

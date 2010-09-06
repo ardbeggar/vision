@@ -32,6 +32,7 @@ import UI
 import XMMS
 import Handler
 import Utils
+import Properties (showPropertyImport, showPropertyManager)
 import Collection.View
 import Collection.List.View
 import Collection.Control
@@ -105,7 +106,8 @@ initCollectionUI browse = do
   setupPA collView
   updatePA
 
-  acts <- mapM (getAction srvAG) ["copy"]
+  acts <- mapM (getAction srvAG)
+          ["copy", "edit-properties", "export-properties"]
   let updateE = do
         en <- (/= 0) <$> treeSelectionCountSelectedRows collSel
         mapM_ (flip actionSetSensitive en) acts
@@ -155,6 +157,22 @@ uiActions browse =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "properties"
+    , actionEntryLabel       = "P_roperties"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "manage-properties"
+    , actionEntryLabel       = "_Manage properties"
+    , actionEntryStockId     = Just stockPreferences
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyManager
     }
   , ActionEntry
     { actionEntryName        = "collection-popup"
@@ -270,6 +288,30 @@ srvActions browse =
     , actionEntryAccelerator = Just "<Control><Shift>a"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = editInvertSelection
+    }
+  , ActionEntry
+    { actionEntryName        = "edit-properties"
+    , actionEntryLabel       = "_Edit properties"
+    , actionEntryStockId     = Just stockEdit
+    , actionEntryAccelerator = Just "<Alt>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyEditor
+    }
+  , ActionEntry
+    { actionEntryName        = "export-properties"
+    , actionEntryLabel       = "E_xport properties"
+    , actionEntryStockId     = Just stockSave
+    , actionEntryAccelerator = Just ""
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyExport
+    }
+  , ActionEntry
+    { actionEntryName        = "import-properties"
+    , actionEntryLabel       = "_Import properties"
+    , actionEntryStockId     = Just stockOpen
+    , actionEntryAccelerator = Just ""
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showPropertyImport
     }
   ]
 
