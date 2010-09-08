@@ -83,6 +83,9 @@ loadNamed name =
 loadCurrent = loadCurrent' `catch` \ParseError -> return ()
 
 loadCurrent' = do
+  text <- trim <$> entryGetText collFilter
+  entrySetText collFilter text
+  setFilter text
   coll <- getCurColl
   collQueryIds xmms coll [] 0 0 >>* do
     ids <- result
@@ -136,11 +139,7 @@ getSelectedIds =
 
 applyFilter = do
   conn <- connected
-  when conn $ do
-    text <- trim <$> entryGetText collFilter
-    entrySetText collFilter text
-    setFilter text
-    loadCurrent
+  when conn loadCurrent
 
 editFilter = do
   editableSelectRegion collFilter 0 (-1)
