@@ -140,7 +140,7 @@ getInfo id =
       Just (CEReady _ info) -> Just info
       _                     -> Nothing
 
-retrieveProperties pbar ids f = do
+retrieveProperties ids f = do
   let ids'       = nub ids
       len        = length ids'
       step       = len `div` 100
@@ -152,21 +152,17 @@ retrieveProperties pbar ids f = do
       (i:is) | i == id -> do
         if null is
           then do
-          f $ reverse ((id, info) : ready)
+          f . Right $ reverse ((id, info) : ready)
           return False
           else do
           let ctr' = ctr + 1
           when (step == 0 || ctr' `mod` step == 0) $
-            progressBarSetFraction pbar $
-              fromIntegral ctr' / fromIntegral len
+            f . Left $ fromIntegral ctr' / fromIntegral len
           requestInfo $ head is
           writeIORef ref (ctr', is, (id, info) : ready)
           return True
       _ ->
         return True
 
-  progressBarSetFraction pbar 0
-  progressBarSetText pbar "Retrieving properties"
   requestInfo $ head ids
-
   return . onMediaInfo $ remove hid

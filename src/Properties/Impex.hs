@@ -88,13 +88,16 @@ makeExportDlg =
 
 exportProps ids file = do
   pbar <- progressBarNew -- FIXME
-  retrieveProperties pbar ids $ \list -> do
-    let base = dropFileName $ decodeString file
-        text = encodeStrict $ showJSON $ map (exConv base . snd) list
-    widgetDestroy pbar -- FIXME
-    writeFile file text `catch` \e ->
-      putStrLn $ "Export failed" ++
-      (decodeString file) ++ ": " ++ ioeGetErrorString e
+  retrieveProperties ids $ \prog ->
+    case prog of
+      Left _     -> return ()
+      Right list -> do
+        let base = dropFileName $ decodeString file
+            text = encodeStrict $ showJSON $ map (exConv base . snd) list
+        widgetDestroy pbar -- FIXME
+        writeFile file text `catch` \e ->
+          putStrLn $ "Export failed" ++
+          (decodeString file) ++ ": " ++ ioeGetErrorString e
 
 exConv base info = ((url', args), Map.difference info readOnlyProps)
   where url'             = stripBase $ decodeURL path

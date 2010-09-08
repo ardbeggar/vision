@@ -179,15 +179,21 @@ showPropertyEditor ids = do
     widgetShow pBar
     resetView
     setRetrievalCancel =<< do
-      retrieveProperties pBar ids $ \list -> do
-        toggleButtonSetActive ptrkB True
-        widgetSetSensitive ptrkB True
-        populateModel list
-        dialogSetResponseSensitive dialog ResponseApply False
-        dialogSetResponseSensitive dialog ResponseOk True
-        updateNavButtons
-        widgetHide pBar
-        updateTitle False False
+      progressBarSetFraction pBar 0
+      progressBarSetText pBar "Retrieving properties"
+      retrieveProperties ids $ \prog ->
+        case prog of
+          Left frac  ->
+            progressBarSetFraction pBar frac
+          Right list -> do
+            toggleButtonSetActive ptrkB True
+            widgetSetSensitive ptrkB True
+            populateModel list
+            dialogSetResponseSensitive dialog ResponseApply False
+            dialogSetResponseSensitive dialog ResponseOk True
+            updateNavButtons
+            widgetHide pBar
+            updateTitle False False
   widgetHide dialog
   windowSetTransientFor dialog window
   updateTitle False retr
