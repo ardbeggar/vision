@@ -36,6 +36,7 @@ import System.IO.Unsafe
 import Graphics.UI.Gtk
 
 import UI
+import Config
 import Compound
 import Editor
 import Context
@@ -66,7 +67,7 @@ initView = do
   treeViewSetRulesHint collView True
   treeSelectionSetMode collSel SelectionMultiple
 
-  setColumns =<< catMaybes <$> mapM property ["Artist", "Album", "Track", "Title"]
+  setColumns =<< loadConfig
 
   return ?context
 
@@ -98,6 +99,7 @@ setColumns props = do
   mapM_ (treeViewRemoveColumn collView) =<< treeViewGetColumns collView
   writeIORef columns props
   mapM_ addColumn props
+  saveConfig props
 
 addColumn prop = do
   column <- treeViewColumnNew
@@ -127,3 +129,16 @@ makeConfigDlg =
     let outerw = outer v
     windowSetTitle outerw "Configure collection browser"
     windowSetDefaultSize outerw 500 400
+
+loadConfig =
+  catMaybes <$> (mapM property =<< config configFile defaultConfig)
+
+saveConfig props = do
+  writeConfig configFile $ map propName props
+  return ()
+
+configFile =
+  "collection-view.conf"
+
+defaultConfig =
+  ["Artist", "Album", "Track", "Title"]
