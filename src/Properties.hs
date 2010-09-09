@@ -30,12 +30,14 @@ module Properties
   , onProperties
   , showPropertyExport
   , showPropertyImport
+  , module Properties.View
   ) where
 
 import Prelude hiding (lookup)
 
 import Properties.Property
 import Properties.Model
+import Properties.View
 import Properties.Manager
 import Properties.Editor
 import Properties.Impex

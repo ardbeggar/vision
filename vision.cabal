@@ -36,6 +36,7 @@ executable vision
                     Properties,
                     Properties.Property,
                     Properties.Model,
+                    Properties.View,
                     Properties.Manager,
                     Properties.Editor,
                     Properties.Editor.Model,

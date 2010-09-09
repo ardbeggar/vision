@@ -18,24 +18,85 @@
 --
 
 module Properties.View
-  ( makePropertiesView
+  ( PropertyView
+  , makePropertyView
   ) where
+
+import Control.Monad
+
+import Data.IORef
 
 import Graphics.UI.Gtk
 
+import Compound
+import Editor
 import Properties.Property
 import Properties.Model
 
 
-makePropertiesView = do
-  view <- treeViewNewWithModel propertyStore
+data PropertyView a
+  = PropertyView
+    { vPaned    :: HPaned
+    , vLeft     :: TreeView
+    , vModified :: IORef Bool
+    }
+
+instance CompoundWidget (PropertyView a) where
+  type Outer (PropertyView a) = HPaned
+  outer = vPaned
+
+instance EditorWidget (PropertyView a) where
+  type Data (PropertyView a) = [(Property, a)]
+  getData       = propertyViewGetData
+  setData       = propertyViewSetData
+  clearData     = propertyViewClearData
+  setupView     = propertyViewSetupView
+  focusView     = propertyViewFocusView
+  getState      = propertyViewGetState
+  resetModified = propertyViewResetModified
+
+propertyViewGetData =
+  const $ return []
+
+propertyViewSetData _ _ =
+  return ()
+
+propertyViewClearData =
+  const $ return ()
+
+propertyViewSetupView pm =
+  treeViewSetCursor (vLeft pm) [0] Nothing
+
+propertyViewFocusView =
+  widgetGrabFocus . vLeft
+
+propertyViewGetState =
+  liftM (True, ) . readIORef . vModified
+
+propertyViewResetModified =
+  flip writeIORef False . vModified
+
+makePropertyView _ _ = do
+  paned <- hPanedNew
+  containerSetBorderWidth paned 7
+
+  left <- treeViewNewWithModel propertyStore
+  treeViewSetHeadersVisible left False
+  panedPack1 paned left True False
+
+  sel <- treeViewGetSelection left
+  treeSelectionSetMode sel SelectionMultiple
 
   column <- treeViewColumnNew
-  treeViewColumnSetTitle column "Properties"
-  treeViewAppendColumn view column
+  treeViewAppendColumn left column
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
   cellLayoutSetAttributes column cell propertyStore $ \prop ->
     [ cellText := propName prop ]
 
-  return view
+  modified <- newIORef False
+
+  return PropertyView { vPaned    = paned
+                      , vLeft     = left
+                      , vModified = modified
+                      }
