@@ -23,6 +23,9 @@
         <menuitem action="select-all"/>
         <menuitem action="invert-selection"/>
       </menu>
+      <menu action="view">
+        <menuitem action="configure-columns"/>
+      </menu>
       <menu action="properties">
         <menuitem action="edit-properties"/>
         <menuitem action="export-properties"/>

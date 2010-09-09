@@ -159,6 +159,22 @@ uiActions browse =
     , actionEntryCallback    = return ()
     }
   , ActionEntry
+    { actionEntryName        = "view"
+    , actionEntryLabel       = "_View"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = return ()
+    }
+  , ActionEntry
+    { actionEntryName        = "configure-columns"
+    , actionEntryLabel       = "Configure _columns"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showViewConfigDialog
+    }
+  , ActionEntry
     { actionEntryName        = "properties"
     , actionEntryLabel       = "P_roperties"
     , actionEntryStockId     = Nothing

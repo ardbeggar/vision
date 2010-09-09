@@ -22,27 +22,42 @@ module Collection.View
   , collView
   , collSel
   , collFilter
+  , showViewConfigDialog
   ) where
 
-import Prelude hiding (lookup)
+import Control.Monad
+import Control.Applicative
+
+import Data.IORef
+import Data.Maybe
+
+import System.IO.Unsafe
 
 import Graphics.UI.Gtk
 
+import UI
+import Compound
+import Editor
 import Context
+import Prelude hiding (lookup)
 import Properties
 import Utils
 import Collection.Model
 
 
 data View
-  = View { vView   :: TreeView
-         , vSel    :: TreeSelection
-         , vFilter :: Entry
+  = View { vView      :: TreeView
+         , vSel       :: TreeSelection
+         , vFilter    :: Entry
+         , vConfigDlg :: EditorDialog (PropertyView ())
+         , vColumns   :: IORef [Property]
          }
 
 collView   = vView context
 collSel    = vSel  context
 collFilter = vFilter context
+configDlg  = vConfigDlg context
+columns    = vColumns context
 
 
 initView = do
@@ -50,28 +65,40 @@ initView = do
   let ?context = context
 
   treeViewSetRulesHint collView True
-  addColumns
-
   treeSelectionSetMode collSel SelectionMultiple
+
+  setColumns =<< catMaybes <$> mapM property ["Artist", "Album", "Track", "Title"]
 
   return ?context
 
+showViewConfigDialog =
+  runEditorDialog configDlg
+  (map (, ()) <$> getColumns)
+  (setColumns . map fst)
+  False window
+
 
 initContext = do
-  view   <- treeViewNewWithModel collStore
-  sel    <- treeViewGetSelection view
-  filter <- entryNew
+  view      <- treeViewNewWithModel collStore
+  sel       <- treeViewGetSelection view
+  filter    <- entryNew
+  configDlg <- unsafeInterleaveIO $ makeConfigDlg
+  columns   <- newIORef []
   return $ augmentContext
-    View { vView   = view
-         , vSel    = sel
-         , vFilter = filter
+    View { vView      = view
+         , vSel       = sel
+         , vFilter    = filter
+         , vConfigDlg = configDlg
+         , vColumns   = columns
          }
 
-addColumns =
-  mapM_ addOne ["Artist", "Album", "Track", "Title"]
-  where addOne name = do
-          prop <- property name
-          fmaybeM_ prop addColumn
+getColumns =
+  readIORef columns
+
+setColumns props = do
+  mapM_ (treeViewRemoveColumn collView) =<< treeViewGetColumns collView
+  writeIORef columns props
+  mapM_ addColumn props
 
 addColumn prop = do
   column <- treeViewColumnNew
@@ -94,3 +121,10 @@ getInfoIfNeeded iter = do
   getInfo mid $ case rng of
     ([f], [t]) -> n >= f && t >= n
     _          -> False
+
+makeConfigDlg =
+  makeEditorDialog [(stockApply, ResponseApply)]
+  makePropertyView $ \v -> do
+    let outerw = outer v
+    windowSetTitle outerw "Configure collection browser"
+    windowSetDefaultSize outerw 500 400
