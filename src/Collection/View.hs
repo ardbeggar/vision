@@ -84,7 +84,7 @@ initContext = do
   view      <- treeViewNewWithModel collStore
   sel       <- treeViewGetSelection view
   filter    <- entryNew
-  configDlg <- unsafeInterleaveIO $ makeConfigDlg
+  configDlg <- unsafeInterleaveIO makeConfigDlg
   columns   <- newIORef []
   return $ augmentContext
     View { vView      = view
@@ -151,8 +151,7 @@ setupSearch props = do
   treeViewSetSearchEqualFunc collView $ Just $ \str iter -> do
     [n]  <- treeModelGetPath collStore iter
     mid  <- listStoreGetValue collStore n
-    info <- getInfo mid True
-    return $ search (map toLower str) props info
+    search (map toLower str) props <$> getInfo mid True
 
 search _ _ Nothing = False
 search _ [] _ = False
