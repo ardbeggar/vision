@@ -30,6 +30,8 @@ import Control.Applicative
 
 import Data.IORef
 import Data.Maybe
+import Data.List (isInfixOf)
+import Data.Char
 
 import System.IO.Unsafe
 
@@ -67,14 +69,14 @@ initView = do
   treeViewSetRulesHint collView True
   treeSelectionSetMode collSel SelectionMultiple
 
-  setColumns =<< loadConfig
+  setColumns False =<< loadConfig
 
   return ?context
 
 showViewConfigDialog =
   runEditorDialog configDlg
   (map (, ()) <$> getColumns)
-  (setColumns . map fst)
+  (setColumns True . map fst)
   False window
 
 
@@ -95,11 +97,12 @@ initContext = do
 getColumns =
   readIORef columns
 
-setColumns props = do
+setColumns save props = do
   mapM_ (treeViewRemoveColumn collView) =<< treeViewGetColumns collView
   writeIORef columns props
   mapM_ addColumn props
-  saveConfig props
+  setupSearch props
+  when save $ saveConfig props
 
 addColumn prop = do
   column <- treeViewColumnNew
@@ -142,3 +145,19 @@ configFile =
 
 defaultConfig =
   ["Artist", "Album", "Track", "Title"]
+
+setupSearch props = do
+  treeViewSetEnableSearch collView True
+  treeViewSetSearchEqualFunc collView $ Just $ \str iter -> do
+    [n]  <- treeModelGetPath collStore iter
+    mid  <- listStoreGetValue collStore n
+    info <- getInfo mid True
+    return $ search (map toLower str) props info
+
+search _ _ Nothing = False
+search _ [] _ = False
+search str (prop:props) (Just info) =
+  let ptext = map toLower $ maybe "" id $ lookup prop info in
+  if isInfixOf str ptext
+  then True
+  else search str props (Just info)
