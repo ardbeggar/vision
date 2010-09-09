@@ -23,6 +23,7 @@ module Properties.Model
   , property
   , propertyList
   , propertyMap
+  , propertyStore
   , getProperties
   , setProperties
   , onProperties
@@ -35,6 +36,8 @@ import Control.Concurrent.MVar
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Graphics.UI.Gtk
+
 import Context
 import Config
 import Handler
@@ -44,11 +47,13 @@ import Properties.Property
 
 data Model
   = Model { mMap          :: MVar (Map String Property)
+          , mStore        :: ListStore Property
           , mOnProperties :: HandlerMVar ()
           }
 
-propertyMap = mMap context
-onProperties = onHandler $ mOnProperties context
+propertyMap   = mMap context
+propertyStore = mStore context
+onProperties  = onHandler $ mOnProperties context
 
 
 initModel = do
@@ -60,10 +65,13 @@ initModel = do
   return ?context
 
 initContext = do
-  npmap   <- newMVar $ Map.fromList $ map (\p -> (propName p, p)) builtinProperties
+  npmap   <- newMVar $ mkMap builtinProperties
+  -- The store will be populated in loadProperties.
+  store   <- listStoreNewDND [] Nothing Nothing
   onprops <- makeHandlerMVar
   return $ augmentContext
     Model { mMap          = npmap
+          , mStore        = store
           , mOnProperties = onprops
           }
 
@@ -74,17 +82,23 @@ propertyList =
   withMVar propertyMap $ return . Map.elems
 
 loadProperties = do
-  props <- config "properties.conf" []
-  modifyMVar_ propertyMap $ \m ->
-    return . Map.union m . Map.fromList $ map (\p -> (propName p, p)) props
+  props  <- config "properties.conf" []
+  mapM_ (listStoreAppend propertyStore) =<<
+    (modifyMVar propertyMap $ \m -> do
+        let m' = Map.union m $ mkMap props
+        return (m', Map.elems m'))
 
 getProperties =
   withMVar propertyMap $ return . Map.elems
 
 setProperties props = do
-  modifyMVar_ propertyMap $ const $ return $
-    Map.fromList $ map (\p -> (propName p, p)) props
+  listStoreClear propertyStore
+  mapM_ (listStoreAppend propertyStore) =<<
+    (modifyMVar propertyMap $ const $ do
+        let m = mkMap props
+        return (m, Map.elems m))
   writeConfig "properties.conf" props
   onProperties $ invoke ()
 
 
+mkMap = Map.fromList . map (\p -> (propName p, p))
