@@ -41,7 +41,6 @@ import Editor
 import Context
 import Prelude hiding (lookup)
 import Properties
-import Utils
 import Collection.Model
 
 

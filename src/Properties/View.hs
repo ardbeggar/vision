@@ -38,6 +38,8 @@ data PropertyView a
   = PropertyView
     { vPaned    :: HPaned
     , vLeft     :: TreeView
+    , vStore    :: ListStore (Property, a)
+    , vRight    :: TreeView
     , vModified :: IORef Bool
     }
 
@@ -56,13 +58,14 @@ instance EditorWidget (PropertyView a) where
   resetModified = propertyViewResetModified
 
 propertyViewGetData =
-  const $ return []
+  listStoreToList . vStore
 
-propertyViewSetData _ _ =
-  return ()
+propertyViewSetData v d = do
+  listStoreClear $ vStore v
+  mapM_ (listStoreAppend $ vStore v) d
 
 propertyViewClearData =
-  const $ return ()
+  listStoreClear . vStore
 
 propertyViewSetupView pm =
   treeViewSetCursor (vLeft pm) [0] Nothing
@@ -76,13 +79,22 @@ propertyViewGetState =
 propertyViewResetModified =
   flip writeIORef False . vModified
 
-makePropertyView _ _ = do
+makePropertyView _ notify = do
+  modified <- newIORef False
+  let onChanged = do
+        writeIORef modified True
+        notify
+
   paned <- hPanedNew
   containerSetBorderWidth paned 7
 
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
+  panedPack1 paned scroll True False
+
   left <- treeViewNewWithModel propertyStore
   treeViewSetHeadersVisible left False
-  panedPack1 paned left True False
 
   sel <- treeViewGetSelection left
   treeSelectionSetMode sel SelectionMultiple
@@ -94,9 +106,37 @@ makePropertyView _ _ = do
   cellLayoutSetAttributes column cell propertyStore $ \prop ->
     [ cellText := propName prop ]
 
-  modified <- newIORef False
+  containerAdd scroll left
+
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
+  panedPack2 paned scroll True False
+
+  store <- listStoreNew []
+  store `on` rowChanged $ const $ const onChanged
+  store `on` rowInserted $ const $ const onChanged
+  store `on` rowDeleted $ const onChanged
+
+  right <- treeViewNewWithModel store
+  treeViewSetHeadersVisible right False
+  treeViewSetReorderable right True
+
+  sel <- treeViewGetSelection right
+  treeSelectionSetMode sel SelectionMultiple
+
+  column <- treeViewColumnNew
+  treeViewAppendColumn right column
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributes column cell store $ \(prop, _) ->
+    [ cellText := propName prop ]
+
+  containerAdd scroll right
 
   return PropertyView { vPaned    = paned
                       , vLeft     = left
+                      , vStore    = store
+                      , vRight    = right
                       , vModified = modified
                       }
