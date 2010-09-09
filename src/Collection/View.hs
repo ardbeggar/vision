@@ -125,7 +125,7 @@ getInfoIfNeeded iter = do
 
 makeConfigDlg =
   makeEditorDialog [(stockApply, ResponseApply)]
-  makePropertyView $ \v -> do
+  (makePropertyView (, ())) $ \v -> do
     let outerw = outer v
     windowSetTitle outerw "Configure collection browser"
     windowSetDefaultSize outerw 500 400

@@ -23,6 +23,7 @@ module Properties.View
   ) where
 
 import Control.Monad
+import Control.Monad.Trans
 
 import Data.IORef
 
@@ -79,7 +80,7 @@ propertyViewGetState =
 propertyViewResetModified =
   flip writeIORef False . vModified
 
-makePropertyView _ notify = do
+makePropertyView make _ notify = do
   modified <- newIORef False
   let onChanged = do
         writeIORef modified True
@@ -133,6 +134,24 @@ makePropertyView _ notify = do
     [ cellText := propName prop ]
 
   containerAdd scroll right
+
+  left `on` keyPressEvent $ tryEvent $ do
+    []       <- eventModifier
+    "Return" <- eventKeyName
+    liftIO $ do
+      sel  <- treeViewGetSelection left
+      rows <- treeSelectionGetSelectedRows sel
+      forM_ rows $ \[n] ->
+        listStoreAppend store . make =<<
+        listStoreGetValue propertyStore n
+
+  right `on` keyPressEvent $ tryEvent $ do
+    []       <- eventModifier
+    "Delete" <- eventKeyName
+    liftIO $ do
+      sel  <- treeViewGetSelection right
+      rows <- treeSelectionGetSelectedRows sel
+      mapM_ (listStoreRemove store . head) $ reverse rows
 
   return PropertyView { vPaned    = paned
                       , vLeft     = left
