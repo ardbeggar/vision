@@ -25,7 +25,6 @@ module Properties
   , lookup
   , initProperties
   , property
-  , propertyList
   , showPropertyManager
   , showPropertyEditor
   , onProperties

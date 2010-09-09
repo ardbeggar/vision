@@ -145,7 +145,7 @@ updateProperties = do
   populateStore cur
 
 populateStore cur = do
-  all <- propertyList
+  all <- getProperties
   mapM_ (listStoreAppend store) $
     unionBy (eqBy propName) (catMaybes cur) all
 

@@ -21,7 +21,6 @@ module Properties.Model
   ( lookup
   , initModel
   , property
-  , propertyList
   , propertyMap
   , propertyStore
   , getProperties
@@ -77,9 +76,6 @@ initContext = do
 
 property name =
   withMVar propertyMap $ return . Map.lookup name
-
-propertyList =
-  withMVar propertyMap $ return . Map.elems
 
 loadProperties = do
   props  <- config "properties.conf" []
