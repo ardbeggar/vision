@@ -30,6 +30,7 @@ executable vision
                     Medialib,
                     UI,
                     Atoms,
+                    DnD,
                     Config,
                     Compound,
                     Editor,
