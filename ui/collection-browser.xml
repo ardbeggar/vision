@@ -25,6 +25,7 @@
       </menu>
       <menu action="view">
         <menuitem action="configure-columns"/>
+        <menuitem action="configure-ordering"/>
       </menu>
       <menu action="properties">
         <menuitem action="edit-properties"/>

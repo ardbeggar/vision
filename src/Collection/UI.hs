@@ -175,6 +175,14 @@ uiActions browse =
     , actionEntryCallback    = showViewConfigDialog
     }
   , ActionEntry
+    { actionEntryName        = "configure-ordering"
+    , actionEntryLabel       = "Configure _ordering"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showOrderDialog
+    }
+  , ActionEntry
     { actionEntryName        = "properties"
     , actionEntryLabel       = "P_roperties"
     , actionEntryStockId     = Nothing
