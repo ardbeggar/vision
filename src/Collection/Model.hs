@@ -51,6 +51,7 @@ import Medialib hiding (getInfo)
 import Collection.Common
 import qualified Properties as P
 import Config
+import Utils
 
 
 data State
@@ -162,7 +163,7 @@ loadOrder =
           maybe Nothing (Just . (, desc)) <$> P.property name
 
 saveOrder order = do
-  writeConfig configFile order
+  writeConfig configFile $ map (mapFst P.propName) order
   return ()
 
 configFile =
