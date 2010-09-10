@@ -20,6 +20,8 @@
 module Properties.View
   ( PropertyView
   , makePropertyView
+  , propertyViewStore
+  , propertyViewRight
   ) where
 
 import Control.Monad
@@ -37,11 +39,11 @@ import Properties.Model
 
 data PropertyView a
   = PropertyView
-    { vPaned    :: HPaned
-    , vLeft     :: TreeView
-    , vStore    :: ListStore (Property, a)
-    , vRight    :: TreeView
-    , vModified :: IORef Bool
+    { vPaned            :: HPaned
+    , vLeft             :: TreeView
+    , propertyViewStore :: ListStore (Property, a)
+    , propertyViewRight :: TreeView
+    , vModified         :: IORef Bool
     }
 
 instance CompoundWidget (PropertyView a) where
@@ -59,14 +61,14 @@ instance EditorWidget (PropertyView a) where
   resetModified = propertyViewResetModified
 
 propertyViewGetData =
-  listStoreToList . vStore
+  listStoreToList . propertyViewStore
 
 propertyViewSetData v d = do
-  listStoreClear $ vStore v
-  mapM_ (listStoreAppend $ vStore v) d
+  listStoreClear $ propertyViewStore v
+  mapM_ (listStoreAppend $ propertyViewStore v) d
 
 propertyViewClearData =
-  listStoreClear . vStore
+  listStoreClear . propertyViewStore
 
 propertyViewSetupView pm =
   treeViewSetCursor (vLeft pm) [0] Nothing
@@ -153,9 +155,9 @@ makePropertyView make _ notify = do
       rows <- treeSelectionGetSelectedRows sel
       mapM_ (listStoreRemove store . head) $ reverse rows
 
-  return PropertyView { vPaned    = paned
-                      , vLeft     = left
-                      , vStore    = store
-                      , vRight    = right
-                      , vModified = modified
+  return PropertyView { vPaned            = paned
+                      , vLeft             = left
+                      , propertyViewStore = store
+                      , propertyViewRight = right
+                      , vModified         = modified
                       }
