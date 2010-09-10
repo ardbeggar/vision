@@ -26,20 +26,30 @@ import Control.Monad.Trans
 
 import Data.Maybe
 
+import System.IO.Unsafe
+
 import Graphics.UI.Gtk hiding (add)
 
 import UI
 import XMMS
 import Handler
 import Utils
+import Context
 import Properties (showPropertyImport, showPropertyManager)
 import Collection.View
 import Collection.List.View
 import Collection.Control
+import Collection.Order
+
+
+data CollectionUI
+  = CollectionUI { cOrderDialog :: OrderDialog }
+
+orderDialog = cOrderDialog context
 
 
 initCollectionUI browse = do
-  context <- initListView
+  context <- initContext
   let ?context = context
 
   addUIActions $ uiActions browse
@@ -117,6 +127,17 @@ initCollectionUI browse = do
   updateWindowTitle
   return ?context
 
+
+initContext = do
+  context <- initListView
+  let ?context = context
+
+  orderDialog <- unsafeInterleaveIO makeOrderDialog
+
+  return $ augmentContext
+    CollectionUI { cOrderDialog = orderDialog }
+
+
 uiActions browse =
   [ ActionEntry
     { actionEntryName        = "collection"
@@ -180,7 +201,7 @@ uiActions browse =
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showOrderDialog
+    , actionEntryCallback    = showOrderDialog orderDialog
     }
   , ActionEntry
     { actionEntryName        = "properties"

@@ -37,6 +37,8 @@ module Collection.Control
   , editInvertSelection
   , showPropertyEditor
   , showPropertyExport
+  , getOrder
+  , setOrder
   ) where
 
 import Prelude hiding (catch)
@@ -58,7 +60,8 @@ import Atoms
 import Clipboard
 import qualified Properties as P
 import Collection.Common
-import Collection.Model
+import Collection.Model hiding (setOrder)
+import qualified Collection.Model as Model
 import Collection.View
 import Collection.List.View
 
@@ -80,14 +83,21 @@ loadNamed name =
       loadCurrent
     return False
 
-loadCurrent = loadCurrent' `catch` \ParseError -> return ()
+setOrder order = do
+  Model.setOrder True order
+  loaded <- getLoaded
+  when loaded loadCurrent
+
+loadCurrent =
+  loadCurrent' `catch` \ParseError -> return ()
 
 loadCurrent' = do
   text <- trim <$> entryGetText collFilter
   entrySetText collFilter text
   setFilter text
   coll <- getCurColl
-  collQueryIds xmms coll [] 0 0 >>* do
+  keys <- getOrderKeys
+  collQueryIds xmms coll keys 0 0 >>* do
     ids <- result
     liftIO $ do
       setLoaded True
@@ -130,7 +140,7 @@ listAddToPlaylist replace = do
 
 addCollection replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()
-  playlistAddCollection xmms Nothing coll []
+  playlistAddCollection xmms Nothing coll =<< getOrderKeys
   return ()
 
 getSelectedIds =
@@ -251,3 +261,9 @@ showPropertyExport = withSelectedIds P.showPropertyExport
 
 withSelectedIds f =
   f =<< getSelectedIds
+
+getOrderKeys =
+  map orderKey <$> getOrder
+
+orderKey (prop, False) = P.propKey prop
+orderKey (prop, True)  = '-' : P.propKey prop

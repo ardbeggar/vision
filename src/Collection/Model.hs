@@ -30,9 +30,15 @@ module Collection.Model
   , resetModel
   , getLoaded
   , setLoaded
+  , getOrder
+  , setOrder
   ) where
 
+import Control.Applicative
+import Control.Monad
 import Control.Concurrent.MVar
+
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
@@ -43,6 +49,8 @@ import Index hiding (getInfo)
 import qualified Index as Index
 import Medialib hiding (getInfo)
 import Collection.Common
+import qualified Properties as P
+import Config
 
 
 data State
@@ -50,6 +58,7 @@ data State
           , sCurName :: String
           , sFilter  :: String
           , sLoaded  :: Bool
+          , sOrder   :: [(P.Property, Bool)]
           }
 
 makeState =
@@ -57,6 +66,7 @@ makeState =
         , sCurName = ""
         , sFilter  = ""
         , sLoaded  = False
+        , sOrder   = []
         }
 
 data Model
@@ -103,12 +113,22 @@ setLoaded loaded =
   modifyMVar_ state $ \s ->
     return s { sLoaded = loaded }
 
+getOrder =
+  withMVar state $ return . sOrder
+
+setOrder save o = do
+  modifyMVar_ state $ \s ->
+    return s { sOrder = o }
+  when save $ saveOrder o
+
 getInfo = Index.getInfo (mIndex context)
 
 
 initModel = do
   context <- initContext
   let ?context = context
+
+  setOrder False =<< loadOrder
 
   return ?context
 
@@ -134,3 +154,16 @@ populateModel ids = do
 resetModel = do
   listStoreClear collStore
   modifyMVar_ state . const $ return makeState
+
+
+loadOrder =
+  catMaybes <$> (mapM convert =<< config configFile [])
+  where convert (name, desc) =
+          maybe Nothing (Just . (, desc)) <$> P.property name
+
+saveOrder order = do
+  writeConfig configFile order
+  return ()
+
+configFile =
+  "collection-order.conf"

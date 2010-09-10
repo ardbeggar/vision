@@ -23,7 +23,6 @@ module Collection.View
   , collSel
   , collFilter
   , showViewConfigDialog
-  , showOrderDialog
   ) where
 
 import Control.Monad
@@ -54,7 +53,6 @@ data View
          , vFilter    :: Entry
          , vConfigDlg :: EditorDialog (PropertyView ())
          , vColumns   :: IORef [Property]
-         , vOrderDlg  :: EditorDialog (PropertyView Bool)
          }
 
 collView   = vView context
@@ -62,7 +60,6 @@ collSel    = vSel  context
 collFilter = vFilter context
 configDlg  = vConfigDlg context
 columns    = vColumns context
-orderDlg   = vOrderDlg context
 
 
 initView = do
@@ -82,26 +79,18 @@ showViewConfigDialog =
   (setColumns True . map fst)
   False window
 
-showOrderDialog =
-  runEditorDialog orderDlg
-  (return [])
-  (const $ return ())
-  False window
-
 initContext = do
   view      <- treeViewNewWithModel collStore
   sel       <- treeViewGetSelection view
   filter    <- entryNew
   configDlg <- unsafeInterleaveIO makeConfigDlg
   columns   <- newIORef []
-  orderDlg  <- unsafeInterleaveIO makeOrderDlg
   return $ augmentContext
     View { vView      = view
          , vSel       = sel
          , vFilter    = filter
          , vConfigDlg = configDlg
          , vColumns   = columns
-         , vOrderDlg  = orderDlg
          }
 
 getColumns =
@@ -172,43 +161,3 @@ search str (prop:props) (Just info) =
   else search str props (Just info)
 
 
-makeOrderDlg =
-  makeEditorDialog [(stockApply, ResponseApply)]
-  makeOrderView $ \v -> do
-    let outerw = outer v
-    windowSetTitle outerw "Configure ordering"
-    windowSetDefaultSize outerw 500 400
-
-makeOrderView parent onState = do
-  view <- makePropertyView (, False) parent onState
-  let store = propertyViewStore view
-      right = propertyViewRight view
-
-  treeViewSetRulesHint right True
-
-  column <- treeViewColumnNew
-  treeViewColumnSetTitle column "Order"
-  treeViewAppendColumn right column
-  cell <- cellRendererComboNew
-  treeViewColumnPackStart column cell True
-  cellLayoutSetAttributes column cell store $ \(_, dir) ->
-    [ cellText := dirToString dir ]
-
-  cmod <- listStoreNewDND [False, True] Nothing Nothing
-  let clid = makeColumnIdString 0
-  customStoreSetColumn cmod clid dirToString
-  cell `set` [ cellTextEditable   := True
-             , cellComboHasEntry  := False
-             , cellComboTextModel := (cmod, clid) ]
-  cell `on` edited $ \[n] str -> do
-    (prop, dir) <- listStoreGetValue store n
-    let dir' = stringToDir str
-    unless (dir' == dir) $
-      listStoreSetValue store n (prop, dir')
-
-  return view
-
-dirToString False = "Ascending"
-dirToString True  = "Descending"
-
-stringToDir = ("Descending" ==)
