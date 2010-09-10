@@ -24,6 +24,7 @@ module Properties.View
   , propertyViewRight
   ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
@@ -31,6 +32,7 @@ import Data.IORef
 
 import Graphics.UI.Gtk
 
+import Atoms
 import Compound
 import Editor
 import Properties.Property
@@ -155,9 +157,74 @@ makePropertyView make _ notify = do
       rows <- treeSelectionGetSelectedRows sel
       mapM_ (listStoreRemove store . head) $ reverse rows
 
+  setupDnDReorder propPosList store right $
+    mapM_ $ \(f, t) -> do
+      v <- listStoreGetValue store f
+      listStoreRemove store f
+      listStoreInsert store t v
+
   return PropertyView { vPaned            = paned
                       , vLeft             = left
                       , propertyViewStore = store
                       , propertyViewRight = right
                       , vModified         = modified
                       }
+
+
+setupDnDReorder target store view apply = do
+  sel <- treeViewGetSelection view
+
+  targetList <- targetListNew
+  targetListAdd targetList target [TargetSameWidget] 0
+
+  dropRef <- newIORef False
+
+  dragSourceSet view [Button1] [ActionMove]
+  dragSourceSetTargetList view targetList
+
+  view `on` dragDataGet $ \_ _ _ -> do
+    rows <- liftIO $ treeSelectionGetSelectedRows sel
+    selectionDataSet selectionTypeInteger $ map head rows
+    return ()
+
+  dragDestSet view [DestDefaultMotion, DestDefaultHighlight] [ActionMove]
+  dragDestSetTargetList view targetList
+
+  view `on` dragDrop $ \ctxt _ tstamp -> do
+    writeIORef dropRef True
+    dragGetData view ctxt target tstamp
+    return True
+
+  view `on` dragDataReceived $ \ctxt (_, y) _ tstamp -> do
+    drop <- liftIO $ readIORef dropRef
+    when drop $ do
+      liftIO $ writeIORef dropRef False
+      (rows :: Maybe [Int]) <- selectionDataGet selectionTypeInteger
+      liftIO $ doReorder apply store view y rows
+      liftIO $ dragFinish ctxt True True tstamp
+
+  view `on` dragDataDelete $ \_ ->
+    treeSelectionUnselectAll sel
+
+
+doReorder _ _ _ _ Nothing                  = return ()
+doReorder apply store view y (Just rows) = do
+  base <- getTargetRow
+  apply $ reorder base rows
+  where getTargetRow = do
+          maybePos <- treeViewGetPathAtPos view (0, y)
+          case maybePos of
+            Just ([n], _, _) ->
+              return n
+            Nothing ->
+              pred <$> listStoreGetSize store
+
+reorder = reorderDown 0
+  where reorderDown _ _ [] = []
+        reorderDown dec base rows@(r:rs)
+          | r <= base = (r - dec, base) : reorderDown (dec + 1) base rs
+          | otherwise = reorderUp (if dec /= 0 then base + 1 else base) rows
+        reorderUp _ [] = []
+        reorderUp base (r:rs)
+          | r == base = reorderUp (base + 1) rs
+          | otherwise = (r, base) : reorderUp (base + 1) rs
