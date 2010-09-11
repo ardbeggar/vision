@@ -77,7 +77,7 @@ handleFormats =
     IntMap.fromList <$> mapM update (IntMap.toList ix)
   where update (i, (IEReady s m _, l)) = do
           t <- makeTrackInfo m
-          mapM touch l
+          mapM_ touch l
           return (i, (IEReady s m t, l))
         update other =
           return other

@@ -51,7 +51,7 @@ data UI
 
 tryLock f =
   maybe (return False) (const $ f >> return True)
-  =<< (tryTakeMVar $ uLock context)
+  =<< tryTakeMVar (uLock context)
 unlock  = tryPutMVar (uLock context) () >> return ()
 
 dialog = uDialog context

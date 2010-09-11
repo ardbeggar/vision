@@ -72,7 +72,7 @@ initEditorView = do
     [ cellText         :=> propertyText prop
     , cellTextEditable :=> do
       c <- connected
-      return $ c && (not $ propReadOnly prop)
+      return $ c && not (propReadOnly prop)
     ]
 
   return ?context

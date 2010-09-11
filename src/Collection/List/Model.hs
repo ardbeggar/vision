@@ -51,7 +51,7 @@ initListModel = do
         change <- result
         when (namespace change == "Collections") $
           -- TODO: use the change info instead of repopulating the model.
-          liftIO $ listCollections
+          liftIO listCollections
         return True
       listCollections
     else

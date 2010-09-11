@@ -57,8 +57,7 @@ setupUI browse = do
   toolbarInsert toolbar item 6
 
   load <- getAction srvAG "load"
-  locationEntry `onEntryActivate` do
-    actionActivate load
+  locationEntry `onEntryActivate` actionActivate load
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
@@ -82,8 +81,8 @@ setupUI browse = do
             return (True, iIsDir item)
           _     ->
             return (True, False)
-        mapM_ (flip actionSetSensitive enp) [addp, repp]
-        mapM_ (flip actionSetSensitive enn) [down, binw]
+        mapM_ (`actionSetSensitive` enp) [addp, repp]
+        mapM_ (`actionSetSensitive` enn) [down, binw]
   locationSel `onSelectionChanged` updateB
   updateB
 

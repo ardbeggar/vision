@@ -57,7 +57,7 @@ initVolume = do
       signalUnblock cId
     else do
       signalBlock cId
-      withoutVolumeChange $ adjustmentSetValue (adj) 0
+      withoutVolumeChange $ adjustmentSetValue adj 0
 
   return ?context
 
@@ -72,13 +72,13 @@ initContext = do
 
 
 makeVolumeControl = do
-  view <- hScaleNew $ adj
+  view <- hScaleNew adj
   scaleSetDrawValue view False
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False
 
   id <- onServerConnectionAdd . ever $ widgetSetSensitive view
-  view `onDestroy` do onServerConnection $ remove id
+  view `onDestroy` onServerConnection (remove id)
 
   return view
 
@@ -86,14 +86,14 @@ makeVolumeControl = do
 handleVolume = do
   vol <- catchResult 0 (maximum . Map.elems)
   liftIO $ withoutVolumeChange $
-    adjustmentSetValue (adj) $ fromIntegral vol
+    adjustmentSetValue adj $ fromIntegral vol
   return True
 
 setVolume vol =
   playbackVolumeGet xmms >>* do
     vols <- catchResult Map.empty id
-    lift $ mapM_ ((flip (playbackVolumeSet xmms)) vol) $ Map.keys vols
+    lift $ mapM_ (flip (playbackVolumeSet xmms) vol) $ Map.keys vols
     return False
 
 withoutVolumeChange =
-  bracket_ (signalBlock $ cId) (signalUnblock $ cId)
+  bracket_ (signalBlock cId) (signalUnblock cId)

@@ -84,22 +84,20 @@ initMedialib = do
 
   onServerConnectionAdd . ever $ \conn ->
     if conn
-    then do
-      broadcastMedialibEntryChanged xmms >>* do
-        id <- result
-        let id' = fromIntegral id
-        liftIO $ do
-          withMVar cache $ \cache ->
-            when (isJust . IntMap.lookup id' $ cEntries cache) $
-              medialibGetInfo xmms id >>* handleInfo id'
-        return True
+    then broadcastMedialibEntryChanged xmms >>* do
+      id <- result
+      let id' = fromIntegral id
+      liftIO $ withMVar cache $ \cache ->
+        when (isJust . IntMap.lookup id' $ cEntries cache) $
+          medialibGetInfo xmms id >>* handleInfo id'
+      return True
     else
       modifyMVar_ cache $ \cache ->
         return cache { cEntries = IntMap.empty }
 
   return ?context
 
-requestInfo id = do
+requestInfo id =
   modifyMVar_ cache $ \cache ->
     let id'     = fromIntegral id
         entries = cEntries cache in
@@ -149,12 +147,12 @@ retrieveProperties ids f = do
   hid <- onMediaInfo . add $ \(id, _, info) -> do
     (ctr, todo, ready) <- readIORef ref
     case todo of
-      (i:is) | i == id -> do
+      (i:is) | i == id ->
         if null is
-          then do
+        then do
           f . Right $ reverse ((id, info) : ready)
           return False
-          else do
+        else do
           let ctr' = ctr + 1
           when (step == 0 || ctr' `mod` step == 0) $
             f . Left $ fromIntegral ctr' / fromIntegral len

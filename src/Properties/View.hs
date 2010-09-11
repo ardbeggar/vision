@@ -159,8 +159,7 @@ makePropertyView make _ notify = do
       rows <- treeSelectionGetSelectedRows sel
       mapM_ (listStoreRemove store . head) $ reverse rows
 
-  setupDnDReorder propPosList store right $
-    mapM_ $ \(f, t) -> do
+  setupDnDReorder propPosList store right . mapM_ $ \(f, t) -> do
       v <- listStoreGetValue store f
       listStoreRemove store f
       listStoreInsert store t v

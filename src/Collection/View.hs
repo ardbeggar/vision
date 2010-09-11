@@ -115,7 +115,7 @@ addColumn prop = do
   cellLayoutSetAttributeFunc column cell collStore $ \iter -> do
     maybeInfo <- getInfoIfNeeded iter
     let text = case maybeInfo of
-          Just info -> maybe "" id (lookup prop info)
+          Just info -> fromMaybe "" $ lookup prop info
           Nothing   -> ""
     cell `set` [ cellText := text ]
 
@@ -157,9 +157,7 @@ setupSearch props = do
 search _ _ Nothing = False
 search _ [] _ = False
 search str (prop:props) (Just info) =
-  let ptext = map toLower $ maybe "" id $ lookup prop info in
-  if isInfixOf str ptext
-  then True
-  else search str props (Just info)
+  let ptext = map toLower $ fromMaybe "" $ lookup prop info in
+  str `isInfixOf` ptext || search str props (Just info)
 
 

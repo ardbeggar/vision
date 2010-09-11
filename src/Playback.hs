@@ -84,7 +84,7 @@ initPlayback = do
         return True
       requestStatus
       broadcastPlaylistCurrentPos xmms >>* do
-        liftIO $ requestCurrentTrack
+        liftIO requestCurrentTrack
         return True
       requestCurrentTrack
     else

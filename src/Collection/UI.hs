@@ -61,7 +61,7 @@ initCollectionUI browse = do
 
   addUIFromFile "collection-browser"
 
-  onCollectionActivated $ loadSelected
+  onCollectionActivated loadSelected
   onCollectionListMidClick $ browseSelected browse
   onCollectionListCR $ browseSelected browse
 
@@ -98,7 +98,7 @@ initCollectionUI browse = do
           ]
   onCollectionSelectionChanged $ do
     en <- isJust <$> getSelectedCollection
-    mapM_ (flip actionSetSensitive en) acts
+    mapM_ (`actionSetSensitive` en) acts
 
   acts <- mapM (getAction srvAG)
           [ "add-to-playlist"
@@ -107,7 +107,7 @@ initCollectionUI browse = do
   let updatePA = liftIO $ do
         list <- widgetGetIsFocus listView
         coll <- widgetGetIsFocus collView
-        mapM_ (flip actionSetSensitive (list || coll)) acts
+        mapM_ (`actionSetSensitive` (list || coll)) acts
         return False
       setupPA w = do
         w `on` focusInEvent $ updatePA
@@ -120,7 +120,7 @@ initCollectionUI browse = do
           ["copy", "edit-properties", "export-properties"]
   let updateE = do
         en <- (/= 0) <$> treeSelectionCountSelectedRows collSel
-        mapM_ (flip actionSetSensitive en) acts
+        mapM_ (`actionSetSensitive` en) acts
   collSel `onSelectionChanged` updateE
   updateE
 

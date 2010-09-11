@@ -43,7 +43,7 @@ data Fe a
 
 cookFormat fmt = runErrorT (mapM f fmt)
   where f (FeP n) =
-          maybe (throwError "") (return . FeP) =<< (liftIO $ property n)
+          maybe (throwError "") (return . FeP) =<< liftIO (property n)
         f (FeL s) =
           return $ FeL s
         f (FeO l) =
@@ -52,6 +52,6 @@ cookFormat fmt = runErrorT (mapM f fmt)
 formatMediaInfo [] _         = Nothing
 formatMediaInfo (fmt:fmts) m =
   execWriterT (mapM_ f fmt) `mplus` formatMediaInfo fmts m
-  where f (FeP p) = tell . escapeMarkup =<< (lift $ lookup p m)
+  where f (FeP p) = tell . escapeMarkup =<< lift (lookup p m)
         f (FeL s) = tell s
         f (FeO l) = mapM_ f l `mplus` return ()

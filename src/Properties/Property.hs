@@ -34,6 +34,7 @@ import Prelude hiding (lookup)
 import Control.Applicative
 import Control.Monad
 
+import Data.Maybe
 import qualified Data.Map as Map
 
 import Text.Printf
@@ -100,18 +101,18 @@ mk (pn, pk, pt, pr) =
 
 
 readValue p s  = liftM Just read `catch` \_ -> return Nothing
-  where read   = maybe rdef id (propReadValue p) $ s
+  where read   = fromMaybe rdef (propReadValue p) s
         rdef s = case (propType p) of
                    PropertyInt    -> X.PropInt32 <$> readIO s
                    PropertyString -> return $ X.PropString s
 
-showValue p v = maybe sdef id (propShowValue p) $ v
+showValue p v = fromMaybe sdef (propShowValue p) v
   where sdef (X.PropInt32  n) = show n
         sdef (X.PropString s) = s
 
 
 lookup p m = do
-  res <- (showValue p) <$> Map.lookup (propKey p) m
+  res <- showValue p <$> Map.lookup (propKey p) m
   when (null res) mzero
   return res
 
@@ -165,7 +166,7 @@ builtinProperties =
 
 
 showDuration (X.PropInt32  n) =
-  if h == 0 then mss else (show h) ++ (':' : mss)
+  if h == 0 then mss else show h ++ (':' : mss)
   where d   = n `div` 1000
         h   = d `div` 3600
         m   = (d - (h * 3600)) `div` 60

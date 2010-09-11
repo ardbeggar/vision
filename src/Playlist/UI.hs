@@ -87,14 +87,14 @@ setupUI = do
   expp   <- getAction srvAG "export-properties"
   let setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
-        mapM_ (flip actionSetSensitive (n /= 0))
+        mapM_ (`actionSetSensitive` (n /= 0))
           [cut, copy, delete, editp, expp]
 
   paste  <- getAction srvAG "paste"
   append <- getAction srvAG "append"
   let setupPA = do
         en <- editCheckClipboard
-        mapM_ (flip actionSetSensitive en) [paste, append]
+        mapM_ (`actionSetSensitive` en) [paste, append]
 
   onPlaybackStatus   . add . ever . const $ setupPPS
   onCurrentTrack     . add . ever . const $ setupPN

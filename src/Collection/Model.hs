@@ -87,7 +87,7 @@ getCurName =
   withMVar state $ return . sCurName
 
 getCurColl =
-  withMVar state $ \s -> do
+  withMVar state $ \s ->
     case sFilter s of
       []   -> return $ sCurColl s
       text -> do

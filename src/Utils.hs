@@ -90,7 +90,7 @@ decodeURL' ('%' : cs) = let (c, cs') = decodeByte cs in c : decodeURL' cs'
 decodeURL' (c : cs)   = c : decodeURL' cs
 
 decodeByte (d1 : d0 : cs)
-  | isHexDigit d1 && isHexDigit d0 = (chr $ (digitToInt d1) * 16 + (digitToInt d0), cs)
+  | isHexDigit d1 && isHexDigit d0 = (chr $ digitToInt d1 * 16 + digitToInt d0, cs)
 decodeByte _ = error "invalid URL"
 
 trd (_, _, c) = c
@@ -110,7 +110,7 @@ setupTreeViewPopup view popup = do
   let cond =
         case selMode of
           SelectionMultiple ->
-            (2 >) <$> (liftIO $ treeSelectionCountSelectedRows sel)
+            (2 >) <$> liftIO (treeSelectionCountSelectedRows sel)
           SelectionNone     ->
             return False
           _                 ->

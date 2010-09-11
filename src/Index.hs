@@ -73,7 +73,7 @@ handleInfo index (id, stamp, info) = do
 updateIndex index ix id stamp info old list =
   if upd
   then do
-    ti <- (iConv index) info
+    ti <- iConv index info
     mapM_ (touch index) list
     return $ IntMap.insert id (IEReady stamp info ti, list) ix
   else

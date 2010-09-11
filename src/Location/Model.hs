@@ -40,6 +40,7 @@ import Control.Concurrent.MVar
 import Control.Applicative
 
 import Data.List
+import Data.Ord
 
 import Graphics.UI.Gtk
 
@@ -122,15 +123,15 @@ makeItem x =
        , iPath  = path
        , iIsDir = entryIsDir x
        }
-  where name = last $ split $ path
+  where name = last $ split path
         path = decodeURL $ entryPath x
 
 compareItems SortDescending a b
-  | iIsDir a == iIsDir b = compare (iName b) (iName a)
+  | iIsDir a == iIsDir b = comparing iName b a
   | iIsDir a             = LT
   | iIsDir b             = GT
 compareItems SortAscending a b
-  | iIsDir a == iIsDir b = compare (iName a) (iName b)
+  | iIsDir a == iIsDir b = comparing iName a b
   | iIsDir a             = LT
   | iIsDir b             = GT
 

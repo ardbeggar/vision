@@ -68,9 +68,9 @@ handleBrowse url = do
             widgetGrabFocus locationView
 
 makeURL url
-  | isInfixOf "://" url =
+  | "://" `isInfixOf` url =
     url
-  | isPrefixOf "~/" url && isJust homeDir =
+  | "~/" `isPrefixOf` url && isJust homeDir =
     "file://" ++ fromJust homeDir ++ tail url
   | otherwise =
     "file://" ++ url

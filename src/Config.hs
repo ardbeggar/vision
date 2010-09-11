@@ -43,7 +43,7 @@ import Compound
 import Utils
 
 
-config name defl = do
+config name defl =
   withFile (configFileName name) ReadMode config' `catch` \_ -> return defl
   where config' h = do
           c <- hGetContents h

@@ -332,7 +332,7 @@ makePropertyEntry exists _ notify = do
 
       checkInsert str pos = do
         check
-        return $ (length str) + pos
+        return $ length str + pos
 
       checkDelete _ _ = check
 

@@ -36,6 +36,7 @@ import Prelude hiding (lookup)
 import Control.Concurrent.MVar
 import Control.Monad.State hiding (State, withState)
 import Control.Applicative
+import Control.Arrow
 
 import Data.Maybe
 import Data.List hiding (lookup)
@@ -204,7 +205,7 @@ togglePerTrack = do
            }
     else let
       u = snd $ sCurrent s
-      e = Map.map (\(b, c) -> (b, Map.union u c)) $ sEntries s
+      e = Map.map (second $ Map.union u) $ sEntries s
       c = e Map.! (sIds s ! sPos s)
       in s { sPerTrack = True
            , sEntries  = e
@@ -254,7 +255,7 @@ extractChanges = do
           Map.insert (sIds s ! sPos s) c (sEntries s)
         False ->
           let u = snd c in
-          Map.map (\(b, c) -> (b, Map.union u c)) $ sEntries s
+          Map.map (second $ Map.union u) $ sEntries s
       e' = Map.map (\(b, c) -> (Map.union c b, Map.empty)) e
   put s { sEntries = e'
         , sCurrent = (Map.union (snd c) (fst c), Map.empty)

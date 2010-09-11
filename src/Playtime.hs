@@ -116,7 +116,7 @@ handleCurrentId ret = do
 
 handleInfo (id, _, info) = do
   cid <- getCurrentId
-  when (cid == Just id) $ do
+  when (cid == Just id) $
     case Map.lookup "duration" info of
       Just (PropInt32 d) -> setUpper $ fromIntegral d
       _                  -> return ()
@@ -159,7 +159,7 @@ disableUpdate = do
   return stamp
 
 scheduleEnableUpdate stamp = do
-  eid <- (flip timeoutAdd) 500 $ do
+  eid <- flip timeoutAdd 500 $ do
     stamp' <- uStamp <$> readIORef ?updateRef
     when (stamp == stamp') $ resetUpdate id
     return False
@@ -190,7 +190,6 @@ makeSeekControl = do
 
   id <- onPlaybackStatusAdd . ever $
     widgetSetSensitive view . (Just StatusPlay ==)
-  view `onDestroy` do
-    onPlaybackStatus $ remove id
+  view `onDestroy` onPlaybackStatus (remove id)
 
   return view
