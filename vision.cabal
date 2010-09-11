@@ -17,7 +17,7 @@ description:
 
 cabal-version:      >= 1.6
 build-type:         Simple
-extra-tmp-files:    config.status, config.log, autom4te.cache
+extra-tmp-files:    config.status, config.log, autom4te.cache, hlint.out
 extra-source-files: configure.ac,
                     configure,
                     src/Properties/Makefile.in,
