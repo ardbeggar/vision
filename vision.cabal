@@ -91,3 +91,8 @@ executable vision
                     TypeFamilies, ScopedTypeVariables
                     TupleSections, PatternGuards
   ghc-options:      -W
+
+
+source-repository head
+  type:             git
+  location:         git://github.com/upwawet/vision.git
