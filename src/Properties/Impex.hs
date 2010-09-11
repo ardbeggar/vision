@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DoRec #-}
+{-# LANGUAGE DoRec, TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Impex

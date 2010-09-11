@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE TupleSections #-}
+
 module Playlist.Format.Config
   ( FormatView
   , makePlaylistFormatView

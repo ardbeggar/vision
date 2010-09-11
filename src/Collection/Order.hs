@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE TupleSections #-}
+
 module Collection.Order
   ( OrderDialog
   , makeOrderDialog
