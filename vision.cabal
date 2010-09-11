@@ -1,5 +1,5 @@
 name:               vision
-version:            0.0.2.1
+version:            0.0.2.2
 
 author:             Oleg Belozeorov
 maintainer:         Oleg Belozeorov <upwawet@gmail.com>
@@ -96,3 +96,8 @@ executable vision
 source-repository head
   type:             git
   location:         git://github.com/upwawet/vision.git
+
+source-repository head
+  type:             git
+  location:         git://github.com/upwawet/vision.git
+  tag:              v0.0.2.2
