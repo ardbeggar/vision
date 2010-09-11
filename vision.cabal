@@ -18,6 +18,18 @@ description:
 cabal-version:      >= 1.6
 build-type:         Simple
 extra-tmp-files:    config.status, config.log, autom4te.cache
+extra-source-files: configure.ac,
+                    configure,
+                    src/Properties/Makefile.in,
+                    src/Properties/Editor/Makefile.in,
+                    src/Makefile.in,
+                    src/Location/Makefile.in,
+                    src/Playlist/Format/Makefile.in,
+                    src/Playlist/Makefile.in,
+                    src/Collection/Makefile.in,
+                    src/Collection/List/Makefile.in,
+                    Makefile.in,
+                    ui/Makefile.in
 data-files:         ui/*.xml
 
 executable vision
@@ -28,6 +40,7 @@ executable vision
                     XMMS,
                     Environment,
                     Medialib,
+                    About,
                     UI,
                     Atoms,
                     DnD,
