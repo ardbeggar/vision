@@ -175,3 +175,7 @@ tryModifyMVar_ m io =
         putMVar m a'
       Nothing ->
         return ()
+
+
+deriving instance MonadCatchIO (ResultM c a)
+
