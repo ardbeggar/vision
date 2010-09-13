@@ -135,8 +135,6 @@ importOne base ((url, args), props) =
       id <- result
       unless (id == 0) $
         liftIO $ setProps id props
-      return False
-    return False
   where enc  = (encodeURL url') ++ args
         url' | isInfixOf "://" url = url
              | otherwise           = "file://" ++ joinPath [base, url]

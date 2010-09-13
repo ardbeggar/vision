@@ -81,7 +81,6 @@ loadNamed name =
     liftIO $ do
       setCurColl coll name
       loadCurrent
-    return False
 
 setOrder order = do
   Model.setOrder True order
@@ -104,7 +103,6 @@ loadCurrent' = do
       updateWindowTitle
       populateModel ids
       widgetGrabFocus collView
-    return False
 
 browseSelected browse =
   browse =<< getSelectedCollection
@@ -136,7 +134,6 @@ listAddToPlaylist replace = do
     Just name -> collGet xmms name "Collections" >>* do
       coll <- result
       liftIO $ addCollection replace coll
-      return False
 
 addCollection replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()

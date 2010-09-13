@@ -69,10 +69,10 @@ initPlaytime = do
   onServerConnectionAdd . ever $ \conn ->
     if conn
     then do
-      playbackCurrentId xmms >>* handleCurrentId False
-      broadcastPlaybackCurrentId xmms >>* handleCurrentId True
-      playbackPlaytime xmms >>* handlePlaytime 0 False
-      signalPlaybackPlaytime xmms >>* handlePlaytime 1000 True
+      playbackCurrentId xmms >>* handleCurrentId
+      broadcastPlaybackCurrentId xmms >>* (handleCurrentId >> persist)
+      playbackPlaytime xmms >>* handlePlaytime 0
+      signalPlaybackPlaytime xmms >>* (handlePlaytime 1000 >> persist)
     else do
       resetState
       setValue 0
@@ -104,7 +104,7 @@ makeState =
 resetState =
   modifyMVar_ state $ const $ return makeState
 
-handleCurrentId ret = do
+handleCurrentId = do
   cid <- result
   liftIO $ do
     setCurrentId $
@@ -112,7 +112,6 @@ handleCurrentId ret = do
       then Nothing
       else Just cid
     requestInfo cid
-  return ret
 
 handleInfo (id, _, info) = do
   cid <- getCurrentId
@@ -126,9 +125,8 @@ bigNum = 10000000000.0
 seek pos = do
   putStrLn $ "seek to " ++ show pos
   eid <- disableUpdate
-  playbackSeekMs xmms (round pos) SeekSet >>* do
-    liftIO $ scheduleEnableUpdate eid
-    return False
+  playbackSeekMs xmms (round pos) SeekSet >>*
+    liftIO (scheduleEnableUpdate eid)
   return ()
 
 data Update
@@ -172,7 +170,7 @@ setUpper = withoutSeek . adjustmentSetUpper adj
 withoutSeek =
   bracket_ (signalBlock cId) (signalUnblock cId)
 
-handlePlaytime diff ret = do
+handlePlaytime diff = do
   newPt <- catchResult 0 fromIntegral
   liftIO $ do
     en <- updateEnabled
@@ -180,7 +178,6 @@ handlePlaytime diff ret = do
     when (en && fromMaybe StatusStop ps /= StatusStop) $ do
       oldPt <- getValue
       when (abs (newPt - oldPt) >= diff) $ setValue newPt
-  return ret
 
 makeSeekControl = do
   view <- hScaleNew adj

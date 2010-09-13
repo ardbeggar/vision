@@ -45,10 +45,9 @@ setupUpdate = do
       playlistCurrentActive xmms >>* do
         setupPlaylist
         liftIO $ broadcastPlaylistChanged xmms >>* handleChange
-        return False
       broadcastPlaylistLoaded xmms >>* do
         setupPlaylist
-        return True
+        persist
     else do
       setPlaylistName Nothing
       updateWindowTitle
@@ -96,7 +95,6 @@ handlePlaylist = do
     mapM_ addToPlaylist ids
     requestCurrentTrack
     onPlaylistUpdated $ invoke ()
-  return False
 
 addToPlaylist id = do
   n <- listStoreAppend playlistStore id
@@ -129,4 +127,4 @@ handleChange = do
           onPlaylistUpdated $ invoke ()
         _ ->
           requestPlaylist name
-  return True
+  persist

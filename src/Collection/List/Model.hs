@@ -52,7 +52,7 @@ initListModel = do
         when (namespace change == "Collections") $
           -- TODO: use the change info instead of repopulating the model.
           liftIO listCollections
-        return True
+        persist
       listCollections
     else
       listStoreClear listStore
@@ -71,4 +71,3 @@ listCollections =
       listStoreClear listStore
       listStoreAppend listStore Nothing
       mapM_ (listStoreAppend listStore . Just) colls
-    return False

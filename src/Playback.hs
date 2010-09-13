@@ -81,11 +81,11 @@ initPlayback = do
     then do
       broadcastPlaybackStatus xmms >>* do
         liftIO requestStatus
-        return True
+        persist
       requestStatus
       broadcastPlaylistCurrentPos xmms >>* do
         liftIO requestCurrentTrack
-        return True
+        persist
       requestCurrentTrack
     else
       resetState
@@ -121,7 +121,6 @@ requestStatus =
   playbackStatus xmms >>* do
     status <- result
     liftIO . setStatus $ Just status
-    return False
 
 requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
@@ -130,7 +129,6 @@ requestCurrentTrack =
       old <- modifyMVar state $ \state ->
         return (state { sCurrentTrack = new }, sCurrentTrack state)
       onCurrentTrack $ invoke old
-    return False
 
 startPlayback False = do
   playbackStart xmms

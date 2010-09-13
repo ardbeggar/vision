@@ -57,10 +57,9 @@ loadLocation location = do
     Nothing ->
       return ()
 
-handleBrowse url = do
+handleBrowse url =
   handleBrowse' `catch` \(_ :: XMMSException) ->
     liftIO $ putStrLn $ "error loading " ++ url
-  return False
   where handleBrowse' = do
           r <- result
           liftIO $ do
@@ -93,12 +92,12 @@ addOne p = do
     else do
       collIdlistFromPlaylistFile xmms path >>*
         ((do coll <- result
-             lift $ playlistAddIdlist xmms Nothing coll
-             return False)
+             liftIO $ playlistAddIdlist xmms Nothing coll
+             return ())
          `catch`
          (\(_ :: XMMSException) -> do
-             lift $ playlistAddURL xmms Nothing path
-             return False))
+             liftIO $ playlistAddURL xmms Nothing path
+             return ()))
       return ()
 
 updateWindowTitle = do

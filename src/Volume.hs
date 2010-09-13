@@ -52,8 +52,7 @@ initVolume = do
     then do
       playbackVolumeGet xmms >>* do
         handleVolume
-        lift $ broadcastPlaybackVolumeChanged xmms >>* handleVolume
-        return False
+        liftIO $ broadcastPlaybackVolumeChanged xmms >>* handleVolume
       signalUnblock cId
     else do
       signalBlock cId
@@ -87,13 +86,12 @@ handleVolume = do
   vol <- catchResult 0 (maximum . Map.elems)
   liftIO $ withoutVolumeChange $
     adjustmentSetValue adj $ fromIntegral vol
-  return True
+  persist
 
 setVolume vol =
   playbackVolumeGet xmms >>* do
     vols <- catchResult Map.empty id
-    lift $ mapM_ (flip (playbackVolumeSet xmms) vol) $ Map.keys vols
-    return False
+    liftIO $ mapM_ (flip (playbackVolumeSet xmms) vol) $ Map.keys vols
 
 withoutVolumeChange =
   bracket_ (signalBlock cId) (signalUnblock cId)

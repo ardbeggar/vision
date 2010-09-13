@@ -90,7 +90,7 @@ initMedialib = do
       liftIO $ withMVar cache $ \cache ->
         when (isJust . IntMap.lookup id' $ cEntries cache) $
           medialibGetInfo xmms id >>* handleInfo id'
-      return True
+      persist
     else
       modifyMVar_ cache $ \cache ->
         return cache { cEntries = IntMap.empty }
@@ -130,7 +130,6 @@ handleInfo id = do
       return (Cache { cEntries   = IntMap.insert id entry entries
                     , cNextStamp = succ stamp }, stamp)
     onMediaInfo $ invoke (fromIntegral id, stamp, info)
-  return False
 
 getInfo id =
   withMVar cache $ \cache ->
