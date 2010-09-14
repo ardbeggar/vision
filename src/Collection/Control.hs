@@ -146,7 +146,7 @@ getSelectedIds =
 
 applyFilter = do
   conn <- connected
-  when conn loadCurrent
+  when conn loadSelected
 
 editFilter = do
   editableSelectRegion collFilter 0 (-1)
