@@ -18,6 +18,7 @@
 --
 
 {-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.View
   ( PropertyView
@@ -26,6 +27,7 @@ module Properties.View
   , propertyViewRight
   ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
@@ -34,9 +36,9 @@ import Data.IORef
 import Graphics.UI.Gtk
 
 import Atoms
-import DnD
 import Compound
 import Editor
+import Utils
 import Properties.Property
 import Properties.Model
 
@@ -151,6 +153,8 @@ makePropertyView make _ notify = do
         listStoreAppend store . make =<<
         listStoreGetValue propertyStore n
 
+  setupLeftDnD left
+
   right `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Delete" <- eventKeyName
@@ -159,10 +163,7 @@ makePropertyView make _ notify = do
       rows <- treeSelectionGetSelectedRows sel
       mapM_ (listStoreRemove store . head) $ reverse rows
 
-  setupDnDReorder propPosList store right . mapM_ $ \(f, t) -> do
-      v <- listStoreGetValue store f
-      listStoreRemove store f
-      listStoreInsert store t v
+  setupRightDnD store right make
 
   return PropertyView { vPaned            = paned
                       , vLeft             = left
@@ -171,4 +172,92 @@ makePropertyView make _ notify = do
                       , vModified         = modified
                       }
 
+
+setupLeftDnD left = do
+  targetList <- targetListNew
+  targetListAdd targetList allPropPosList [TargetSameApp] 0
+
+  dragSourceSet left [Button1] [ActionCopy]
+  dragSourceSetTargetList left targetList
+
+  sel <- treeViewGetSelection left
+  left `on` dragDataGet $ \_ _ _ -> do
+    rows <- liftIO $ treeSelectionGetSelectedRows sel
+    selectionDataSet selectionTypeInteger $ map head rows
+    return ()
+
+  return ()
+
+
+setupRightDnD store view make = do
+  targetList <- targetListNew
+  targetListAdd targetList confPropPosList [TargetSameWidget] 0
+
+  dragSourceSet view [Button1] [ActionMove]
+  dragSourceSetTargetList view targetList
+
+  sel <- treeViewGetSelection view
+  view `on` dragDataGet $ \_ _ _ -> do
+    rows <- liftIO $ treeSelectionGetSelectedRows sel
+    selectionDataSet selectionTypeInteger $ map head rows
+    return ()
+
+  targetListAdd targetList allPropPosList [TargetSameApp] 1
+  dragDestSet view [DestDefaultMotion, DestDefaultHighlight]
+    [ActionCopy, ActionMove]
+  dragDestSetTargetList view targetList
+
+  dropRef <- newIORef False
+
+  view `on` dragDrop $ \ctxt _ tstamp -> do
+    maybeTarget <- dragDestFindTarget view ctxt (Just targetList)
+    case maybeTarget of
+      Just target -> do
+        writeIORef dropRef True
+        dragGetData view ctxt target tstamp
+        return True
+      Nothing ->
+        return False
+
+  view `on` dragDataReceived $ \ctxt (_, y) infoId tstamp -> do
+    drop <- liftIO $ readIORef dropRef
+    when drop $ do
+      rows <- selectionDataGet selectionTypeInteger
+      liftIO $ do
+        writeIORef dropRef False
+        fmaybeM_ rows $ \rows ->
+          case infoId of
+            0 -> do
+              base <- getTargetRow store view y pred
+              forM_ (reorder base rows) $ \(f, t) -> do
+                v <- listStoreGetValue store f
+                listStoreRemove store f
+                listStoreInsert store t v
+            1 -> do
+              base  <- getTargetRow store view y id
+              zipWithM_ (listStoreInsert store) [base .. ] =<<
+                mapM (liftM make . listStoreGetValue propertyStore) rows
+            _ -> return ()
+        dragFinish ctxt True True tstamp
+
+  view `on` dragDataDelete $ \_ ->
+    treeSelectionUnselectAll sel
+
+getTargetRow store view y f = do
+  maybePos <- treeViewGetPathAtPos view (0, y)
+  case maybePos of
+    Just ([n], _, _) ->
+      return n
+    Nothing ->
+      f <$> listStoreGetSize store
+
+reorder = reorderDown 0
+  where reorderDown _ _ [] = []
+        reorderDown dec base rows@(r:rs)
+          | r <= base = (r - dec, base) : reorderDown (dec + 1) base rs
+          | otherwise = reorderUp (if dec /= 0 then base + 1 else base) rows
+        reorderUp _ [] = []
+        reorderUp base (r:rs)
+          | r == base = reorderUp (base + 1) rs
+          | otherwise = (r, base) : reorderUp (base + 1) rs
 
