@@ -39,6 +39,7 @@ module Collection.Control
   , showPropertyExport
   , getOrder
   , setOrder
+  , getSelectedIds
   ) where
 
 import Prelude hiding (catch)

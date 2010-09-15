@@ -30,6 +30,7 @@ import Collection.List
 import Collection.Model
 import Collection.View
 import Collection.Control
+import Collection.DnD
 import Collection.UI
 
 
@@ -57,6 +58,8 @@ browseCollection maybeName = do
 
   context <- initCollectionUI f
   let ?context = context
+
+  setupDnD
 
   widgetShowAll window
   case maybeName of
