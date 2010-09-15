@@ -202,7 +202,10 @@ setupRightDnD store view make = do
     selectionDataSet selectionTypeInteger $ map head rows
     return ()
 
+  targetList <- targetListNew
+  targetListAdd targetList confPropPosList [TargetSameWidget] 0
   targetListAdd targetList allPropPosList [TargetSameApp] 1
+
   dragDestSet view [DestDefaultMotion, DestDefaultHighlight]
     [ActionCopy, ActionMove]
   dragDestSetTargetList view targetList
@@ -234,7 +237,7 @@ setupRightDnD store view make = do
                 listStoreRemove store f
                 listStoreInsert store t v
             1 -> do
-              base  <- getTargetRow store view y id
+              base <- getTargetRow store view y id
               zipWithM_ (listStoreInsert store) [base .. ] =<<
                 mapM (liftM make . listStoreGetValue propertyStore) rows
             _ -> return ()
