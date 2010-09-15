@@ -20,7 +20,8 @@
 module Atoms
   ( xmms2PosList
   , xmms2MlibId
-  , propPosList
+  , allPropPosList
+  , confPropPosList
   , mlibIdClipboard
   ) where
 
@@ -30,5 +31,6 @@ import System.IO.Unsafe
 
 xmms2PosList    = unsafePerformIO $ atomNew "application/x-xmms2poslist"
 xmms2MlibId     = unsafePerformIO $ atomNew "application/x-xmms2mlibid"
-propPosList     = unsafePerformIO $ atomNew "application/x-visionpropposlist"
+allPropPosList  = unsafePerformIO $ atomNew "application/x-visionallpropposlist"
+confPropPosList = unsafePerformIO $ atomNew "application/x-visionconfpropposlist"
 mlibIdClipboard = unsafePerformIO $ atomNew "_VISION_MEDIAID_CLIPBOARD"
