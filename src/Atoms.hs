@@ -20,8 +20,8 @@
 module Atoms
   ( xmms2PosList
   , xmms2MlibId
-  , allPropPosList
-  , confPropPosList
+  , indexList
+  , propertyNameList
   , mlibIdClipboard
   ) where
 
@@ -29,8 +29,8 @@ import Graphics.UI.Gtk
 import System.IO.Unsafe
 
 
-xmms2PosList    = unsafePerformIO $ atomNew "application/x-xmms2poslist"
-xmms2MlibId     = unsafePerformIO $ atomNew "application/x-xmms2mlibid"
-allPropPosList  = unsafePerformIO $ atomNew "application/x-visionallpropposlist"
-confPropPosList = unsafePerformIO $ atomNew "application/x-visionconfpropposlist"
-mlibIdClipboard = unsafePerformIO $ atomNew "_VISION_MEDIAID_CLIPBOARD"
+xmms2PosList     = unsafePerformIO $ atomNew "application/x-xmms2poslist"
+xmms2MlibId      = unsafePerformIO $ atomNew "application/x-xmms2mlibid"
+indexList        = unsafePerformIO $ atomNew "application/x-visionindexlist"
+propertyNameList = unsafePerformIO $ atomNew "application/x-visionpropertynamelist"
+mlibIdClipboard  = unsafePerformIO $ atomNew "_VISION_MEDIAID_CLIPBOARD"

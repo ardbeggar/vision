@@ -32,6 +32,9 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Data.IORef
+import Data.List
+import Data.Char
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
@@ -175,15 +178,17 @@ makePropertyView make _ notify = do
 
 setupLeftDnD left = do
   targetList <- targetListNew
-  targetListAdd targetList allPropPosList [TargetSameApp] 0
+  targetListAdd targetList propertyNameList [TargetSameApp] 0
 
   dragSourceSet left [Button1] [ActionCopy]
   dragSourceSetTargetList left targetList
 
   sel <- treeViewGetSelection left
   left `on` dragDataGet $ \_ _ _ -> do
-    rows <- liftIO $ treeSelectionGetSelectedRows sel
-    selectionDataSet selectionTypeInteger $ map head rows
+    names <- liftIO $ do
+      rows <- treeSelectionGetSelectedRows sel
+      forM rows $ liftM propName . listStoreGetValue propertyStore . head
+    selectionDataSetStringList names
     return ()
 
   return ()
@@ -191,7 +196,7 @@ setupLeftDnD left = do
 
 setupRightDnD store view make = do
   targetList <- targetListNew
-  targetListAdd targetList confPropPosList [TargetSameWidget] 0
+  targetListAdd targetList indexList [TargetSameWidget] 0
 
   dragSourceSet view [Button1] [ActionMove]
   dragSourceSetTargetList view targetList
@@ -203,8 +208,8 @@ setupRightDnD store view make = do
     return ()
 
   targetList <- targetListNew
-  targetListAdd targetList confPropPosList [TargetSameWidget] 0
-  targetListAdd targetList allPropPosList [TargetSameApp] 1
+  targetListAdd targetList indexList [TargetSameWidget] 0
+  targetListAdd targetList propertyNameList [TargetSameApp] 1
 
   dragDestSet view [DestDefaultMotion, DestDefaultHighlight]
     [ActionCopy, ActionMove]
@@ -225,23 +230,23 @@ setupRightDnD store view make = do
   view `on` dragDataReceived $ \ctxt (_, y) infoId tstamp -> do
     drop <- liftIO $ readIORef dropRef
     when drop $ do
-      rows <- selectionDataGet selectionTypeInteger
-      liftIO $ do
-        writeIORef dropRef False
-        fmaybeM_ rows $ \rows ->
-          case infoId of
-            0 -> do
-              base <- getTargetRow store view y pred
-              forM_ (reorder base rows) $ \(f, t) -> do
-                v <- listStoreGetValue store f
-                listStoreRemove store f
-                listStoreInsert store t v
-            1 -> do
-              base <- getTargetRow store view y id
-              zipWithM_ (listStoreInsert store) [base .. ] =<<
-                mapM (liftM make . listStoreGetValue propertyStore) rows
-            _ -> return ()
-        dragFinish ctxt True True tstamp
+      liftIO $ writeIORef dropRef False
+      case infoId of
+        0 -> do
+          rows <- selectionDataGet selectionTypeInteger
+          fmaybeM_ rows $ \rows -> liftIO $ do
+            base <- getTargetRow store view y pred
+            forM_ (reorder base rows) $ \(f, t) -> do
+              v <- listStoreGetValue store f
+              listStoreRemove store f
+              listStoreInsert store t v
+        1 -> do
+          names <- selectionDataGetStringList
+          liftIO $ do
+            props <- map make . catMaybes <$> mapM property names
+            base  <- getTargetRow store view y id
+            zipWithM_ (listStoreInsert store) [base .. ] props
+      liftIO $ dragFinish ctxt True True tstamp
 
   view `on` dragDataDelete $ \_ ->
     treeSelectionUnselectAll sel
@@ -263,4 +268,13 @@ reorder = reorderDown 0
         reorderUp base (r:rs)
           | r == base = reorderUp (base + 1) rs
           | otherwise = (r, base) : reorderUp (base + 1) rs
+
+selectionDataSetStringList =
+  selectionDataSet selectionTypeInteger . intercalate [0] . map (map ord)
+
+selectionDataGetStringList =
+  maybe [] brk <$> selectionDataGet selectionTypeInteger
+  where brk text = case break (== 0) text of
+          (name, [])       -> [map chr name]
+          (name, _ : rest) -> (map chr name) : brk rest
 
