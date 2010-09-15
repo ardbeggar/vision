@@ -26,6 +26,7 @@
       </menu>
       <menu action="playlist">
         <menuitem action="clear-playlist"/>
+        <menuitem action="sort-playlist"/>
         <separator/>
         <menuitem action="configure-playlist"/>
       </menu>

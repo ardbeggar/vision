@@ -26,6 +26,8 @@ module Playlist.Control
   , playTrack
   , showPropertyEditor
   , showPropertyExport
+  , getOrder
+  , setOrder
   ) where
 
 import Control.Monad
@@ -77,3 +79,11 @@ showPropertyExport = withSelectedIds P.showPropertyExport
 
 withSelectedIds f =
   f =<< playlistGetIds =<< getSelectedTracks
+
+getOrder =
+  return []
+
+setOrder order = do
+  name <- getPlaylistName
+  playlistSort xmms name $ P.encodeOrder order
+  return ()

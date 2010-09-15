@@ -21,6 +21,8 @@ module Playlist.UI
   ( setupUI
   ) where
 
+import System.IO.Unsafe
+
 import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
@@ -35,6 +37,7 @@ import Utils
 import Clipboard
 import Location
 import Collection
+import Compound
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
@@ -46,8 +49,13 @@ import Playlist.Control
 setupUI = do
   addUIActions uiActions
 
+  orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
+    let outerw = outer v
+    windowSetTitle outerw "Configure ordering"
+    windowSetDefaultSize outerw 500 400
+
   srvAG <- actionGroupNew "server"
-  actionGroupAddActions srvAG srvActions
+  actionGroupAddActions srvAG $ srvActions orderDialog
   onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
   insertActionGroup srvAG 1
 
@@ -218,7 +226,7 @@ uiActions =
     }
   ]
 
-srvActions =
+srvActions orderDialog =
   [ ActionEntry
     { actionEntryName        = "play"
     , actionEntryLabel       = "_Play"
@@ -338,6 +346,14 @@ srvActions =
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = clearPlaylist
+    }
+  , ActionEntry
+    { actionEntryName        = "sort-playlist"
+    , actionEntryLabel       = "_Sort playlist"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = showOrderDialog orderDialog getOrder setOrder
     }
   , ActionEntry
     { actionEntryName        = "edit-properties"
