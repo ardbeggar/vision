@@ -35,11 +35,16 @@ import XMMS
 import Handler
 import Utils
 import Context
-import Properties (showPropertyImport, showPropertyManager)
+import Properties
+  ( showPropertyImport
+  , showPropertyManager
+  , OrderDialog
+  , makeOrderDialog
+  , showOrderDialog )
+import Compound
 import Collection.View
 import Collection.List.View
 import Collection.Control
-import Collection.Order
 
 
 data CollectionUI
@@ -132,7 +137,10 @@ initContext = do
   context <- initListView
   let ?context = context
 
-  orderDialog <- unsafeInterleaveIO makeOrderDialog
+  orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
+    let outerw = outer v
+    windowSetTitle outerw "Configure ordering"
+    windowSetDefaultSize outerw 500 400
 
   return $ augmentContext
     CollectionUI { cOrderDialog = orderDialog }
@@ -201,7 +209,7 @@ uiActions browse =
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showOrderDialog orderDialog
+    , actionEntryCallback    = showOrderDialog orderDialog getOrder setOrder
     }
   , ActionEntry
     { actionEntryName        = "properties"

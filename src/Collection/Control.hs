@@ -260,7 +260,4 @@ withSelectedIds f =
   f =<< getSelectedIds
 
 getOrderKeys =
-  map orderKey <$> getOrder
-
-orderKey (prop, False) = P.propKey prop
-orderKey (prop, True)  = '-' : P.propKey prop
+  P.encodeOrder <$> getOrder

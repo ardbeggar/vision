@@ -19,10 +19,11 @@
 
 {-# LANGUAGE TupleSections #-}
 
-module Collection.Order
+module Properties.Order
   ( OrderDialog
   , makeOrderDialog
   , showOrderDialog
+  , encodeOrder
   ) where
 
 import Control.Monad
@@ -30,26 +31,23 @@ import Control.Monad
 import Graphics.UI.Gtk
 
 import UI
-import Compound
 import Editor
-import Properties
-import Collection.Control
+import Properties.Property
+import Properties.View
 
 
 type OrderDialog = EditorDialog (PropertyView Bool)
 
-showOrderDialog dialog =
+
+showOrderDialog dialog getOrder setOrder =
   runEditorDialog dialog
   getOrder
   setOrder
   False window
 
-makeOrderDialog =
+makeOrderDialog setup =
   makeEditorDialog [(stockApply, ResponseApply)]
-  makeOrderView $ \v -> do
-    let outerw = outer v
-    windowSetTitle outerw "Configure ordering"
-    windowSetDefaultSize outerw 500 400
+  makeOrderView setup
 
 makeOrderView parent onState = do
   view <- makePropertyView (, False) parent onState
@@ -84,3 +82,7 @@ dirToString False = "Ascending"
 dirToString True  = "Descending"
 
 stringToDir = ("Descending" ==)
+
+encodeOrder = map enc
+  where enc (prop, False) = propKey prop
+        enc (prop, True)  = '-' : propKey prop

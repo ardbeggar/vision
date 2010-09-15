@@ -31,6 +31,7 @@ module Properties
   , showPropertyExport
   , showPropertyImport
   , module Properties.View
+  , module Properties.Order
   ) where
 
 import Prelude hiding (lookup)
@@ -41,6 +42,7 @@ import Properties.View
 import Properties.Manager
 import Properties.Editor
 import Properties.Impex
+import Properties.Order
 
 
 initProperties = do
