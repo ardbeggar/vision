@@ -61,6 +61,7 @@ setupDnD = do
   targetList <- targetListNew
   targetListAdd targetList xmms2PosList [TargetSameWidget] 0
   targetListAdd targetList xmms2MlibId [TargetSameApp] 1
+  targetListAddUriTargets targetList 2
 
   dragDestSet view [DestDefaultMotion, DestDefaultHighlight]
     [ActionMove, ActionCopy]
@@ -97,6 +98,13 @@ setupDnD = do
               name <- getPlaylistName
               base <- getTargetRow store view y id
               zipWithM_ (playlistInsertId xmms name) [base .. ] ids
+            dragFinish ctxt True False tstamp
+        2 -> do
+          uris <- selectionDataGetURIs
+          liftIO $ do
+            fmaybeM_ uris $ \uris -> do
+              base <- getTargetRow store view y id
+              addURIs base uris
             dragFinish ctxt True False tstamp
         _ -> liftIO $ dragFinish ctxt False False tstamp
 
