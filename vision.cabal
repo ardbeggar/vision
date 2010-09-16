@@ -67,6 +67,7 @@ executable vision
                     Location.History,
                     Location.Model,
                     Location.View,
+                    Location.DnD,
                     Location.Control,
                     Location.UI,
                     Collection,

@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 28 Jun. 2010
+--  Created: 16 Sep. 2010
 --
 --  Copyright (C) 2010 Oleg Belozeorov
 --
@@ -17,45 +17,34 @@
 --  General Public License for more details.
 --
 
-module Location
-  ( initLocation
-  , browseLocation
+module Location.DnD
+  ( setupDnD
   ) where
+
+import Control.Monad.Trans
+
+import Network.URL
 
 import Graphics.UI.Gtk
 
-import UI
-import Location.History
 import Location.Model
 import Location.View
-import Location.DnD
-import Location.Control
-import Location.UI
 
 
-initLocation =
-  initHistory
+setupDnD = do
+  targetList <- targetListNew
+  targetListAddUriTargets targetList 0
 
+  dragSourceSet locationView [Button1] [ActionCopy]
+  dragSourceSetTargetList locationView targetList
 
-browseLocation order maybeURL = do
-  let f = browseLocation
+  locationView `on` dragDataGet $ \_ _ _ -> do
+    paths <- liftIO $ do
+      rows  <- treeSelectionGetSelectedRows locationSel
+      items <- mapM itemByPath rows
+      return $ map (encString False ok_url . iPath) items
+    selectionDataSetURIs paths
+    return ()
 
-  context <- initUI
-  let ?context = context
-
-  context <- initModel order
-  let ?context = context
-
-  context <- initView
-  let ?context = context
-
-  setupUI f
-  setupDnD
-
-  widgetShowAll window
-  case maybeURL of
-    Just url -> loadLocation $ Go url
-    Nothing  -> openLocation
-
-
+  return ()
 
