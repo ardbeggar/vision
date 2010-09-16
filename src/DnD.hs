@@ -20,65 +20,27 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module DnD
-  ( setupDnDReorder
+  ( getTargetRow
+  , reorder
+  , selectionDataGetStringList
+  , selectionDataSetStringList
   ) where
 
 import Control.Applicative
-import Control.Monad
-import Control.Monad.Trans
 
-import Data.IORef
+import Data.List
+import Data.Char
 
 import Graphics.UI.Gtk
 
 
-setupDnDReorder target store view apply = do
-  sel <- treeViewGetSelection view
-
-  targetList <- targetListNew
-  targetListAdd targetList target [TargetSameWidget] 0
-
-  dropRef <- newIORef False
-
-  dragSourceSet view [Button1] [ActionMove]
-  dragSourceSetTargetList view targetList
-
-  view `on` dragDataGet $ \_ _ _ -> do
-    rows <- liftIO $ treeSelectionGetSelectedRows sel
-    selectionDataSet selectionTypeInteger $ map head rows
-    return ()
-
-  dragDestSet view [DestDefaultMotion, DestDefaultHighlight] [ActionMove]
-  dragDestSetTargetList view targetList
-
-  view `on` dragDrop $ \ctxt _ tstamp -> do
-    writeIORef dropRef True
-    dragGetData view ctxt target tstamp
-    return True
-
-  view `on` dragDataReceived $ \ctxt (_, y) _ tstamp -> do
-    drop <- liftIO $ readIORef dropRef
-    when drop $ do
-      liftIO $ writeIORef dropRef False
-      (rows :: Maybe [Int]) <- selectionDataGet selectionTypeInteger
-      liftIO $ doReorder apply store view y rows
-      liftIO $ dragFinish ctxt True True tstamp
-
-  view `on` dragDataDelete $ \_ ->
-    treeSelectionUnselectAll sel
-
-
-doReorder _ _ _ _ Nothing                  = return ()
-doReorder apply store view y (Just rows) = do
-  base <- getTargetRow
-  apply $ reorder base rows
-  where getTargetRow = do
-          maybePos <- treeViewGetPathAtPos view (0, y)
-          case maybePos of
-            Just ([n], _, _) ->
-              return n
-            Nothing ->
-              pred <$> listStoreGetSize store
+getTargetRow store view y f = do
+  maybePos <- treeViewGetPathAtPos view (0, y)
+  case maybePos of
+    Just ([n], _, _) ->
+      return n
+    Nothing ->
+      f <$> listStoreGetSize store
 
 reorder = reorderDown 0
   where reorderDown _ _ [] = []
@@ -89,4 +51,13 @@ reorder = reorderDown 0
         reorderUp base (r:rs)
           | r == base = reorderUp (base + 1) rs
           | otherwise = (r, base) : reorderUp (base + 1) rs
+
+selectionDataSetStringList =
+  selectionDataSet selectionTypeInteger . intercalate [0] . map (map ord)
+
+selectionDataGetStringList =
+  maybe [] brk <$> selectionDataGet selectionTypeInteger
+  where brk text = case break (== 0) text of
+          (name, [])       -> [map chr name]
+          (name, _ : rest) -> (map chr name) : brk rest
 

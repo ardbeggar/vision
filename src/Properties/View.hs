@@ -18,7 +18,6 @@
 --
 
 {-# LANGUAGE TupleSections #-}
-{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.View
   ( PropertyView
@@ -32,8 +31,6 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Data.IORef
-import Data.List
-import Data.Char
 import Data.Maybe
 
 import Graphics.UI.Gtk
@@ -42,6 +39,8 @@ import Atoms
 import Compound
 import Editor
 import Utils
+import DnD
+
 import Properties.Property
 import Properties.Model
 
@@ -234,47 +233,23 @@ setupRightDnD store view make = do
       case infoId of
         0 -> do
           rows <- selectionDataGet selectionTypeInteger
-          fmaybeM_ rows $ \rows -> liftIO $ do
-            base <- getTargetRow store view y pred
-            forM_ (reorder base rows) $ \(f, t) -> do
-              v <- listStoreGetValue store f
-              listStoreRemove store f
-              listStoreInsert store t v
+          liftIO $ do
+            fmaybeM_ rows $ \rows -> do
+              base <- getTargetRow store view y pred
+              forM_ (reorder base rows) $ \(f, t) -> do
+                v <- listStoreGetValue store f
+                listStoreRemove store f
+                listStoreInsert store t v
+            dragFinish ctxt True True tstamp
         1 -> do
           names <- selectionDataGetStringList
           liftIO $ do
             props <- map make . catMaybes <$> mapM property names
             base  <- getTargetRow store view y id
             zipWithM_ (listStoreInsert store) [base .. ] props
-      liftIO $ dragFinish ctxt True True tstamp
+            dragFinish ctxt True False tstamp
+        _ ->
+          liftIO $ dragFinish ctxt False False tstamp
 
   view `on` dragDataDelete $ \_ ->
     treeSelectionUnselectAll sel
-
-getTargetRow store view y f = do
-  maybePos <- treeViewGetPathAtPos view (0, y)
-  case maybePos of
-    Just ([n], _, _) ->
-      return n
-    Nothing ->
-      f <$> listStoreGetSize store
-
-reorder = reorderDown 0
-  where reorderDown _ _ [] = []
-        reorderDown dec base rows@(r:rs)
-          | r <= base = (r - dec, base) : reorderDown (dec + 1) base rs
-          | otherwise = reorderUp (if dec /= 0 then base + 1 else base) rows
-        reorderUp _ [] = []
-        reorderUp base (r:rs)
-          | r == base = reorderUp (base + 1) rs
-          | otherwise = (r, base) : reorderUp (base + 1) rs
-
-selectionDataSetStringList =
-  selectionDataSet selectionTypeInteger . intercalate [0] . map (map ord)
-
-selectionDataGetStringList =
-  maybe [] brk <$> selectionDataGet selectionTypeInteger
-  where brk text = case break (== 0) text of
-          (name, [])       -> [map chr name]
-          (name, _ : rest) -> (map chr name) : brk rest
-

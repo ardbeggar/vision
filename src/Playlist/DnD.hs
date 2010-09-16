@@ -17,13 +17,10 @@
 --  General Public License for more details.
 --
 
-{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
-
 module Playlist.DnD
   ( setupDnD
   ) where
 
-import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
@@ -36,6 +33,7 @@ import XMMS2.Client
 import Atoms
 import XMMS
 import Utils
+import DnD
 
 import Playlist.Model
 import Playlist.View
@@ -110,21 +108,3 @@ setupDnD = do
 
   view `on` dragDataDelete $ \_ ->
     treeSelectionUnselectAll sel
-
-getTargetRow store view y f = do
-  maybePos <- treeViewGetPathAtPos view (0, y)
-  case maybePos of
-    Just ([n], _, _) ->
-      return n
-    Nothing ->
-      f <$> listStoreGetSize store
-
-reorder = reorderDown 0
-  where reorderDown _ _ [] = []
-        reorderDown dec base rows@(r:rs)
-          | r <= base = (r - dec, base) : reorderDown (dec + 1) base rs
-          | otherwise = reorderUp (if dec /= 0 then base + 1 else base) rows
-        reorderUp _ [] = []
-        reorderUp base (r:rs)
-          | r == base = reorderUp (base + 1) rs
-          | otherwise = (r, base) : reorderUp (base + 1) rs
