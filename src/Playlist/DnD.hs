@@ -102,7 +102,7 @@ setupDnD = do
           liftIO $ do
             fmaybeM_ uris $ \uris -> do
               base <- getTargetRow store view y id
-              addURIs base uris
+              insertURIs uris $ Just base
             dragFinish ctxt True False tstamp
         _ -> liftIO $ dragFinish ctxt False False tstamp
 

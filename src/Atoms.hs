@@ -23,6 +23,7 @@ module Atoms
   , indexList
   , propertyNameList
   , mlibIdClipboard
+  , uriList
   ) where
 
 import Graphics.UI.Gtk
@@ -34,3 +35,4 @@ xmms2MlibId      = unsafePerformIO $ atomNew "application/x-xmms2mlibid"
 indexList        = unsafePerformIO $ atomNew "application/x-visionindexlist"
 propertyNameList = unsafePerformIO $ atomNew "application/x-visionpropertynamelist"
 mlibIdClipboard  = unsafePerformIO $ atomNew "_VISION_MEDIAID_CLIPBOARD"
+uriList          = unsafePerformIO $ atomNew "text/uri-list"

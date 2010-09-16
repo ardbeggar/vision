@@ -26,7 +26,6 @@ module Playlist.Edit
   , editCheckClipboard
   ) where
 
-import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
@@ -51,14 +50,24 @@ editDelete cut = do
 
 editCopy = copyIds =<< getSelectedTracks
 
-editPaste append =
-  clipboardRequestContents clipboard xmms2MlibId $ do
-    maybeIds <- selectionDataGet selectionTypeInteger
-    fmaybeM_ maybeIds $ \ids -> liftIO $ do
-      (path, _) <- treeViewGetCursor playlistView
-      insertIds ids $ case path of
-        [n] | not append -> Just n
-        _                -> Nothing
+editPaste append = do
+  targets <- getClipboardTargets
+  paste targets
+  where paste targets
+          | xmms2MlibId `elem` targets =
+            p xmms2MlibId (selectionDataGet selectionTypeInteger) insertIds
+          | uriList `elem` targets =
+            p uriList selectionDataGetURIs insertURIs
+          | otherwise =
+            return ()
+        p target get put =
+          clipboardRequestContents clipboard target $ do
+            maybeContents <- get
+            fmaybeM_ maybeContents $ \contents -> liftIO $ do
+              (path, _) <- treeViewGetCursor playlistView
+              put contents $ case path of
+                [n] | not append -> Just n
+                _                -> Nothing
 
 editSelectAll =
   treeSelectionSelectAll playlistSel
@@ -68,9 +77,9 @@ editInvertSelection = do
   treeSelectionSelectAll playlistSel
   mapM_ (treeSelectionUnselectPath playlistSel) rows
 
-editCheckClipboard =
-  elem xmms2MlibId <$> getClipboardTargets
-
+editCheckClipboard = do
+  targets <- getClipboardTargets
+  return $ elem xmms2MlibId targets || elem uriList targets
 
 copyIds tracks = do
   ids <- playlistGetIds tracks

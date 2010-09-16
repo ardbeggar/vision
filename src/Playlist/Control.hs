@@ -28,7 +28,7 @@ module Playlist.Control
   , showPropertyExport
   , getOrder
   , setOrder
-  , addURIs
+  , insertURIs
   ) where
 
 import Control.Monad
@@ -93,15 +93,18 @@ setOrder order = do
   playlistSort xmms name $ P.encodeOrder order
   return ()
 
-addURIs base uris = do
+insertURIs uris pos = do
   name <- getPlaylistName
-  addURIs' name base $ map (decString False) $ reverse uris
+  base <- case pos of
+    Just n  -> return n
+    Nothing -> getPlaylistSize
+  insertURIs' name base $ map (decString False) $ reverse uris
 
-addURIs' _ _ [] = return ()
-addURIs' name base (Nothing : rest) = addURIs' name base rest
-addURIs' name base ((Just uri) : rest) =
+insertURIs' _ _ [] = return ()
+insertURIs' name base (Nothing : rest) = insertURIs' name base rest
+insertURIs' name base ((Just uri) : rest) =
   xformMediaBrowse xmms uri >>* do
     func <- catchResult playlistInsertURL (const playlistRInsert)
     liftIO $ do
       func xmms name base uri
-      addURIs' name base rest
+      insertURIs' name base rest
