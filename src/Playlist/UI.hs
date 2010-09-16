@@ -51,7 +51,7 @@ setupUI = do
 
   orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
     let outerw = outer v
-    windowSetTitle outerw "Configure ordering"
+    windowSetTitle outerw "Sort playlist"
     windowSetDefaultSize outerw 500 400
 
   srvAG <- actionGroupNew "server"
