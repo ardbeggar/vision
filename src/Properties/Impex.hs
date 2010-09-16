@@ -184,7 +184,7 @@ runChooser Chooser { cLock = lock, cChooser = chooser } onAccept = do
              case resp of
                ResponseAccept -> do
                  name <- fileChooserGetFilename chooser
-                 fmaybeM_ name onAccept
+                 withJust name onAccept
                _ ->
                  return ()
              widgetHide chooser

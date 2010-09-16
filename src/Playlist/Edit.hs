@@ -45,7 +45,7 @@ editDelete cut = do
   when cut $ copyIds tracks
   removeTracks tracks
   maybeTrack <- currentTrackThisPlaylist
-  fmaybeM_ maybeTrack $ \t ->
+  withJust maybeTrack $ \t ->
     when (t `elem` tracks) restartPlayback
 
 editCopy = copyIds =<< getSelectedTracks
@@ -63,7 +63,7 @@ editPaste append = do
         p target get put =
           clipboardRequestContents clipboard target $ do
             maybeContents <- get
-            fmaybeM_ maybeContents $ \contents -> liftIO $ do
+            withJust maybeContents $ \contents -> liftIO $ do
               (path, _) <- treeViewGetCursor playlistView
               put contents $ case path of
                 [n] | not append -> Just n

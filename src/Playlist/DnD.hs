@@ -85,14 +85,14 @@ setupDnD = do
         0 -> do
           rows <- selectionDataGet selectionTypeInteger
           liftIO $ do
-            fmaybeM_ rows $ \rows -> do
+            withJust rows $ \rows -> do
               base <- getTargetRow store view y pred
               moveTracks $ reorder base rows
             dragFinish ctxt True True tstamp
         1 -> do
           ids <- selectionDataGet selectionTypeInteger
           liftIO $ do
-            fmaybeM_ ids $ \ids -> do
+            withJust ids $ \ids -> do
               name <- getPlaylistName
               base <- getTargetRow store view y id
               zipWithM_ (playlistInsertId xmms name) [base .. ] ids
@@ -100,7 +100,7 @@ setupDnD = do
         2 -> do
           uris <- selectionDataGetURIs
           liftIO $ do
-            fmaybeM_ uris $ \uris -> do
+            withJust uris $ \uris -> do
               base <- getTargetRow store view y id
               insertURIs uris $ Just base
             dragFinish ctxt True False tstamp

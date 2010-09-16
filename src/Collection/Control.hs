@@ -164,14 +164,14 @@ saveCollection = do
   name <- trim <$> getCurName
   coll <- getCurColl
   res  <- runDlg "Save collection" (not $ null name) (const True) name
-  fmaybeM_ res $ \name -> do
+  withJust res $ \name -> do
     collSave xmms coll name "Collections"
     return ()
 
 renameCollection = do
   old <- fromJust <$> getSelectedCollection
   res <- runDlg "Rename collection" False (/= old) old
-  fmaybeM_ res $ \new -> do
+  withJust res $ \new -> do
     collRename xmms old new "Collections"
     return ()
 

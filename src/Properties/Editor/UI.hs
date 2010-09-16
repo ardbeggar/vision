@@ -64,7 +64,7 @@ pBar  = uPBar  context
 setRetrievalCancel = writeIORef (uCancel context) . Just
 cancelRetrieval    = do
   cancel' <- readIORef (uCancel context)
-  fmaybeM_ cancel' id
+  withJust cancel' id
   writeIORef (uCancel context) Nothing
 
 

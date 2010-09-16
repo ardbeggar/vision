@@ -234,7 +234,7 @@ setupRightDnD store view make = do
         0 -> do
           rows <- selectionDataGet selectionTypeInteger
           liftIO $ do
-            fmaybeM_ rows $ \rows -> do
+            withJust rows $ \rows -> do
               base <- getTargetRow store view y pred
               forM_ (reorder base rows) $ \(f, t) -> do
                 v <- listStoreGetValue store f

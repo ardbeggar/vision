@@ -31,7 +31,7 @@ module Utils
   , catchResult
   , setupTreeViewPopup
   , dialogAddButtonCR
-  , fmaybeM_
+  , withJust
   , withSignalBlocked
   , hideOnDeleteEvent
   , eqBy
@@ -147,8 +147,8 @@ dialogAddButtonCR dialog label response = do
 fmaybe :: b -> Maybe a -> (a -> b) -> b
 fmaybe = flip . maybe
 
-fmaybeM_ :: Monad m => Maybe a -> (a -> m b) -> m ()
-fmaybeM_ m f = fmaybe (return ()) m $ \a -> f a >> return ()
+withJust :: Monad m => Maybe a -> (a -> m b) -> m ()
+withJust m f = fmaybe (return ()) m $ \a -> f a >> return ()
 
 withSignalBlocked s f =
   block $ do
