@@ -34,13 +34,18 @@ import Data.Char
 import Graphics.UI.Gtk
 
 
-getTargetRow store view y f = do
+getTargetRow store view y reorder = do
   maybePos <- treeViewGetPathAtPos view (0, y)
   case maybePos of
-    Just ([n], _, _) ->
+    Just ([n], _, _) | reorder ->
       return n
+    Just ([n], column, _) -> do
+      Rectangle _ cy _ ch <- treeViewGetCellArea view (Just [n]) column
+      return $ if y - cy > 2 * ch `div` 3 then n + 1 else n
+    Nothing | reorder ->
+      pred <$> listStoreGetSize store
     Nothing ->
-      f <$> listStoreGetSize store
+      listStoreGetSize store
 
 reorder = reorderDown 0
   where reorderDown _ _ [] = []

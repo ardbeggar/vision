@@ -235,7 +235,7 @@ setupRightDnD store view make = do
           rows <- selectionDataGet selectionTypeInteger
           liftIO $ do
             withJust rows $ \rows -> do
-              base <- getTargetRow store view y pred
+              base <- getTargetRow store view y True
               forM_ (reorder base rows) $ \(f, t) -> do
                 v <- listStoreGetValue store f
                 listStoreRemove store f
@@ -245,7 +245,7 @@ setupRightDnD store view make = do
           names <- selectionDataGetStringList
           liftIO $ do
             props <- map make . catMaybes <$> mapM property names
-            base  <- getTargetRow store view y id
+            base  <- getTargetRow store view y False
             zipWithM_ (listStoreInsert store) [base .. ] props
             dragFinish ctxt True False tstamp
         _ ->
