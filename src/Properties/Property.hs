@@ -162,6 +162,8 @@ builtinProperties =
       , ("Chorus master", "chorus_master",
          PropertyString, False, Nothing, Nothing)
       , ("Chorus", "chorus",
+         PropertyString, False, Nothing, Nothing)
+      , ("Channel", "channel",
          PropertyString, False, Nothing, Nothing) ]
 
 
