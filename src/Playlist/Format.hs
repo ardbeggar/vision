@@ -136,6 +136,8 @@ loadFormatDefs = do
             \{Performer}][\n\
             \[{Conductor}, ]{Orchestra}][\n\
             \[{Chorus master}, ]{Chorus}]"
+          , "[<b>{Title}</b>\n]\
+            \{Channel}"
           , "[{Track} ]<b>{Title}</b>\n\
             \{Artist} — {Album}" ]
 
