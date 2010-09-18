@@ -104,7 +104,21 @@ insertURIs' _ _ [] = return ()
 insertURIs' name base (Nothing : rest) = insertURIs' name base rest
 insertURIs' name base ((Just uri) : rest) =
   xformMediaBrowse xmms uri >>* do
-    func <- catchResult playlistInsertURL (const playlistRInsert)
-    liftIO $ do
-      func xmms name base uri
-      insertURIs' name base rest
+    isDir <- catchResult False (const True)
+    liftIO $
+      if isDir
+      then do
+        playlistRInsert xmms name base uri
+        insertURIs' name base rest
+      else do
+        let insertColl coll = do
+              playlistInsertCollection xmms name base coll []
+              return ()
+            insertURL = do
+              playlistInsertURL xmms name base uri
+              return ()
+        collIdlistFromPlaylistFile xmms uri >>* do
+          func <- catchResult insertURL insertColl
+          liftIO $ do
+            func
+            insertURIs' name base rest
