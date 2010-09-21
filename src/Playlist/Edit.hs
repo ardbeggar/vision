@@ -58,6 +58,8 @@ editPaste append = do
             p xmms2MlibIdTarget (selectionDataGet selectionTypeInteger) insertIds
           | uriListTarget `elem` targets =
             p uriListTarget selectionDataGetURIs insertURIs
+          | stringTarget `elem` targets =
+            p stringTarget selectionDataGetText $ insertURIs . (: [])
           | otherwise =
             return ()
         p target get put =
@@ -79,7 +81,10 @@ editInvertSelection = do
 
 editCheckClipboard = do
   targets <- getClipboardTargets
-  return $ elem xmms2MlibIdTarget targets || elem uriListTarget targets
+  return $
+    elem xmms2MlibIdTarget targets ||
+    elem uriListTarget targets ||
+    elem stringTarget targets
 
 copyIds tracks = do
   ids <- playlistGetIds tracks
