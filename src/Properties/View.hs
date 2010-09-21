@@ -177,7 +177,7 @@ makePropertyView make _ notify = do
 
 setupLeftDnD left = do
   targetList <- targetListNew
-  targetListAdd targetList propertyNameList [TargetSameApp] 0
+  targetListAdd targetList propertyNameListTarget [TargetSameApp] 0
 
   dragSourceSet left [Button1] [ActionCopy]
   dragSourceSetTargetList left targetList
@@ -195,7 +195,7 @@ setupLeftDnD left = do
 
 setupRightDnD store view make = do
   targetList <- targetListNew
-  targetListAdd targetList indexList [TargetSameWidget] 0
+  targetListAdd targetList indexListTarget [TargetSameWidget] 0
 
   dragSourceSet view [Button1] [ActionMove]
   dragSourceSetTargetList view targetList
@@ -207,8 +207,8 @@ setupRightDnD store view make = do
     return ()
 
   targetList <- targetListNew
-  targetListAdd targetList indexList [TargetSameWidget] 0
-  targetListAdd targetList propertyNameList [TargetSameApp] 1
+  targetListAdd targetList indexListTarget [TargetSameWidget] 0
+  targetListAdd targetList propertyNameListTarget [TargetSameApp] 1
 
   dragDestSet view [DestDefaultMotion, DestDefaultHighlight]
     [ActionCopy, ActionMove]

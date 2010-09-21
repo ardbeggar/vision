@@ -239,7 +239,7 @@ updateWindowTitle = do
 editCopy = do
   ids <- getSelectedIds
   clipboardSetWithData clipboard
-    [(xmms2MlibId, 0)]
+    [(xmms2MlibIdTarget, 0)]
     (const $ selectionDataSet selectionTypeInteger ids)
     (return ())
   return ()

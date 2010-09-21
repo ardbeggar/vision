@@ -18,21 +18,21 @@
 --
 
 module Atoms
-  ( xmms2PosList
-  , xmms2MlibId
-  , indexList
-  , propertyNameList
-  , mlibIdClipboard
-  , uriList
+  ( xmms2PosListTarget
+  , xmms2MlibIdTarget
+  , indexListTarget
+  , propertyNameListTarget
+  , uriListTarget
+  , stringTarget
   ) where
 
 import Graphics.UI.Gtk
 import System.IO.Unsafe
 
 
-xmms2PosList     = unsafePerformIO $ atomNew "application/x-xmms2poslist"
-xmms2MlibId      = unsafePerformIO $ atomNew "application/x-xmms2mlibid"
-indexList        = unsafePerformIO $ atomNew "application/x-visionindexlist"
-propertyNameList = unsafePerformIO $ atomNew "application/x-visionpropertynamelist"
-mlibIdClipboard  = unsafePerformIO $ atomNew "_VISION_MEDIAID_CLIPBOARD"
-uriList          = unsafePerformIO $ atomNew "text/uri-list"
+xmms2PosListTarget = unsafePerformIO $ atomNew "application/x-xmms2poslist"
+xmms2MlibIdTarget = unsafePerformIO $ atomNew "application/x-xmms2mlibid"
+indexListTarget = unsafePerformIO $ atomNew "application/x-visionindexlist"
+propertyNameListTarget = unsafePerformIO $ atomNew "application/x-visionpropertynamelist"
+uriListTarget = unsafePerformIO $ atomNew "text/uri-list"
+stringTarget =  unsafePerformIO $ atomNew "STRING"

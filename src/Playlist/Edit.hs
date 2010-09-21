@@ -54,10 +54,10 @@ editPaste append = do
   targets <- getClipboardTargets
   paste targets
   where paste targets
-          | xmms2MlibId `elem` targets =
-            p xmms2MlibId (selectionDataGet selectionTypeInteger) insertIds
-          | uriList `elem` targets =
-            p uriList selectionDataGetURIs insertURIs
+          | xmms2MlibIdTarget `elem` targets =
+            p xmms2MlibIdTarget (selectionDataGet selectionTypeInteger) insertIds
+          | uriListTarget `elem` targets =
+            p uriListTarget selectionDataGetURIs insertURIs
           | otherwise =
             return ()
         p target get put =
@@ -79,12 +79,12 @@ editInvertSelection = do
 
 editCheckClipboard = do
   targets <- getClipboardTargets
-  return $ elem xmms2MlibId targets || elem uriList targets
+  return $ elem xmms2MlibIdTarget targets || elem uriListTarget targets
 
 copyIds tracks = do
   ids <- playlistGetIds tracks
   clipboardSetWithData clipboard
-    [(xmms2MlibId, 0)]
+    [(xmms2MlibIdTarget, 0)]
     (const $ selectionDataSet selectionTypeInteger ids)
     (return ())
   return ()

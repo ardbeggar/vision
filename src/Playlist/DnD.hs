@@ -45,7 +45,7 @@ setupDnD = do
       store = playlistStore
 
   targetList <- targetListNew
-  targetListAdd targetList xmms2PosList [TargetSameWidget] 0
+  targetListAdd targetList xmms2PosListTarget [TargetSameWidget] 0
 
   dragSourceSet view [Button1] [ActionMove]
   dragSourceSetTargetList view targetList
@@ -57,8 +57,8 @@ setupDnD = do
     return ()
 
   targetList <- targetListNew
-  targetListAdd targetList xmms2PosList [TargetSameWidget] 0
-  targetListAdd targetList xmms2MlibId [TargetSameApp] 1
+  targetListAdd targetList xmms2PosListTarget [TargetSameWidget] 0
+  targetListAdd targetList xmms2MlibIdTarget [TargetSameApp] 1
   targetListAddUriTargets targetList 2
 
   dragDestSet view [DestDefaultMotion, DestDefaultHighlight]

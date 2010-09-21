@@ -33,7 +33,7 @@ import Collection.View
 
 setupDnD = do
   targetList <- targetListNew
-  targetListAdd targetList xmms2MlibId [TargetSameApp] 0
+  targetListAdd targetList xmms2MlibIdTarget [TargetSameApp] 0
 
   dragSourceSet collView [Button1] [ActionCopy]
   dragSourceSetTargetList collView targetList
