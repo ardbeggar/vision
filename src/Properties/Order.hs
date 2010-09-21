@@ -45,9 +45,8 @@ showOrderDialog dialog getOrder setOrder =
   setOrder
   False window
 
-makeOrderDialog setup =
-  makeEditorDialog [(stockApply, ResponseApply)]
-  makeOrderView setup
+makeOrderDialog =
+  makeEditorDialog [(stockApply, ResponseApply)] makeOrderView
 
 makeOrderView parent onState = do
   view <- makePropertyView (, False) parent onState

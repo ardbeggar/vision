@@ -80,9 +80,10 @@ property name =
 loadProperties = do
   props  <- config "properties.conf" []
   mapM_ (listStoreAppend propertyStore) =<<
-    (modifyMVar propertyMap $ \m -> do
-        let m' = Map.union m $ mkMap props
-        return (m', Map.elems m'))
+    modifyMVar propertyMap
+    (\m ->
+      let m' = Map.union m $ mkMap props in
+      return (m', Map.elems m'))
 
 getProperties =
   withMVar propertyMap $ return . Map.elems
@@ -90,9 +91,10 @@ getProperties =
 setProperties props = do
   listStoreClear propertyStore
   mapM_ (listStoreAppend propertyStore) =<<
-    (modifyMVar propertyMap $ const $ do
-        let m = mkMap props
-        return (m, Map.elems m))
+    modifyMVar propertyMap
+    (const $
+     let m = mkMap props in
+     return (m, Map.elems m))
   writeConfig "properties.conf" props
   onProperties $ invoke ()
 

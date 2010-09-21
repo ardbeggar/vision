@@ -34,6 +34,8 @@ module Playlist.Control
 import Control.Monad
 import Control.Monad.Trans
 
+import Data.Maybe
+
 import Network.URL
 
 import XMMS2.Client
@@ -98,11 +100,10 @@ insertURIs uris pos = do
   base <- case pos of
     Just n  -> return n
     Nothing -> getPlaylistSize
-  insertURIs' name base $ map (decString False) $ reverse uris
+  insertURIs' name base . mapMaybe (decString False) $ reverse uris
 
 insertURIs' _ _ [] = return ()
-insertURIs' name base (Nothing : rest) = insertURIs' name base rest
-insertURIs' name base ((Just uri) : rest) =
+insertURIs' name base (uri : rest) =
   xformMediaBrowse xmms uri >>* do
     isDir <- catchResult False (const True)
     liftIO $

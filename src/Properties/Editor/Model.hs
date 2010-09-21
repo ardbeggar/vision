@@ -39,9 +39,9 @@ import Control.Applicative
 import Control.Arrow
 
 import Data.Maybe
-import Data.List hiding (lookup)
+import Data.List hiding (lookup, union)
 import Data.Array
-import Data.Map (Map)
+import Data.Map (Map, union)
 import qualified Data.Map as Map
 
 import Graphics.UI.Gtk hiding (add, get, Entry)
@@ -250,15 +250,13 @@ writeProperty id (key, val) =
 extractChanges = do
   s <- get
   let c = sCurrent s
-      e = case sPerTrack s of
-        True  ->
-          Map.insert (sIds s ! sPos s) c (sEntries s)
-        False ->
-          let u = snd c in
-          Map.map (second $ Map.union u) $ sEntries s
-      e' = Map.map (\(b, c) -> (Map.union c b, Map.empty)) e
+      e = if sPerTrack s
+          then Map.insert (sIds s ! sPos s) c (sEntries s)
+          else let u = snd c in
+          Map.map (second $ union u) $ sEntries s
+      e' = Map.map (\(b, c) -> (c `union` b, Map.empty)) e
   put s { sEntries = e'
-        , sCurrent = (Map.union (snd c) (fst c), Map.empty)
+        , sCurrent = (snd c `union` fst c, Map.empty)
         }
   return $ map (\(id, (_, c)) -> (id, Map.toList c)) $ Map.toList e
 

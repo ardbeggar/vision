@@ -64,5 +64,5 @@ selectionDataGetStringList =
   maybe [] brk <$> selectionDataGet selectionTypeInteger
   where brk text = case break (== 0) text of
           (name, [])       -> [map chr name]
-          (name, _ : rest) -> (map chr name) : brk rest
+          (name, _ : rest) -> map chr name : brk rest
 
