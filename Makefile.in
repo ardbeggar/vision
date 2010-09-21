@@ -22,8 +22,7 @@ clean:
 
 lint:
 	rm -f hlint.out
-	-find ./src/ -type f -name "*.hs" -exec hlint {} \; | \
-		grep -v '^No suggestions$$' >> hlint.out
+	-hlint src > hlint.out
 
 .PHONY: all-dev install build configure-dev clean lint
 else
