@@ -21,8 +21,6 @@ module Utils
   ( HandlerMVar
   , makeHandlerMVar
   , onHandler
-  , mapFst
-  , mapSnd
   , encodeURL
   , decodeURL
   , trd
@@ -60,9 +58,6 @@ type HandlerMVar a = MVar (Handler IO a)
 makeHandlerMVar = newMVar make
 
 onHandler = modifyMVar
-
-mapFst f (a, b) = (f a, b)
-mapSnd f (a, b) = (a, f b)
 
 encodeURL = encodeURL' . encodeString
 encodeURL' [] = []

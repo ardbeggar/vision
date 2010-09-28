@@ -32,6 +32,7 @@ module Properties.Property
 import Prelude hiding (lookup)
 
 import Control.Applicative
+import Control.Arrow
 import Control.Monad
 
 import Data.Maybe
@@ -74,7 +75,7 @@ data Property
              , propShowValue :: Maybe PropertyShow }
 
 instance Read Property where
-  readsPrec x s = map (mapFst mk) (readsPrec x s)
+  readsPrec x s = map (first mk) (readsPrec x s)
 
 instance Show Property where
   show p = show (propName p, propKey p, propType p, propReadOnly p)

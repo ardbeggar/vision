@@ -33,6 +33,7 @@ module Playback
   , requestCurrentTrack
   ) where
 
+import Control.Arrow
 import Control.Concurrent.MVar
 import Control.Monad.Trans
 
@@ -124,7 +125,7 @@ requestStatus =
 
 requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
-    new <- catchResult Nothing (Just . mapFst fromIntegral)
+    new <- catchResult Nothing (Just . first fromIntegral)
     liftIO $ do
       old <- modifyMVar state $ \state ->
         return (state { sCurrentTrack = new }, sCurrentTrack state)
