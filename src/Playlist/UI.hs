@@ -21,8 +21,6 @@ module Playlist.UI
   ( setupUI
   ) where
 
-import Control.Applicative
-
 import System.IO.Unsafe
 
 import Graphics.UI.Gtk hiding (add)
