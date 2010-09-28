@@ -59,7 +59,7 @@ editPaste append = do
           | uriListTarget `elem` targets =
             p uriListTarget selectionDataGetURIs insertURIs
           | stringTarget `elem` targets =
-            p stringTarget selectionDataGetText $ insertURIs . (: [])
+            p stringTarget selectionDataGetText $ insertURIs . lines
           | otherwise =
             return ()
         p target get put =
