@@ -206,50 +206,26 @@ setupRightDnD store view make = do
     selectionDataSet selectionTypeInteger $ map head rows
     return ()
 
-  targetList <- targetListNew
-  targetListAdd targetList indexListTarget [TargetSameWidget] 0
-  targetListAdd targetList propertyNameListTarget [TargetSameApp] 1
-
-  dragDestSet view [DestDefaultMotion, DestDefaultHighlight]
+  setupDest view
+    [DestDefaultMotion, DestDefaultHighlight]
     [ActionCopy, ActionMove]
-  dragDestSetTargetList view targetList
-
-  dropRef <- newIORef False
-
-  view `on` dragDrop $ \ctxt _ tstamp -> do
-    maybeTarget <- dragDestFindTarget view ctxt (Just targetList)
-    case maybeTarget of
-      Just target -> do
-        writeIORef dropRef True
-        dragGetData view ctxt target tstamp
-        return True
-      Nothing ->
-        return False
-
-  view `on` dragDataReceived $ \ctxt (_, y) infoId tstamp -> do
-    drop <- liftIO $ readIORef dropRef
-    when drop $ do
-      liftIO $ writeIORef dropRef False
-      case infoId of
-        0 -> do
-          rows <- selectionDataGet selectionTypeInteger
-          liftIO $ do
-            withJust rows $ \rows -> do
-              base <- getTargetRow store view y True
-              forM_ (reorder base rows) $ \(f, t) -> do
-                v <- listStoreGetValue store f
-                listStoreRemove store f
-                listStoreInsert store t v
-            dragFinish ctxt True True tstamp
-        1 -> do
-          names <- selectionDataGetStringList
-          liftIO $ do
-            props <- map make . catMaybes <$> mapM property names
-            base  <- getTargetRow store view y False
-            zipWithM_ (listStoreInsert store) [base .. ] props
-            dragFinish ctxt True False tstamp
-        _ ->
-          liftIO $ dragFinish ctxt False False tstamp
+    [ indexListTarget :>: \(_, y) -> do
+         rows <- selectionDataGet selectionTypeInteger
+         liftIO $ withJust rows $ \rows -> do
+           base <- getTargetRow store view y True
+           forM_ (reorder base rows) $ \(f, t) -> do
+             v <- listStoreGetValue store f
+             listStoreRemove store f
+             listStoreInsert store t v
+         return (True, True)
+    , propertyNameListTarget :>: \(_, y) -> do
+         names <- selectionDataGetStringList
+         liftIO $ do
+           props <- map make . catMaybes <$> mapM property names
+           base  <- getTargetRow store view y False
+           zipWithM_ (listStoreInsert store) [base .. ] props
+         return (True, False)
+    ]
 
   view `on` dragDataDelete $ \_ ->
     treeSelectionUnselectAll sel
