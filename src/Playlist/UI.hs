@@ -21,11 +21,13 @@ module Playlist.UI
   ( setupUI
   ) where
 
+import Control.Applicative
+
 import System.IO.Unsafe
 
 import Graphics.UI.Gtk hiding (add)
 
-import XMMS2.Client
+import XMMS2.Client hiding (Data)
 
 import UI
 import XMMS
@@ -38,6 +40,7 @@ import Clipboard
 import Location
 import Collection
 import Compound
+import Editor
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
@@ -54,8 +57,10 @@ setupUI = do
     windowSetTitle outerw "Sort playlist"
     windowSetDefaultSize outerw 500 400
 
+  urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
+
   srvAG <- actionGroupNew "server"
-  actionGroupAddActions srvAG $ srvActions orderDialog
+  actionGroupAddActions srvAG $ srvActions orderDialog urlEntryDialog
   onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
   insertActionGroup srvAG 1
 
@@ -226,7 +231,7 @@ uiActions =
     }
   ]
 
-srvActions orderDialog =
+srvActions orderDialog urlEntryDialog =
   [ ActionEntry
     { actionEntryName        = "play"
     , actionEntryLabel       = "_Play"
@@ -340,6 +345,14 @@ srvActions orderDialog =
     , actionEntryCallback    = browseCollection Nothing
     }
   , ActionEntry
+    { actionEntryName        = "add-media"
+    , actionEntryLabel       = "_Add media"
+    , actionEntryStockId     = Just stockAdd
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = runURLEntryDialog urlEntryDialog
+    }
+  , ActionEntry
     { actionEntryName        = "clear-playlist"
     , actionEntryLabel       = "_Clear playlist"
     , actionEntryStockId     = Just stockClear
@@ -380,3 +393,40 @@ srvActions orderDialog =
     , actionEntryCallback    = showPropertyImport
     }
   ]
+
+
+data URLEntry =
+  URLEntry { urlEntry :: Entry
+           , urlBox   :: HBox
+           }
+
+instance CompoundWidget URLEntry where
+  type Outer URLEntry = HBox
+  outer = urlBox
+
+instance EditorWidget URLEntry where
+  type Data URLEntry = String
+  setData e     = entrySetText (urlEntry e)
+  getData       = entryGetText . urlEntry
+  clearData     = flip setData ""
+  getState      = const $ return (True, True)
+  resetModified = const $ return ()
+  focusView     = widgetGrabFocus . urlEntry
+
+makeURLEntry _ _ = do
+  entry <- entryNew
+  box   <- hBoxNew False 0
+  containerSetBorderWidth box 7
+  boxPackStartDefaults box entry
+  return URLEntry { urlEntry = entry
+                  , urlBox   = box
+                  }
+
+makeURLEntryDialog =
+  makeEditorDialog [] makeURLEntry $ \v -> do
+    let outerw = outer v
+    windowSetTitle outerw "Add media"
+    windowSetDefaultSize outerw 500 (-1)
+
+runURLEntryDialog dlg =
+  runEditorDialog dlg (return "") (\uri -> insertURIs [uri] Nothing) False window
