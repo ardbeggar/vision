@@ -209,15 +209,11 @@ setupRightDnD store view make = do
   setupDest view
     [DestDefaultMotion, DestDefaultHighlight]
     [ActionCopy, ActionMove]
-    [ indexListTarget :>: \(_, y) -> do
-         rows <- selectionDataGet selectionTypeInteger
-         liftIO $ withJust rows $ \rows -> do
-           base <- getTargetRow store view y True
-           forM_ (reorder base rows) $ \(f, t) -> do
-             v <- listStoreGetValue store f
-             listStoreRemove store f
-             listStoreInsert store t v
-         return (True, True)
+    [ indexListTarget :>: reorderRows store view
+      (mapM_ $ \(f, t) -> do
+          v <- listStoreGetValue store f
+          listStoreRemove store f
+          listStoreInsert store t v)
     , propertyNameListTarget :>: \(_, y) -> do
          names <- selectionDataGetStringList
          liftIO $ do

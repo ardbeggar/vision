@@ -57,12 +57,7 @@ setupDnD = do
   setupDest view
     [DestDefaultMotion, DestDefaultHighlight]
     [ActionMove, ActionCopy]
-    [ xmms2PosListTarget :>: \(_, y) -> do
-         rows <- selectionDataGet selectionTypeInteger
-         liftIO $ withJust rows $ \rows -> do
-           base <- getTargetRow store view y True
-           moveTracks $ reorder base rows
-         return (True, True)
+    [ xmms2PosListTarget :>: reorderRows store view moveTracks
     , xmms2MlibIdTarget :>: \(_, y) -> do
          ids <- selectionDataGet selectionTypeInteger
          liftIO $ withJust ids $ \ids -> do

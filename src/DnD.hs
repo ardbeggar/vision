@@ -23,6 +23,7 @@
 module DnD
   ( getTargetRow
   , reorder
+  , reorderRows
   , selectionDataGetStringList
   , selectionDataSetStringList
   , CommonTargets (..)
@@ -42,6 +43,8 @@ import qualified Data.IntMap as IntMap
 
 import Graphics.UI.Gtk
 
+import Utils
+
 
 getTargetRow store view y reorder = do
   maybePos <- treeViewGetPathAtPos view (0, y)
@@ -55,6 +58,13 @@ getTargetRow store view y reorder = do
       pred <$> listStoreGetSize store
     Nothing ->
       listStoreGetSize store
+
+reorderRows store view f (_, y) = do
+  rows <- selectionDataGet selectionTypeInteger
+  liftIO $ withJust rows $ \rows -> do
+    base <- getTargetRow store view y True
+    f $ reorder base rows
+  return (True, True)
 
 reorder = reorderDown 0
   where reorderDown _ _ [] = []
