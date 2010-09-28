@@ -17,18 +17,12 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE TypeSynonymInstances, ExistentialQuantification #-}
-
 module Playlist.DnD
   ( setupDnD
   ) where
 
-import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-
-import Data.IORef
-import qualified Data.IntMap as IntMap
 
 import Graphics.UI.Gtk
 
@@ -86,63 +80,3 @@ setupDnD = do
 
   view `on` dragDataDelete $ \_ ->
     treeSelectionUnselectAll sel
-
-
-data CommonTargets
-  = URITargets
-
-class TargetClass t where
-  addToTargetList :: TargetList -> InfoId -> t -> IO ()
-
-instance TargetClass TargetTag where
-  addToTargetList tl id tg = targetListAdd tl tg [] id
-
-instance TargetClass CommonTargets where
-  addToTargetList tl id tg =
-    case tg of
-      URITargets -> targetListAddUriTargets tl id
-
-data Dest
-  = forall t. TargetClass t => t :|: Dest
-  | forall t. TargetClass t => t :>: (Point -> SelectionDataM (Bool, Bool))
-
-infixr 9 :|:, :>:
-
-
-setupDest widget defs acts dests = do
-  tl <- targetListNew
-  hm <- IntMap.fromList <$> zipWithM (setupDest' tl) [0 .. ] dests
-
-  dragDestSet widget defs acts
-  dragDestSetTargetList widget tl
-
-  dropRef <- newIORef False
-
-  widget `on` dragDrop $ \ctxt _ tstamp -> do
-    maybeTarget <- dragDestFindTarget widget ctxt (Just tl)
-    case maybeTarget of
-      Just target -> do
-        writeIORef dropRef True
-        dragGetData widget ctxt target tstamp
-        return True
-      Nothing ->
-        return False
-
-  widget `on` dragDataReceived $ \ctxt pos infoId tstamp -> do
-    drop <- liftIO $ readIORef dropRef
-    when drop $ do
-      liftIO $ writeIORef dropRef False
-      (ok, del) <- case IntMap.lookup (fromIntegral infoId) hm of
-        Just handler -> handler pos
-        Nothing      -> return (False, False)
-      liftIO $ dragFinish ctxt ok del tstamp
-
-  return ()
-
-setupDest' tl id (t :|: rest) = do
-  addToTargetList tl id t
-  setupDest' tl id rest
-setupDest' tl id (t :>: handler) = do
-  addToTargetList tl id t
-  return (fromIntegral id, handler)
-
