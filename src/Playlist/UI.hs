@@ -23,6 +23,8 @@ module Playlist.UI
 
 import System.IO.Unsafe
 
+import Network.URL
+
 import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client hiding (Data)
@@ -412,9 +414,10 @@ instance EditorWidget URLEntry where
   focusView     = widgetGrabFocus . urlEntry
 
 makeURLEntry _ _ = do
-  entry <- entryNew
   box   <- hBoxNew False 0
   containerSetBorderWidth box 7
+  entry <- entryNew
+  entrySetActivatesDefault entry True
   boxPackStartDefaults box entry
   return URLEntry { urlEntry = entry
                   , urlBox   = box
@@ -427,4 +430,7 @@ makeURLEntryDialog =
     windowSetDefaultSize outerw 500 (-1)
 
 runURLEntryDialog dlg =
-  runEditorDialog dlg (return "") (\uri -> insertURIs [uri] Nothing) False window
+  runEditorDialog dlg (return "")
+  (\str ->
+    insertURIs (map (encString False ok_url) $ lines str) Nothing)
+  False window
