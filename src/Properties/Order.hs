@@ -24,6 +24,7 @@ module Properties.Order
   , makeOrderDialog
   , showOrderDialog
   , encodeOrder
+  , makeOrderView
   ) where
 
 import Control.Monad

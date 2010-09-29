@@ -21,6 +21,8 @@ module Playlist.UI
   ( setupUI
   ) where
 
+import Control.Monad.Trans
+
 import System.IO.Unsafe
 
 import Network.URL
@@ -52,17 +54,40 @@ import Playlist.Control
 setupUI = do
   addUIActions uiActions
 
-  orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
-    let outerw = outer v
-    windowSetTitle outerw "Sort playlist"
-    windowSetDefaultSize outerw 500 400
-
   urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
 
+  order <- makeOrderView window (return ())
+  containerSetBorderWidth (outer order) 0
+
   srvAG <- actionGroupNew "server"
-  actionGroupAddActions srvAG $ srvActions orderDialog urlEntryDialog
+  actionGroupAddActions srvAG $ srvActions urlEntryDialog order
   onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
   insertActionGroup srvAG 1
+
+  button <- buttonNew
+  sort   <- getAction srvAG "do-sort-playlist"
+  actionConnectProxy sort button
+
+  box <- vBoxNew False 5
+  containerSetBorderWidth box 7
+  boxPackStartDefaults box $ outer order
+
+  bbox <- hButtonBoxNew
+  buttonBoxSetLayout bbox ButtonboxEnd
+  boxPackStart box bbox PackNatural 0
+  containerAdd bbox button
+
+  widgetShowAll box
+  widgetSetNoShowAll box True
+  widgetHide box
+
+  sort <- toggleActionNew "sort-playlist" "_Sort playlist" Nothing Nothing
+  actionGroupAddActionWithAccel uiActionGroup sort (Just "<Control>o")
+  sort `on` actionToggled $ do
+    active <- toggleActionGetActive sort
+    if active
+      then widgetShow box
+      else widgetHide box
 
   play  <- getAction srvAG "play"
   pause <- getAction srvAG "pause"
@@ -126,10 +151,21 @@ setupUI = do
   playlistView `onRowActivated` \[n] _ ->
     playTrack n
 
+  paned <- vPanedNew
+  paned `on` buttonPressEvent $ tryEvent $ do
+    LeftButton  <- eventButton
+    DoubleClick <- eventClick
+    liftIO $ actionActivate sort
+
+  boxPackStartDefaults contents paned
+
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
   containerAdd scroll playlistView
-  boxPackStartDefaults contents scroll
+  panedPack1 paned scroll True False
+
+  panedPack2 paned box False False
 
   playbar <- getWidget castToToolbar "ui/playbar"
   toolbarSetStyle playbar ToolbarIcons
@@ -231,7 +267,7 @@ uiActions =
     }
   ]
 
-srvActions orderDialog urlEntryDialog =
+srvActions urlEntryDialog order =
   [ ActionEntry
     { actionEntryName        = "play"
     , actionEntryLabel       = "_Play"
@@ -361,14 +397,6 @@ srvActions orderDialog urlEntryDialog =
     , actionEntryCallback    = clearPlaylist
     }
   , ActionEntry
-    { actionEntryName        = "sort-playlist"
-    , actionEntryLabel       = "_Sort playlist"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showOrderDialog orderDialog getOrder setOrder
-    }
-  , ActionEntry
     { actionEntryName        = "edit-properties"
     , actionEntryLabel       = "_Edit properties"
     , actionEntryStockId     = Just stockEdit
@@ -391,6 +419,16 @@ srvActions orderDialog urlEntryDialog =
     , actionEntryAccelerator = Just ""
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = showPropertyImport
+    }
+  , ActionEntry
+    { actionEntryName        = "do-sort-playlist"
+    , actionEntryLabel       = "_Sort playlist"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Nothing
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = do
+      setOrder =<< getData order
+      return ()
     }
   ]
 

@@ -30,6 +30,7 @@ module UI
   , addUIActions
   , getAction
   , windowGroup
+  , uiActionGroup
   ) where
 
 import Control.Applicative
