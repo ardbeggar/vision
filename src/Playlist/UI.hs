@@ -17,11 +17,17 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE TupleSections, DoRec #-}
+
 module Playlist.UI
   ( setupUI
   ) where
 
+import Control.Applicative
+import Control.Arrow
 import Control.Monad.Trans
+
+import Data.Maybe
 
 import System.IO.Unsafe
 
@@ -43,6 +49,7 @@ import Location
 import Collection
 import Compound
 import Editor
+import Config
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
@@ -446,7 +453,7 @@ runURLEntryDialog dlg =
 
 
 makeSortWidget ag = do
-  view <- makeOrderView window (return ())
+  rec { view <- makeOrderView window $ saveSortConfig view }
   containerSetBorderWidth (outer view) 0
 
   sort <- actionNew "do-sort-playlist" "_Sort playlist" Nothing Nothing
@@ -471,5 +478,18 @@ makeSortWidget ag = do
   widgetSetNoShowAll box True
   widgetHide box
 
+  loadSortConfig view
+
   return box
 
+  where loadSortConfig view = do
+          raw <- config configFile []
+          cnf <- catMaybes <$> mapM convert raw
+          setData view cnf
+        convert (name, desc) =
+          maybe Nothing (Just . (, desc)) <$> property name
+        saveSortConfig view = do
+          cnf <- getData view
+          writeConfig configFile $ map (first propName) cnf
+          return ()
+        configFile = "playlist-sort.conf"
