@@ -38,7 +38,6 @@ import Graphics.UI.Gtk
 import Atoms
 import Compound
 import Editor
-import Utils
 import DnD
 
 import Properties.Property
