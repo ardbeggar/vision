@@ -206,7 +206,7 @@ setupRightDnD store view make = do
     selectionDataSet selectionTypeInteger $ map head rows
     return ()
 
-  setupDest view
+  setupDragDest view
     [DestDefaultMotion, DestDefaultHighlight]
     [ActionCopy, ActionMove]
     [ indexListTarget :>: reorderRows store view

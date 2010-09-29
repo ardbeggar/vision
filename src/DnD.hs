@@ -21,15 +21,16 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module DnD
-  ( getTargetRow
-  , reorder
+  ( TargetClass (..)
+  , CommonTargets (..)
+  , Targets (..)
+  , DragDest (..)
+  , setupDragDest
+  , getTargetRow
   , reorderRows
+  , reorder
   , selectionDataGetStringList
   , selectionDataSetStringList
-  , CommonTargets (..)
-  , TargetClass (..)
-  , Dest (..)
-  , setupDest
   ) where
 
 import Control.Applicative
@@ -44,6 +45,75 @@ import qualified Data.IntMap as IntMap
 import Graphics.UI.Gtk
 
 import Utils
+
+
+class TargetClass t where
+  addToTargetList :: TargetList -> InfoId -> t -> IO ()
+
+
+instance TargetClass TargetTag where
+  addToTargetList tl id tg = targetListAdd tl tg [] id
+
+
+data CommonTargets
+  = URITargets
+
+instance TargetClass CommonTargets where
+  addToTargetList tl id tg =
+    case tg of
+      URITargets -> targetListAddUriTargets tl id
+
+
+data Targets
+  = forall t1 t2. (TargetClass t1, TargetClass t2) => t1 :|: t2
+
+infixr 5 :|:
+
+instance TargetClass Targets where
+  addToTargetList tl id (t1 :|: t2) = do
+    addToTargetList tl id t1
+    addToTargetList tl id t2
+
+
+data DragDest
+  = forall t. TargetClass t => t :>: (Point -> SelectionDataM (Bool, Bool))
+
+infix 4 :>:
+
+
+setupDragDest widget defs acts dests = do
+  tl <- targetListNew
+  hm <- IntMap.fromList <$> zipWithM (mk tl) [0 .. ] dests
+
+  dragDestSet widget defs acts
+  dragDestSetTargetList widget tl
+
+  dropRef <- newIORef False
+
+  widget `on` dragDrop $ \ctxt _ tstamp -> do
+    maybeTarget <- dragDestFindTarget widget ctxt (Just tl)
+    case maybeTarget of
+      Just target -> do
+        writeIORef dropRef True
+        dragGetData widget ctxt target tstamp
+        return True
+      Nothing ->
+        return False
+
+  widget `on` dragDataReceived $ \ctxt pos infoId tstamp -> do
+    drop <- liftIO $ readIORef dropRef
+    when drop $ do
+      liftIO $ writeIORef dropRef False
+      (ok, del) <- case IntMap.lookup (fromIntegral infoId) hm of
+        Just handler -> handler pos
+        Nothing      -> return (False, False)
+      liftIO $ dragFinish ctxt ok del tstamp
+
+  return ()
+
+  where mk tl id (ts :>: handler) = do
+          addToTargetList tl id ts
+          return (fromIntegral id, handler)
 
 
 getTargetRow store view y reorder = do
@@ -76,6 +146,7 @@ reorder = reorderDown 0
           | r == base = reorderUp (base + 1) rs
           | otherwise = (r, base) : reorderUp (base + 1) rs
 
+
 selectionDataSetStringList =
   selectionDataSet selectionTypeInteger . intercalate [0] . map (map ord)
 
@@ -84,63 +155,4 @@ selectionDataGetStringList =
   where brk text = case break (== 0) text of
           (name, [])       -> [map chr name]
           (name, _ : rest) -> map chr name : brk rest
-
-
-data CommonTargets
-  = URITargets
-
-class TargetClass t where
-  addToTargetList :: TargetList -> InfoId -> t -> IO ()
-
-instance TargetClass TargetTag where
-  addToTargetList tl id tg = targetListAdd tl tg [] id
-
-instance TargetClass CommonTargets where
-  addToTargetList tl id tg =
-    case tg of
-      URITargets -> targetListAddUriTargets tl id
-
-data Dest
-  = forall t. TargetClass t => t :|: Dest
-  | forall t. TargetClass t => t :>: (Point -> SelectionDataM (Bool, Bool))
-
-infixr 9 :|:, :>:
-
-
-setupDest widget defs acts dests = do
-  tl <- targetListNew
-  hm <- IntMap.fromList <$> zipWithM (setupDest' tl) [0 .. ] dests
-
-  dragDestSet widget defs acts
-  dragDestSetTargetList widget tl
-
-  dropRef <- newIORef False
-
-  widget `on` dragDrop $ \ctxt _ tstamp -> do
-    maybeTarget <- dragDestFindTarget widget ctxt (Just tl)
-    case maybeTarget of
-      Just target -> do
-        writeIORef dropRef True
-        dragGetData widget ctxt target tstamp
-        return True
-      Nothing ->
-        return False
-
-  widget `on` dragDataReceived $ \ctxt pos infoId tstamp -> do
-    drop <- liftIO $ readIORef dropRef
-    when drop $ do
-      liftIO $ writeIORef dropRef False
-      (ok, del) <- case IntMap.lookup (fromIntegral infoId) hm of
-        Just handler -> handler pos
-        Nothing      -> return (False, False)
-      liftIO $ dragFinish ctxt ok del tstamp
-
-  return ()
-
-setupDest' tl id (t :|: rest) = do
-  addToTargetList tl id t
-  setupDest' tl id rest
-setupDest' tl id (t :>: handler) = do
-  addToTargetList tl id t
-  return (fromIntegral id, handler)
 

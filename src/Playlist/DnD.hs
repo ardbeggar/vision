@@ -54,7 +54,7 @@ setupDnD = do
     selectionDataSet selectionTypeInteger $ map head rows
     return ()
 
-  setupDest view
+  setupDragDest view
     [DestDefaultMotion, DestDefaultHighlight]
     [ActionMove, ActionCopy]
     [ xmms2PosListTarget :>: reorderRows store view moveTracks
