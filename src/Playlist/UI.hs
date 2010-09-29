@@ -128,6 +128,7 @@ setupUI = do
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+  scrolledWindowSetShadowType scroll ShadowIn
   containerAdd scroll playlistView
   boxPackStartDefaults contents scroll
 
