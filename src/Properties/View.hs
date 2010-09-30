@@ -144,20 +144,19 @@ makePropertyView make _ notify = do
 
   containerAdd scroll right
 
-  left `onRowActivated` \[n] _ ->
-    listStoreGetValue propertyStore n >>=
-    listStoreAppend store . make >>
-    return ()
+  let addProps = do
+        sel  <- treeViewGetSelection left
+        rows <- treeSelectionGetSelectedRows sel
+        forM_ rows $ \[n] ->
+          listStoreAppend store . make =<<
+          listStoreGetValue propertyStore n
+
+  left `onRowActivated` \_ _ -> addProps
 
   left `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Return" <- eventKeyName
-    liftIO $ do
-      sel  <- treeViewGetSelection left
-      rows <- treeSelectionGetSelectedRows sel
-      forM_ rows $ \[n] ->
-        listStoreAppend store . make =<<
-        listStoreGetValue propertyStore n
+    liftIO addProps
 
   setupLeftDnD left
 
