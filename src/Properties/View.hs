@@ -144,6 +144,11 @@ makePropertyView make _ notify = do
 
   containerAdd scroll right
 
+  left `onRowActivated` \[n] _ ->
+    listStoreGetValue propertyStore n >>=
+    listStoreAppend store . make >>
+    return ()
+
   left `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Return" <- eventKeyName
