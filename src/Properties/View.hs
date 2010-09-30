@@ -191,14 +191,19 @@ setupLeftDnD left = do
     (mapM (liftM propName . listStoreGetValue propertyStore . head)
      =<< treeSelectionGetSelectedRows sel)
 
+  setupDragDest left
+    [DestDefaultMotion, DestDefaultHighlight]
+    [ActionMove]
+    [indexListTarget :>: \_ _ -> return (True, True)]
+
   return ()
 
 
 setupRightDnD store view make = do
   targetList <- targetListNew
-  targetListAdd targetList indexListTarget [TargetSameWidget] 0
+  targetListAdd targetList indexListTarget [TargetSameApp] 0
 
-  dragSourceSet view [Button1] [ActionMove]
+  dragSourceSet view [Button1] [ActionDefault, ActionMove]
   dragSourceSetTargetList view targetList
 
   sel <- treeViewGetSelection view
@@ -209,13 +214,13 @@ setupRightDnD store view make = do
 
   setupDragDest view
     [DestDefaultMotion, DestDefaultHighlight]
-    [ActionCopy, ActionMove]
+    [ActionCopy, ActionDefault]
     [ indexListTarget :>: reorderRows store view
       (mapM_ $ \(f, t) -> do
           v <- listStoreGetValue store f
           listStoreRemove store f
           listStoreInsert store t v)
-    , propertyNameListTarget :>: \(_, y) -> do
+    , propertyNameListTarget :>: \_ (_, y) -> do
          names <- selectionDataGetStringList
          liftIO $ do
            props <- map make . catMaybes <$> mapM property names
@@ -225,4 +230,5 @@ setupRightDnD store view make = do
     ]
 
   view `on` dragDataDelete $ \_ ->
-    treeSelectionUnselectAll sel
+    mapM_ (listStoreRemove store . head) . reverse
+    =<< treeSelectionGetSelectedRows sel
