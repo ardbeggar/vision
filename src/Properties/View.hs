@@ -182,12 +182,10 @@ setupLeftDnD left = do
   dragSourceSetTargetList left targetList
 
   sel <- treeViewGetSelection left
-  left `on` dragDataGet $ \_ _ _ -> do
-    names <- liftIO $ do
-      rows <- treeSelectionGetSelectedRows sel
-      forM rows $ liftM propName . listStoreGetValue propertyStore . head
-    selectionDataSetStringList names
-    return ()
+  left `on` dragDataGet $ \_ _ _ ->
+    selectionDataSetStringList =<< liftIO
+    (mapM (liftM propName . listStoreGetValue propertyStore . head)
+     =<< treeSelectionGetSelectedRows sel)
 
   return ()
 
