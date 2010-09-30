@@ -76,7 +76,7 @@ instance TargetClass Targets where
 
 
 data DragDest
-  = forall t. TargetClass t => t :>: (Point -> SelectionDataM (Bool, Bool))
+  = forall t. TargetClass t => t :>: (DragContext -> Point -> SelectionDataM (Bool, Bool))
 
 infix 4 :>:
 
@@ -105,7 +105,7 @@ setupDragDest widget defs acts dests = do
     when drop $ do
       liftIO $ writeIORef dropRef False
       (ok, del) <- case IntMap.lookup (fromIntegral infoId) hm of
-        Just handler -> handler pos
+        Just handler -> handler ctxt pos
         Nothing      -> return (False, False)
       liftIO $ dragFinish ctxt ok del tstamp
 
@@ -129,7 +129,7 @@ getTargetRow store view y reorder = do
     Nothing ->
       listStoreGetSize store
 
-reorderRows store view f (_, y) = do
+reorderRows store view f _ (_, y) = do
   rows <- selectionDataGet selectionTypeInteger
   liftIO $ withJust rows $ \rows -> do
     base <- getTargetRow store view y True
