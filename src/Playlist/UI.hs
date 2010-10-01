@@ -237,7 +237,7 @@ srvActions orderDialog urlEntryDialog =
     { actionEntryName        = "play"
     , actionEntryLabel       = "_Play"
     , actionEntryStockId     = Just stockMediaPlay
-    , actionEntryAccelerator = Just "<Control>space"
+    , actionEntryAccelerator = Just "<Control>Return"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = startPlayback False
     }
@@ -245,7 +245,7 @@ srvActions orderDialog urlEntryDialog =
     { actionEntryName        = "pause"
     , actionEntryLabel       = "_Pause"
     , actionEntryStockId     = Just stockMediaPause
-    , actionEntryAccelerator = Just "<Control>space"
+    , actionEntryAccelerator = Just "<Control>Return"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = pausePlayback
     }
