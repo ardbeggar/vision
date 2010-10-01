@@ -134,7 +134,7 @@ reorderRows store view f _ (_, y) = do
   liftIO $ withJust rows $ \rows -> do
     base <- getTargetRow store view y True
     f $ reorder base rows
-  return (True, True)
+  return (True, False)
 
 reorder = reorderDown 0
   where reorderDown _ _ [] = []
