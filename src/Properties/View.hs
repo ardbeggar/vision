@@ -32,6 +32,8 @@ import Control.Monad.Trans
 
 import Data.IORef
 import Data.Maybe
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 import Graphics.UI.Gtk
 
@@ -47,10 +49,12 @@ import Properties.Model
 data PropertyView a
   = PropertyView
     { vPaned            :: HPaned
+    , vFilter           :: TreeModelFilter
     , vLeft             :: TreeView
     , propertyViewStore :: ListStore (Property, a)
     , propertyViewRight :: TreeView
     , vModified         :: IORef Bool
+    , vSelected         :: IORef (Set String)
     }
 
 instance CompoundWidget (PropertyView a) where
@@ -73,9 +77,11 @@ propertyViewGetData =
 propertyViewSetData v d = do
   listStoreClear $ propertyViewStore v
   mapM_ (listStoreAppend $ propertyViewStore v) d
+  writeIORef (vSelected v) $ Set.fromList $ map (propName . fst) d
+  treeModelFilterRefilter (vFilter v)
 
 propertyViewClearData =
-  listStoreClear . propertyViewStore
+  flip propertyViewSetData []
 
 propertyViewSetupView pm =
   treeViewSetCursor (vLeft pm) [0] Nothing
@@ -90,6 +96,8 @@ propertyViewResetModified =
   flip writeIORef False . vModified
 
 makePropertyView make _ notify = do
+  selected <- newIORef Set.empty
+
   modified <- newIORef False
   let onChanged = do
         writeIORef modified True
@@ -103,7 +111,14 @@ makePropertyView make _ notify = do
   scrolledWindowSetShadowType scroll ShadowIn
   panedPack1 paned scroll True False
 
-  left <- treeViewNewWithModel propertyStore
+  filter <- treeModelFilterNew propertyStore []
+  treeModelFilterSetVisibleFunc filter $ Just $ \iter -> do
+    [n]   <- treeModelGetPath propertyStore iter
+    prop  <- listStoreGetValue propertyStore n
+    seld  <- readIORef selected
+    return $ Set.notMember (propName prop) seld
+
+  left <- treeViewNewWithModel filter
   treeViewSetHeadersVisible left False
 
   sel <- treeViewGetSelection left
@@ -144,12 +159,16 @@ makePropertyView make _ notify = do
 
   containerAdd scroll right
 
-  let addProps = do
-        sel  <- treeViewGetSelection left
-        rows <- treeSelectionGetSelectedRows sel
-        forM_ rows $ \[n] ->
-          listStoreAppend store . make =<<
-          listStoreGetValue propertyStore n
+  let updFilter func props = do
+        modifyIORef selected $ func (Set.fromList $ map propName props)
+        treeModelFilterRefilter filter
+      addProps = do
+        sel   <- treeViewGetSelection left
+        rows  <- treeSelectionGetSelectedRows sel
+        rows  <- mapM (treeModelFilterConvertPathToChildPath filter) rows
+        props <- mapM (listStoreGetValue propertyStore . head) rows
+        mapM (listStoreAppend store . make) props
+        updFilter Set.union props
 
   left `onRowActivated` \_ _ -> addProps
 
@@ -158,27 +177,32 @@ makePropertyView make _ notify = do
     "Return" <- eventKeyName
     liftIO addProps
 
-  setupLeftDnD left
+  setupLeftDnD filter left
 
   right `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Delete" <- eventKeyName
     liftIO $ do
-      sel  <- treeViewGetSelection right
-      rows <- treeSelectionGetSelectedRows sel
+      sel   <- treeViewGetSelection right
+      rows  <- treeSelectionGetSelectedRows sel
+      props <- mapM (listStoreGetValue store . head) rows
       mapM_ (listStoreRemove store . head) $ reverse rows
+      updFilter (flip Set.difference) $ map fst props
 
-  setupRightDnD store right make
+
+  setupRightDnD store right make updFilter
 
   return PropertyView { vPaned            = paned
+                      , vFilter           = toTreeModelFilter filter
                       , vLeft             = left
                       , propertyViewStore = store
                       , propertyViewRight = right
                       , vModified         = modified
+                      , vSelected         = selected
                       }
 
 
-setupLeftDnD left = do
+setupLeftDnD filter left = do
   targetList <- targetListNew
   targetListAdd targetList propertyNameListTarget [TargetSameApp] 0
 
@@ -186,10 +210,12 @@ setupLeftDnD left = do
   dragSourceSetTargetList left targetList
 
   sel <- treeViewGetSelection left
-  left `on` dragDataGet $ \_ _ _ ->
-    selectionDataSetStringList =<< liftIO
-    (mapM (liftM propName . listStoreGetValue propertyStore . head)
-     =<< treeSelectionGetSelectedRows sel)
+  left `on` dragDataGet $ \_ _ _ -> do
+    names <- liftIO $ do
+      rows <- treeSelectionGetSelectedRows sel
+      rows <- mapM (treeModelFilterConvertPathToChildPath filter) rows
+      mapM (liftM propName . listStoreGetValue propertyStore . head) rows
+    selectionDataSetStringList names
 
   setupDragDest left
     [DestDefaultMotion, DestDefaultHighlight]
@@ -199,7 +225,7 @@ setupLeftDnD left = do
   return ()
 
 
-setupRightDnD store view make = do
+setupRightDnD store view make updFilter = do
   targetList <- targetListNew
   targetListAdd targetList indexListTarget [TargetSameApp] 0
 
@@ -226,9 +252,12 @@ setupRightDnD store view make = do
            props <- map make . catMaybes <$> mapM property names
            base  <- getTargetRow store view y False
            zipWithM_ (listStoreInsert store) [base .. ] props
+           updFilter Set.union $ map fst props
          return (True, False)
     ]
 
-  view `on` dragDataDelete $ \_ ->
-    mapM_ (listStoreRemove store . head) . reverse
-    =<< treeSelectionGetSelectedRows sel
+  view `on` dragDataDelete $ \_ -> do
+    rows  <- treeSelectionGetSelectedRows sel
+    props <- mapM (listStoreGetValue store . head) rows
+    mapM_ (listStoreRemove store . head) $ reverse rows
+    updFilter (flip Set.difference) $ map fst props
