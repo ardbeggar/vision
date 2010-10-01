@@ -220,7 +220,10 @@ setupLeftDnD filter left = do
   setupDragDest left
     [DestDefaultMotion, DestDefaultHighlight]
     [ActionMove]
-    [indexListTarget :>: \_ _ -> return (True, True)]
+    [ indexListTarget :>: \_ _ -> do
+         liftIO $ signalStopEmission left "drag_data_received"
+         return (True, True)
+    ]
 
   return ()
 
