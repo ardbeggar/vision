@@ -25,7 +25,7 @@ import System.IO.Unsafe
 
 import Network.URL
 
-import Graphics.UI.Gtk hiding (add)
+import Graphics.UI.Gtk hiding (add, remove)
 
 import XMMS2.Client hiding (Data)
 
@@ -54,7 +54,13 @@ setupUI = do
 
   orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
     let outerw = outer v
-    windowSetTitle outerw "Sort playlist"
+        updateTitle = do
+          name <- getPlaylistName
+          windowSetTitle outerw $
+            "Sort playlist" ++ maybe "" (": " ++) name
+    cid <- onPlaylistUpdated . add . ever . const $ updateTitle
+    outerw `onDestroy` (onPlaylistUpdated $ remove cid)
+    updateTitle
     windowSetDefaultSize outerw 500 400
 
   urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
