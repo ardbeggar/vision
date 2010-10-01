@@ -182,13 +182,7 @@ makePropertyView make _ notify = do
   right `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Delete" <- eventKeyName
-    liftIO $ do
-      sel   <- treeViewGetSelection right
-      rows  <- treeSelectionGetSelectedRows sel
-      props <- mapM (listStoreGetValue store . head) rows
-      mapM_ (listStoreRemove store . head) $ reverse rows
-      updFilter (flip Set.difference) $ map fst props
-
+    liftIO $ deleteSelectedRows store right updFilter
 
   setupRightDnD store right make updFilter
 
@@ -200,7 +194,6 @@ makePropertyView make _ notify = do
                       , vModified         = modified
                       , vSelected         = selected
                       }
-
 
 setupLeftDnD filter left = do
   targetList <- targetListNew
@@ -259,8 +252,22 @@ setupRightDnD store view make updFilter = do
          return (True, False)
     ]
 
-  view `on` dragDataDelete $ \_ -> do
-    rows  <- treeSelectionGetSelectedRows sel
-    props <- mapM (listStoreGetValue store . head) rows
-    mapM_ (listStoreRemove store . head) $ reverse rows
-    updFilter (flip Set.difference) $ map fst props
+  view `on` dragDataDelete $ const $
+    deleteSelectedRows store view updFilter
+
+
+deleteSelectedRows store view updFilter = do
+  sel    <- treeViewGetSelection view
+  rows   <- map head <$> treeSelectionGetSelectedRows sel
+  props  <- mapM (listStoreGetValue store) rows
+  cursor <- treeViewGetCursor view
+  mapM_ (listStoreRemove store) $ reverse rows
+  updFilter (flip Set.difference) $ map fst props
+  case cursor of
+    ([n], c) -> do
+      size <- listStoreGetSize store
+      let up = length $ takeWhile (n >) rows
+          n' = min (n - up) $ max 0 (size - 1)
+          c' = maybe Nothing (Just . (, False)) c
+      treeViewSetCursor view [n'] c'
+    _ -> return ()
