@@ -362,8 +362,8 @@ srvActions orderDialog urlEntryDialog =
     , actionEntryCallback    = clearPlaylist
     }
   , ActionEntry
-    { actionEntryName        = "sort-playlist"
-    , actionEntryLabel       = "_Sort playlist"
+    { actionEntryName        = "sort-by"
+    , actionEntryLabel       = "_Sort by…"
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing

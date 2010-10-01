@@ -27,7 +27,7 @@
       <menu action="playlist">
         <menuitem action="add-media"/>
         <menuitem action="clear-playlist"/>
-        <menuitem action="sort-playlist"/>
+        <menuitem action="sort-by"/>
         <separator/>
         <menuitem action="configure-playlist"/>
       </menu>
