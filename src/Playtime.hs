@@ -107,6 +107,8 @@ resetState =
 handleCurrentId = do
   cid <- result
   liftIO $ do
+    setValue 0
+    setUpper bigNum
     setCurrentId $
       if cid == 0
       then Nothing
@@ -123,7 +125,6 @@ handleInfo (id, _, info) = do
 bigNum = 10000000000.0
 
 seek pos = do
-  putStrLn $ "seek to " ++ show pos
   eid <- disableUpdate
   playbackSeekMs xmms (round pos) SeekSet >>*
     liftIO (scheduleEnableUpdate eid)

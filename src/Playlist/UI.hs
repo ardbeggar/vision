@@ -33,7 +33,7 @@ import System.IO.Unsafe
 
 import Network.URL
 
-import Graphics.UI.Gtk hiding (add)
+import Graphics.UI.Gtk hiding (add, remove)
 
 import XMMS2.Client hiding (Data)
 
@@ -260,7 +260,7 @@ srvActions urlEntryDialog =
     { actionEntryName        = "play"
     , actionEntryLabel       = "_Play"
     , actionEntryStockId     = Just stockMediaPlay
-    , actionEntryAccelerator = Just "<Control>space"
+    , actionEntryAccelerator = Just "<Control>Return"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = startPlayback False
     }
@@ -268,7 +268,7 @@ srvActions urlEntryDialog =
     { actionEntryName        = "pause"
     , actionEntryLabel       = "_Pause"
     , actionEntryStockId     = Just stockMediaPause
-    , actionEntryAccelerator = Just "<Control>space"
+    , actionEntryAccelerator = Just "<Control>Return"
     , actionEntryTooltip     = Nothing
     , actionEntryCallback    = pausePlayback
     }

@@ -58,14 +58,14 @@ setupDnD = do
     [DestDefaultMotion, DestDefaultHighlight]
     [ActionMove, ActionCopy]
     [ xmms2PosListTarget :>: reorderRows store view moveTracks
-    , xmms2MlibIdTarget :>: \(_, y) -> do
+    , xmms2MlibIdTarget :>: \_ (_, y) -> do
          ids <- selectionDataGet selectionTypeInteger
          liftIO $ withJust ids $ \ids -> do
            name <- getPlaylistName
            base <- getTargetRow store view y False
            zipWithM_ (playlistInsertId xmms name) [base .. ] ids
          return (True, False)
-    , URITargets :>: \(_, y) -> do
+    , URITargets :>: \_ (_, y) -> do
          uris <- selectionDataGetURIs
          liftIO $ withJust uris $ \uris -> do
            base <- getTargetRow store view y False
