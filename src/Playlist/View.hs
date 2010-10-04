@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE TupleSections #-}
+
 module Playlist.View
   ( initView
   , playlistView
@@ -29,17 +31,17 @@ import Control.Applicative
 
 import Data.Maybe
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
 
 import Context
+import Handler
 import UI
 import Playback
 import Playlist.Model
 import Playlist.Index
 import Playlist.Format
---import Playlist.Control
 
 
 data View
@@ -94,6 +96,16 @@ initView = do
   cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
     info <- getInfoIfNeeded iter
     cell `set` [ cellText := trackInfoDuration info ]
+
+  beforeDeletingTrack . add . ever $ \t -> do
+    cursor <- treeViewGetCursor playlistView
+    case cursor of
+      ([p], c) | p == t -> do
+        s <- getPlaylistSize
+        let p' = if p + 1 < s then p + 1 else max (p - 1) 0
+            c' = maybe Nothing (Just . (, False)) c
+        treeViewSetCursor playlistView [p'] c'
+      _ -> return ()
 
   return ?context
 

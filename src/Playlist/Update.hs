@@ -107,6 +107,7 @@ handleChange = do
     when (name == playlist change) $
       case change of
         PlaylistRemove { position = p } -> do
+          beforeDeletingTrack $ invoke p
           listStoreRemove playlistStore p
           onPlaylistUpdated $ invoke ()
         PlaylistAdd { mlibId = id } -> do
@@ -118,6 +119,7 @@ handleChange = do
           addToIndex id n
           onPlaylistUpdated $ invoke ()
         PlaylistMove { mlibId = id, position = o, newPosition = n } -> do
+          beforeDeletingTrack $ invoke o
           listStoreRemove playlistStore o
           listStoreInsert playlistStore n id
           addToIndex id n
