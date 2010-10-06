@@ -213,9 +213,9 @@ setupLeftDnD left takeProps = do
   dragSourceSet left [Button1] [ActionCopy]
   dragSourceSetTargetList left targetList
 
-  left `on` dragDataGet $ \_ _ _ -> do
-    names <- liftIO (map propName <$> takeProps)
-    selectionDataSetStringList names
+  left `on` dragDataGet $ \_ _ _ ->
+    selectionDataSetStringList =<<
+    liftIO (map propName <$> takeProps)
 
   setupDragDest left
     [DestDefaultMotion, DestDefaultHighlight]
