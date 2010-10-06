@@ -162,22 +162,33 @@ makePropertyView make _ notify = do
   let updFilter func props = do
         modifyIORef selected $ func (Set.fromList $ map propName props)
         treeModelFilterRefilter filter
-      addProps = do
-        sel   <- treeViewGetSelection left
-        rows  <- treeSelectionGetSelectedRows sel
-        rows  <- mapM (treeModelFilterConvertPathToChildPath filter) rows
-        props <- mapM (listStoreGetValue propertyStore . head) rows
-        mapM (listStoreAppend store . make) props
+      takeProps = do
+        sel    <- treeViewGetSelection left
+        rows   <- treeSelectionGetSelectedRows sel
+        rows   <- mapM (liftM head . treeModelFilterConvertPathToChildPath filter) rows
+        props  <- mapM (listStoreGetValue propertyStore) rows
+        cursor <- treeViewGetCursor left
         updFilter Set.union props
+        case cursor of
+          ([n], c) -> do
+            size1 <- listStoreGetSize propertyStore
+            size2 <- Set.size <$> readIORef selected
+            let up = length $ takeWhile (n >) rows
+                n' = min (n - up) $ max 0 (size1 - size2 - 1)
+                c' = maybe Nothing (Just . (, False)) c
+            treeViewSetCursor left [n'] c'
+          _ -> return ()
+        return props
+      addProps =
+        mapM_ (listStoreAppend store . make) =<< takeProps
 
   left `onRowActivated` \_ _ -> addProps
-
   left `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Return" <- eventKeyName
     liftIO addProps
 
-  setupLeftDnD filter left
+  setupLeftDnD left takeProps
 
   right `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
@@ -195,19 +206,15 @@ makePropertyView make _ notify = do
                       , vSelected         = selected
                       }
 
-setupLeftDnD filter left = do
+setupLeftDnD left takeProps = do
   targetList <- targetListNew
   targetListAdd targetList propertyNameListTarget [TargetSameApp] 0
 
   dragSourceSet left [Button1] [ActionCopy]
   dragSourceSetTargetList left targetList
 
-  sel <- treeViewGetSelection left
   left `on` dragDataGet $ \_ _ _ -> do
-    names <- liftIO $ do
-      rows <- treeSelectionGetSelectedRows sel
-      rows <- mapM (treeModelFilterConvertPathToChildPath filter) rows
-      mapM (liftM propName . listStoreGetValue propertyStore . head) rows
+    names <- liftIO (map propName <$> takeProps)
     selectionDataSetStringList names
 
   setupDragDest left
