@@ -182,7 +182,9 @@ makePropertyView make _ notify = do
       addProps =
         mapM_ (listStoreAppend store . make) =<< takeProps
 
-  left `onRowActivated` \_ _ -> addProps
+  left `onRowActivated` \_ _ ->
+    addProps
+
   left `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Return" <- eventKeyName
@@ -190,10 +192,18 @@ makePropertyView make _ notify = do
 
   setupLeftDnD left takeProps
 
-  right `on` keyPressEvent $ tryEvent $ do
-    []       <- eventModifier
-    "Delete" <- eventKeyName
-    liftIO $ deleteSelectedRows store right updFilter
+  right `onRowActivated` \_ _ ->
+    deleteSelectedRows store right updFilter
+
+  right `on` keyPressEvent $ do
+    m <- eventModifier
+    k <- eventKeyName
+    case (m, k) of
+      ([], "Delete") -> do
+        liftIO $ deleteSelectedRows store right updFilter
+        return True
+      (_, "Return")  -> return True
+      _              -> return False
 
   setupRightDnD store right make updFilter
 
