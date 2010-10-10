@@ -23,7 +23,6 @@ module Playlist.View
   ( initView
   , playlistView
   , playlistSel
-  , updateWindowTitle
   , getSelectedTracks
   ) where
 
@@ -37,7 +36,6 @@ import XMMS2.Client
 
 import Context
 import Handler
-import UI
 import Playback
 import Playlist.Model
 import Playlist.Index
@@ -118,12 +116,6 @@ getInfoIfNeeded iter = do
     ([f], [t]) -> n >= f && t >= n
     _          -> False
 
-
-updateWindowTitle = do
-  maybeName <- getPlaylistName
-  setWindowTitle $ case maybeName of
-    Nothing   -> "Vision playlist"
-    Just name -> name ++ " - Vision playlist"
 
 initContext = do
   view <- treeViewNewWithModel playlistStore

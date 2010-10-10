@@ -47,6 +47,7 @@ import Playlist.View
 import Playlist.Edit
 import Playlist.Config
 import Playlist.Control
+import Playlist.Update
 
 
 setupUI = do
@@ -169,6 +170,9 @@ setupUI = do
   setupTreeViewPopup playlistView popup
 
   window `onDestroy` mainQuit
+
+  onPlaylistUpdated . add . ever . const $ updateWindowTitle
+  updateWindowTitle
 
 
 uiActions =
@@ -441,3 +445,9 @@ runURLEntryDialog dlg =
   (\str ->
     insertURIs (map (encString False ok_url) $ lines str) Nothing)
   False window
+
+updateWindowTitle = do
+  maybeName <- getPlaylistName
+  setWindowTitle $ case maybeName of
+    Nothing   -> "Vision playlist"
+    Just name -> name ++ " - Vision playlist"

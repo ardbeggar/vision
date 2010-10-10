@@ -41,9 +41,6 @@ initPlaylist =
   initFormat
 
 showPlaylist = do
-  context <- initUI
-  let ?context = context
-
   context <- initModel
   let ?context = context
 
@@ -56,9 +53,14 @@ showPlaylist = do
   context <- initPlaylistConfig
   let ?context = context
 
+  context <- initUpdate
+  let ?context = context
+
   setupSearch
-  setupUpdate
   setupDnD
+
+  context <- initUI
+  let ?context = context
   setupUI
 
   widgetShowAll window
