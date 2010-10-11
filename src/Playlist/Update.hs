@@ -18,7 +18,8 @@
 --
 
 module Playlist.Update
-  ( setupUpdate
+  ( initUpdate
+  , onPlaylistLoaded
   ) where
 
 import Control.Applicative
@@ -32,13 +33,23 @@ import XMMS2.Client
 
 import XMMS
 import Handler
+import Utils
+import Context
 import Playback
 import Playlist.Model
 import Playlist.Index
-import Playlist.View
 
 
-setupUpdate = do
+data Context
+  = Context { cOnPlaylistLoaded :: HandlerMVar () }
+
+onPlaylistLoaded = onHandler $ cOnPlaylistLoaded context
+
+
+initUpdate = do
+  context <- initContext
+  let ?context = context
+
   onServerConnectionAdd . ever $ \conn ->
     if conn
     then do
@@ -50,8 +61,8 @@ setupUpdate = do
         persist
     else do
       setPlaylistName Nothing
-      updateWindowTitle
       clearModel
+      onPlaylistLoaded $ invoke ()
 
   onPlaybackStatus . add . ever . const $ do
     maybeCT <- getCurrentTrack
@@ -78,12 +89,19 @@ setupUpdate = do
       _ ->
         return ()
 
+  return ?context
+
+initContext = do
+  onPlaylistLoaded <- makeHandlerMVar
+  return $ augmentContext
+    Context { cOnPlaylistLoaded = onPlaylistLoaded }
+
 setupPlaylist = do
   name <- result
   liftIO $ do
     setPlaylistName $ Just name
-    updateWindowTitle
     requestPlaylist name
+    onPlaylistLoaded $ invoke ()
 
 requestPlaylist name =
   playlistListEntries xmms (Just name) >>* handlePlaylist
