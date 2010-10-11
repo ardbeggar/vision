@@ -19,17 +19,35 @@
       </object>
     </child>
     <child>
-      <object class="GtkActionGroup" id="server-actions"/>
+      <object class="GtkActionGroup" id="server-actions">
+        <child>
+          <object class="GtkAction" id="play">
+            <property name="label">_Play</property>
+            <property name="stock_id">gtk-media-play</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="pause">
+            <property name="label">_Pause</property>
+            <property name="stock_id">gtk-media-pause</property>
+          </object>
+        </child>
+      </object>
     </child>
     <ui>
       <menubar name="menubar">
         <placeholder name="entries">
           <menu action="music">
+            <menuitem action="play"/>
+            <menuitem action="pause"/>
+            <separator/>
             <menuitem action="quit"/>
           </menu>
         </placeholder>
       </menubar>
       <toolbar name="playbar">
+        <toolitem action="play"/>
+        <toolitem action="pause"/>
       </toolbar>
     </ui>
   </object>

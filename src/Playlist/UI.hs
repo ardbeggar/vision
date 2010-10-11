@@ -42,7 +42,6 @@ import Location
 import Collection
 import Compound
 import Editor
-import Context
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
@@ -454,6 +453,10 @@ updateWindowTitle = do
     Just name -> name ++ " - Vision playlist"
 
 setupUIB builder = do
+  setupServerActions builder
+  setupPlaybar builder
+
+setupPlaybar builder = do
   playbar <- builderGetObject builder castToToolbar "playbar"
 
   sep <- separatorToolItemNew
@@ -480,3 +483,7 @@ setupUIB builder = do
   toolbarInsert playbar volumeItem (-1)
 
   return ()
+
+setupServerActions builder = do
+  ag <- builderGetObject builder castToActionGroup "server-actions"
+  onServerConnectionAdd . ever $ actionGroupSetSensitive ag
