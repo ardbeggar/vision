@@ -47,7 +47,6 @@ import Playlist.View
 import Playlist.Edit
 import Playlist.Config
 import Playlist.Control
-import Playlist.Update
 
 
 setupUI = do
