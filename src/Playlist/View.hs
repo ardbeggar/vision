@@ -50,9 +50,11 @@ playlistView = vView context
 playlistSel  = vSel context
 
 
-initView = do
-  context <- initContext
+initView builder = do
+  context <- initContext builder
   let ?context = context
+
+  treeViewSetModel playlistView playlistStore
 
   treeViewSetRulesHint playlistView True
   treeViewSetReorderable playlistView True
@@ -117,8 +119,8 @@ getInfoIfNeeded iter = do
     _          -> False
 
 
-initContext = do
-  view <- treeViewNewWithModel playlistStore
+initContext builder = do
+  view <- builderGetObject builder castToTreeView "playlist-view"
   sel  <- treeViewGetSelection view
   return $ augmentContext
     View { vView = view

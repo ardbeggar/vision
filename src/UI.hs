@@ -30,6 +30,9 @@ module UI
   , addUIActions
   , getAction
   , windowGroup
+  , initUIB
+  , makeUI
+  , makeBuilder
   ) where
 
 import Control.Applicative
@@ -147,3 +150,30 @@ uiActions =
     , actionEntryCallback    = showAbout window
     }
   ]
+
+
+initUIB builder = do
+  ui <- makeUI builder
+  let ?context =  augmentContext ui
+
+  windowAddAccelGroup window =<< uiManagerGetAccelGroup uiManager
+
+  return ?context
+
+makeUI builder = do
+  window        <- builderGetObject builder castToWindow "main-window"
+  contents      <- builderGetObject builder castToVBox "contents"
+  uiManager     <- builderGetObject builder castToUIManager "ui-manager"
+  uiActionGroup <- builderGetObject builder castToActionGroup "ui-actions"
+  windowGroup   <- windowGroupNew
+  return UI { uWindow      = window
+            , uContents    = contents
+            , uManager     = uiManager
+            , uActionGroup = uiActionGroup
+            , uWindowGroup = windowGroup
+            }
+
+makeBuilder name = do
+  builder <- builderNew
+  builderAddFromFile builder $ gladeFilePath name
+  return builder

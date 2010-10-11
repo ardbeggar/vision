@@ -25,6 +25,7 @@ module Environment
   , homeDir
   , dataDir
   , uiFilePath
+  , gladeFilePath
   , xmmsPath
   , maybeGetEnv
   ) where
@@ -64,4 +65,5 @@ maybeGetEnv var =
   (Just <$> getEnv var) `catch` \_ -> return Nothing
 
 uiFilePath name = dataDir </> "ui" </> name <.> "xml"
+gladeFilePath name = dataDir </> "ui" </> name <.> "glade"
 

@@ -41,13 +41,18 @@ initPlaylist =
   initFormat
 
 showPlaylist = do
+  builder <- makeBuilder "playlist"
+
+  context <- initUIB builder
+  let ?context = context
+
   context <- initModel
   let ?context = context
 
   context <- initIndex
   let ?context = context
 
-  context <- initView
+  context <- initView builder
   let ?context = context
 
   context <- initPlaylistConfig
@@ -58,9 +63,7 @@ showPlaylist = do
 
   setupSearch
   setupDnD
-
-  context <- initUI
-  let ?context = context
-  setupUI
+  setupUIB builder
 
   widgetShowAll window
+

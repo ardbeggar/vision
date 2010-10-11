@@ -19,6 +19,7 @@
 
 module Playlist.UI
   ( setupUI
+  , setupUIB
   ) where
 
 import System.IO.Unsafe
@@ -41,13 +42,13 @@ import Location
 import Collection
 import Compound
 import Editor
+import Context
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
 import Playlist.Edit
 import Playlist.Config
 import Playlist.Control
-import Playlist.Update
 
 
 setupUI = do
@@ -451,3 +452,8 @@ updateWindowTitle = do
   setWindowTitle $ case maybeName of
     Nothing   -> "Vision playlist"
     Just name -> name ++ " - Vision playlist"
+
+setupUIB _builder = do
+  return ()
+
+
