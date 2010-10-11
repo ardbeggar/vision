@@ -453,7 +453,30 @@ updateWindowTitle = do
     Nothing   -> "Vision playlist"
     Just name -> name ++ " - Vision playlist"
 
-setupUIB _builder = do
+setupUIB builder = do
+  playbar <- builderGetObject builder castToToolbar "playbar"
+
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
+
+  seekView <- makeSeekControl
+  seekItem <- toolItemNew
+  toolItemSetHomogeneous seekItem False
+  toolItemSetExpand seekItem True
+  containerAdd seekItem seekView
+  toolbarInsert playbar seekItem (-1)
+
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
+
+  volView <- makeVolumeControl
+  volumeItem <- toolItemNew
+  toolItemSetHomogeneous volumeItem False
+  toolItemSetExpand volumeItem False
+  widgetSetSizeRequest volumeItem 100 (-1)
+  containerAdd volumeItem volView
+  toolbarInsert playbar volumeItem (-1)
+
   return ()
-
-
