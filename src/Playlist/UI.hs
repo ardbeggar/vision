@@ -261,6 +261,8 @@ setupUIB builder = do
   popup <- getWidget castToMenu "ui/playlist-popup"
   setupTreeViewPopup playlistView popup
 
+  window `onDestroy` mainQuit
+
   return ()
 
 
