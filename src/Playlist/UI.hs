@@ -202,33 +202,7 @@ uiActions =
     }
   ]
 
-srvActions _orderDialog _urlEntryDialog =
-  [ ActionEntry
-    { actionEntryName        = "edit-properties"
-    , actionEntryLabel       = "_Edit properties"
-    , actionEntryStockId     = Just stockEdit
-    , actionEntryAccelerator = Just "<Alt>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyEditor
-    }
-  , ActionEntry
-    { actionEntryName        = "export-properties"
-    , actionEntryLabel       = "E_xport properties"
-    , actionEntryStockId     = Just stockSave
-    , actionEntryAccelerator = Just ""
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyExport
-    }
-  , ActionEntry
-    { actionEntryName        = "import-properties"
-    , actionEntryLabel       = "_Import properties"
-    , actionEntryStockId     = Just stockOpen
-    , actionEntryAccelerator = Just ""
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyImport
-    }
-  ]
-
+srvActions _orderDialog _urlEntryDialog = []
 
 data URLEntry =
   URLEntry { urlEntry :: Entry
@@ -326,16 +300,18 @@ setupServerActions builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  play   <- action builder "play"   $ startPlayback False
-  pause  <- action builder "pause"  $ pausePlayback
-  stop   <- action builder "stop"   $ stopPlayback
-  prev   <- action builder "prev"   $ prevTrack
-  next   <- action builder "next"   $ nextTrack
-  cut    <- action builder "cut"    $ editDelete True
-  copy   <- action builder "copy"   $ editCopy
-  paste  <- action builder "paste"  $ editPaste False
-  append <- action builder "append" $ editPaste True
-  delete <- action builder "delete" $ editDelete False
+  play   <- action builder "play"              $ startPlayback False
+  pause  <- action builder "pause"             $ pausePlayback
+  stop   <- action builder "stop"              $ stopPlayback
+  prev   <- action builder "prev"              $ prevTrack
+  next   <- action builder "next"              $ nextTrack
+  cut    <- action builder "cut"               $ editDelete True
+  copy   <- action builder "copy"              $ editCopy
+  paste  <- action builder "paste"             $ editPaste False
+  append <- action builder "append"            $ editPaste True
+  delete <- action builder "delete"            $ editDelete False
+  editp  <- action builder "edit-properties"   $ showPropertyEditor
+  export <- action builder "export-properties" $ showPropertyExport
 
   action builder "select-all"        $ editSelectAll
   action builder "invert-selection"  $ editInvertSelection
@@ -344,6 +320,7 @@ setupServerActions builder = do
   action builder "add-media"         $ runURLEntryDialog urlEntryDialog
   action builder "clear-playlist"    $ clearPlaylist
   action builder "sort-by"           $ showOrderDialog orderDialog getOrder setOrder
+  action builder "import-properties" $ showPropertyImport
 
   let setupPPS = do
         ps <- getPlaybackStatus
@@ -369,7 +346,8 @@ setupServerActions builder = do
         actionSetSensitive next en
       setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
-        mapM_ (`actionSetSensitive` (n /= 0)) [cut, copy, delete]
+        mapM_ (`actionSetSensitive` (n /= 0))
+          [cut, copy, delete, editp, export]
       setupPA = do
         en <- editCheckClipboard
         mapM_ (`actionSetSensitive` en) [paste, append]
@@ -393,6 +371,7 @@ setupServerActions builder = do
 setupUIActions builder = do
   action builder "quit"               mainQuit
   action builder "configure-playlist" showPlaylistConfigDialog
+  action builder "manage-properties"  showPropertyManager
   return ()
 
 action builder name func = do

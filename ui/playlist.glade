@@ -37,6 +37,17 @@
             <property name="stock_id">gtk-preferences</property>
           </object>
         </child>
+        <child>
+          <object class="GtkAction" id="properties">
+            <property name="label">P_roperties</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="manage-properties">
+            <property name="label">_Manage properties…</property>
+            <property name="stock_id">gtk-preferences</property>
+          </object>
+        </child>
       </object>
     </child>
     <child>
@@ -152,6 +163,27 @@
             <property name="label">_Sort by…</property>
           </object>
         </child>
+        <child>
+          <object class="GtkAction" id="edit-properties">
+            <property name="label">_Edit properties</property>
+            <property name="stock_id">gtk-edit</property>
+          </object>
+          <accelerator key="Return" modifiers="GDK_MOD1_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="export-properties">
+            <property name="label">E_xport properties…</property>
+            <property name="stock_id">gtk-save</property>
+          </object>
+          <accelerator/>
+        </child>
+        <child>
+          <object class="GtkAction" id="import-properties">
+            <property name="label">_Import properties…</property>
+            <property name="stock_id">gtk-open</property>
+          </object>
+          <accelerator/>
+        </child>
       </object>
     </child>
     <ui>
@@ -186,6 +218,13 @@
             <menuitem action="sort-by"/>
             <separator/>
             <menuitem action="configure-playlist"/>
+          </menu>
+          <menu action="properties">
+            <menuitem action="edit-properties"/>
+            <menuitem action="export-properties"/>
+            <menuitem action="import-properties"/>
+            <separator/>
+            <menuitem action="manage-properties"/>
           </menu>
         </placeholder>
       </menubar>
