@@ -50,8 +50,7 @@ import Playlist.Control
 
 
 setupUI builder = do
-  setupUIActions builder
-  setupServerActions builder
+  setupActions builder
   setupPlaybar builder
 
   playlistView `onRowActivated` \[n] _ ->
@@ -139,7 +138,7 @@ setupPlaybar builder = do
 
   return ()
 
-setupServerActions builder = do
+setupActions builder = do
   urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
 
   orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
@@ -169,14 +168,17 @@ setupServerActions builder = do
   editp  <- action builder "edit-properties"   $ showPropertyEditor
   export <- action builder "export-properties" $ showPropertyExport
 
-  action builder "select-all"        $ editSelectAll
-  action builder "invert-selection"  $ editInvertSelection
-  action builder "browse-location"   $ browseLocation SortAscending Nothing
-  action builder "browse-collection" $ browseCollection Nothing
-  action builder "add-media"         $ runURLEntryDialog urlEntryDialog
-  action builder "clear-playlist"    $ clearPlaylist
-  action builder "sort-by"           $ showOrderDialog orderDialog getOrder setOrder
-  action builder "import-properties" $ showPropertyImport
+  action builder "select-all"         $ editSelectAll
+  action builder "invert-selection"   $ editInvertSelection
+  action builder "browse-location"    $ browseLocation SortAscending Nothing
+  action builder "browse-collection"  $ browseCollection Nothing
+  action builder "add-media"          $ runURLEntryDialog urlEntryDialog
+  action builder "clear-playlist"     $ clearPlaylist
+  action builder "sort-by"            $ showOrderDialog orderDialog getOrder setOrder
+  action builder "import-properties"  $ showPropertyImport
+  action builder "quit"               $ mainQuit
+  action builder "configure-playlist" $ showPlaylistConfigDialog
+  action builder "manage-properties"  $ showPropertyManager
 
   let setupPPS = do
         ps <- getPlaybackStatus
@@ -221,11 +223,4 @@ setupServerActions builder = do
     updateWindowTitle
     return False
 
-  return ()
-
-
-setupUIActions builder = do
-  action builder "quit"               mainQuit
-  action builder "configure-playlist" showPlaylistConfigDialog
-  action builder "manage-properties"  showPropertyManager
   return ()
