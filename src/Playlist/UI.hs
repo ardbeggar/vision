@@ -244,78 +244,6 @@ uiActions =
 
 srvActions orderDialog urlEntryDialog =
   [ ActionEntry
-    { actionEntryName        = "prev"
-    , actionEntryLabel       = "P_revious track"
-    , actionEntryStockId     = Just stockMediaPrevious
-    , actionEntryAccelerator = Just "<Control>p"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = prevTrack
-    }
-  , ActionEntry
-    { actionEntryName        = "next"
-    , actionEntryLabel       = "_Next track"
-    , actionEntryStockId     = Just stockMediaNext
-    , actionEntryAccelerator = Just "<Control>n"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = nextTrack
-    }
-  , ActionEntry
-    { actionEntryName        = "cut"
-    , actionEntryLabel       = "Cu_t"
-    , actionEntryStockId     = Just stockCut
-    , actionEntryAccelerator = Just "<Control>x"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editDelete True
-    }
-  , ActionEntry
-    { actionEntryName        = "copy"
-    , actionEntryLabel       = "_Copy"
-    , actionEntryStockId     = Just stockCopy
-    , actionEntryAccelerator = Just "<Control>c"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editCopy
-    }
-  , ActionEntry
-    { actionEntryName        = "paste"
-    , actionEntryLabel       = "_Paste"
-    , actionEntryStockId     = Just stockPaste
-    , actionEntryAccelerator = Just "<Control>v"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editPaste False
-    }
-  , ActionEntry
-    { actionEntryName        = "append"
-    , actionEntryLabel       = "_Append"
-    , actionEntryStockId     = Just stockPaste
-    , actionEntryAccelerator = Just "<Control><Shift>v"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editPaste True
-    }
-  , ActionEntry
-    { actionEntryName        = "delete"
-    , actionEntryLabel       = "_Delete"
-    , actionEntryStockId     = Just stockDelete
-    , actionEntryAccelerator = Just "Delete"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editDelete False
-    }
-  , ActionEntry
-    { actionEntryName        = "select-all"
-    , actionEntryLabel       = "_Select all"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editSelectAll
-    }
-  , ActionEntry
-    { actionEntryName        = "invert-selection"
-    , actionEntryLabel       = "_Invert selection"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control><Shift>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editInvertSelection
-    }
-  , ActionEntry
     { actionEntryName        = "browse-location"
     , actionEntryLabel       = "Browse _location"
     , actionEntryStockId     = Nothing
@@ -501,13 +429,40 @@ setupServerActions builder = do
         actionSetSensitive prev ep
         actionSetSensitive next en
 
+  cut <- builderGetObject builder castToAction "cut"
+  cut `on` actionActivated $ editDelete True
+  copy <- builderGetObject builder castToAction "copy"
+  copy `on` actionActivated $ editDelete True
+  paste <- builderGetObject builder castToAction "paste"
+  paste `on` actionActivated $ editPaste False
+  append <- builderGetObject builder castToAction "append"
+  append `on` actionActivated $ editPaste True
+  delete <- builderGetObject builder castToAction "delete"
+  delete `on` actionActivated $ editDelete False
+  sall <- builderGetObject builder castToAction "select-all"
+  sall `on` actionActivated $ editSelectAll
+  invs <- builderGetObject builder castToAction "invert-selection"
+  invs `on` actionActivated $ editInvertSelection
 
-  onPlaybackStatus  . add . ever . const $ setupPPS
-  onCurrentTrack    . add . ever . const $ setupPN
-  onPlaylistUpdated . add . ever . const $ setupPN
+  let setupSel = do
+        n <- treeSelectionCountSelectedRows playlistSel
+        mapM_ (`actionSetSensitive` (n /= 0))
+          [cut, copy, delete]
+      setupPA = do
+        en <- editCheckClipboard
+        mapM_ (`actionSetSensitive` en) [paste, append]
+
+  onPlaybackStatus   . add . ever . const $ setupPPS
+  onCurrentTrack     . add . ever . const $ setupPN
+  onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
+  onClipboardTargets . add . ever . const $ setupPA
+  playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
     setupPPS
     setupPN
+    setupPA
+    setupSel
+    updateWindowTitle
     return False
 
   return ()

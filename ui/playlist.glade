@@ -6,14 +6,19 @@
     <child>
       <object class="GtkActionGroup" id="ui-actions">
         <child>
-            <object class="GtkAction" id="music">
-              <property name="label">_Music</property>
-            </object>
+          <object class="GtkAction" id="music">
+            <property name="label">_Music</property>
+          </object>
         </child>
         <child>
           <object class="GtkAction" id="quit">
             <property name="label">_Quit</property>
             <property name="stock_id">gtk-quit</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="edit">
+            <property name="label">_Edit</property>
           </object>
         </child>
       </object>
@@ -55,6 +60,55 @@
           </object>
           <accelerator key="n" modifiers="GDK_CONTROL_MASK"/>
         </child>
+        <child>
+          <object class="GtkAction" id="cut">
+            <property name="label">Cu_t</property>
+            <property name="stock_id">gtk-cut</property>
+          </object>
+          <accelerator key="x" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="copy">
+            <property name="label">_Copy</property>
+            <property name="stock_id">gtk-copy</property>
+          </object>
+          <accelerator key="c" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="paste">
+            <property name="label">_Paste</property>
+            <property name="stock_id">gtk-paste</property>
+          </object>
+          <accelerator key="v" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="append">
+            <property name="label">_Append</property>
+            <property name="stock_id">gtk-paste</property>
+          </object>
+          <accelerator key="v" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="delete">
+            <property name="label">_Delete</property>
+            <property name="stock_id">gtk-delete</property>
+          </object>
+          <accelerator key="Delete"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="select-all">
+            <property name="label">_Select all</property>
+            <property name="stock_id">gtk-select-all</property>
+          </object>
+          <accelerator key="a" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="invert-selection">
+            <property name="label">_Invert selection</property>
+            <property name="stock_id">gtk-select-all</property>
+          </object>
+          <accelerator key="a" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
+        </child>
       </object>
     </child>
     <ui>
@@ -68,6 +122,16 @@
             <menuitem action="next"/>
             <separator/>
             <menuitem action="quit"/>
+          </menu>
+          <menu action="edit">
+            <menuitem action="cut"/>
+            <menuitem action="copy"/>
+            <menuitem action="paste"/>
+            <menuitem action="append"/>
+            <menuitem action="delete"/>
+            <separator/>
+            <menuitem action="select-all"/>
+            <menuitem action="invert-selection"/>
           </menu>
         </placeholder>
       </menubar>
