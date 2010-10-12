@@ -21,6 +21,11 @@
             <property name="label">_Edit</property>
           </object>
         </child>
+        <child>
+          <object class="GtkAction" id="browse">
+            <property name="label">_Browse</property>
+          </object>
+        </child>
       </object>
     </child>
     <child>
@@ -109,6 +114,16 @@
           </object>
           <accelerator key="a" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
         </child>
+        <child>
+          <object class="GtkAction" id="browse-location">
+            <property name="label">Browse _location</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="browse-collection">
+            <property name="label">Browse _collection</property>
+          </object>
+        </child>
       </object>
     </child>
     <ui>
@@ -132,6 +147,10 @@
             <separator/>
             <menuitem action="select-all"/>
             <menuitem action="invert-selection"/>
+          </menu>
+          <menu action="browse">
+            <menuitem action="browse-location"/>
+            <menuitem action="browse-collection"/>
           </menu>
         </placeholder>
       </menubar>

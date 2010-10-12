@@ -244,22 +244,6 @@ uiActions =
 
 srvActions orderDialog urlEntryDialog =
   [ ActionEntry
-    { actionEntryName        = "browse-location"
-    , actionEntryLabel       = "Browse _location"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browseLocation SortAscending Nothing
-    }
-  , ActionEntry
-    { actionEntryName        = "browse-collection"
-    , actionEntryLabel       = "Browse _collection"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browseCollection Nothing
-    }
-  , ActionEntry
     { actionEntryName        = "add-media"
     , actionEntryLabel       = "_Add media"
     , actionEntryStockId     = Just stockAdd
@@ -393,18 +377,21 @@ setupServerActions builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  play   <- action builder "play"             $ startPlayback False
-  pause  <- action builder "pause"            $ pausePlayback
-  stop   <- action builder  "stop"            $ stopPlayback
-  prev   <- action builder "prev"             $ prevTrack
-  next   <- action builder "next"             $ nextTrack
-  cut    <- action builder "cut"              $ editDelete True
-  copy   <- action builder "copy"             $ editCopy
-  paste  <- action builder "paste"            $ editPaste False
-  append <- action builder "append"           $ editPaste True
-  delete <- action builder "delete"           $ editDelete False
-  action builder           "select-all"       $ editSelectAll
-  action builder           "invert-selection" $ editInvertSelection
+  play   <- action builder "play"   $ startPlayback False
+  pause  <- action builder "pause"  $ pausePlayback
+  stop   <- action builder "stop"   $ stopPlayback
+  prev   <- action builder "prev"   $ prevTrack
+  next   <- action builder "next"   $ nextTrack
+  cut    <- action builder "cut"    $ editDelete True
+  copy   <- action builder "copy"   $ editCopy
+  paste  <- action builder "paste"  $ editPaste False
+  append <- action builder "append" $ editPaste True
+  delete <- action builder "delete" $ editDelete False
+
+  action builder "select-all"        $ editSelectAll
+  action builder "invert-selection"  $ editInvertSelection
+  action builder "browse-location"   $ browseLocation SortAscending Nothing
+  action builder "browse-collection" $ browseCollection Nothing
 
   let setupPPS = do
         ps <- getPlaybackStatus
