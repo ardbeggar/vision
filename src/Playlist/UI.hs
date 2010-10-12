@@ -177,46 +177,6 @@ setupUI = do
 
 uiActions =
   [ ActionEntry
-    { actionEntryName        = "music"
-    , actionEntryLabel       = "_Music"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "edit"
-    , actionEntryLabel       = "_Edit"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "browse"
-    , actionEntryLabel       = "_Browse"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "playlist"
-    , actionEntryLabel       = "_Playlist"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "configure-playlist"
-    , actionEntryLabel       = "C_onfigure playlist"
-    , actionEntryStockId     = Just stockPreferences
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPlaylistConfigDialog
-    }
-  , ActionEntry
     { actionEntryName        = "properties"
     , actionEntryLabel       = "P_roperties"
     , actionEntryStockId     = Nothing
@@ -242,32 +202,8 @@ uiActions =
     }
   ]
 
-srvActions orderDialog urlEntryDialog =
+srvActions _orderDialog _urlEntryDialog =
   [ ActionEntry
-    { actionEntryName        = "add-media"
-    , actionEntryLabel       = "_Add media"
-    , actionEntryStockId     = Just stockAdd
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = runURLEntryDialog urlEntryDialog
-    }
-  , ActionEntry
-    { actionEntryName        = "clear-playlist"
-    , actionEntryLabel       = "_Clear playlist"
-    , actionEntryStockId     = Just stockClear
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = clearPlaylist
-    }
-  , ActionEntry
-    { actionEntryName        = "sort-by"
-    , actionEntryLabel       = "_Sort by…"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showOrderDialog orderDialog getOrder setOrder
-    }
-  , ActionEntry
     { actionEntryName        = "edit-properties"
     , actionEntryLabel       = "_Edit properties"
     , actionEntryStockId     = Just stockEdit
@@ -374,6 +310,19 @@ setupPlaybar builder = do
   return ()
 
 setupServerActions builder = do
+  urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
+
+  orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
+    let outerw = outer v
+        updateTitle = do
+          name <- getPlaylistName
+          windowSetTitle outerw $
+            "Sort playlist" ++ maybe "" (": " ++) name
+    cid <- onPlaylistUpdated . add . ever . const $ updateTitle
+    outerw `onDestroy` (onPlaylistUpdated $ remove cid)
+    updateTitle
+    windowSetDefaultSize outerw 500 400
+
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
@@ -392,6 +341,9 @@ setupServerActions builder = do
   action builder "invert-selection"  $ editInvertSelection
   action builder "browse-location"   $ browseLocation SortAscending Nothing
   action builder "browse-collection" $ browseCollection Nothing
+  action builder "add-media"         $ runURLEntryDialog urlEntryDialog
+  action builder "clear-playlist"    $ clearPlaylist
+  action builder "sort-by"           $ showOrderDialog orderDialog getOrder setOrder
 
   let setupPPS = do
         ps <- getPlaybackStatus
@@ -439,8 +391,9 @@ setupServerActions builder = do
 
 
 setupUIActions builder = do
-  quit <- builderGetObject builder castToAction "quit"
-  quit `on` actionActivated $ mainQuit
+  action builder "quit"               mainQuit
+  action builder "configure-playlist" showPlaylistConfigDialog
+  return ()
 
 action builder name func = do
   a <- builderGetObject builder castToAction name

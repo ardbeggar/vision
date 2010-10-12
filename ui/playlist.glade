@@ -26,6 +26,17 @@
             <property name="label">_Browse</property>
           </object>
         </child>
+        <child>
+          <object class="GtkAction" id="playlist">
+            <property name="label">_Playlist</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="configure-playlist">
+            <property name="label">C_onfigure playlist…</property>
+            <property name="stock_id">gtk-preferences</property>
+          </object>
+        </child>
       </object>
     </child>
     <child>
@@ -124,6 +135,23 @@
             <property name="label">Browse _collection</property>
           </object>
         </child>
+        <child>
+          <object class="GtkAction" id="add-media">
+            <property name="label">_Add media…</property>
+            <property name="stock_id">gtk-add</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="clear-playlist">
+            <property name="label">_Clear playlist</property>
+            <property name="stock_id">gtk-clear</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="sort-by">
+            <property name="label">_Sort by…</property>
+          </object>
+        </child>
       </object>
     </child>
     <ui>
@@ -151,6 +179,13 @@
           <menu action="browse">
             <menuitem action="browse-location"/>
             <menuitem action="browse-collection"/>
+          </menu>
+          <menu action="playlist">
+            <menuitem action="add-media"/>
+            <menuitem action="clear-playlist"/>
+            <menuitem action="sort-by"/>
+            <separator/>
+            <menuitem action="configure-playlist"/>
           </menu>
         </placeholder>
       </menubar>
