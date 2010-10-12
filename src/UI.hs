@@ -36,6 +36,7 @@ module UI
   ) where
 
 import Control.Applicative
+import Control.Monad
 
 import Data.Maybe
 
@@ -152,13 +153,7 @@ uiActions =
   ]
 
 
-initUIB builder = do
-  ui <- makeUI builder
-  let ?context =  augmentContext ui
-
-  windowAddAccelGroup window =<< uiManagerGetAccelGroup uiManager
-
-  return ?context
+initUIB = liftM augmentContext . makeUI
 
 makeUI builder = do
   window        <- builderGetObject builder castToWindow "main-window"
