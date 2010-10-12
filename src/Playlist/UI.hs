@@ -255,6 +255,12 @@ setupUIB builder = do
   setupServerActions builder
   setupPlaybar builder
 
+  popup <- getWidget castToMenu "ui/playlist-popup"
+  setupTreeViewPopup playlistView popup
+
+  return ()
+
+
 setupPlaybar builder = do
   playbar <- builderGetObject builder castToToolbar "playbar"
 
