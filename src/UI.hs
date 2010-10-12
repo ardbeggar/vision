@@ -33,6 +33,7 @@ module UI
   , initUIB
   , makeUI
   , makeBuilder
+  , action
   ) where
 
 import Control.Applicative
@@ -172,3 +173,8 @@ makeBuilder name = do
   builder <- builderNew
   builderAddFromFile builder $ gladeFilePath name
   return builder
+
+action builder name func = do
+  a <- builderGetObject builder castToAction name
+  a `on` actionActivated $ func
+  return a

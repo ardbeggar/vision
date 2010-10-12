@@ -229,9 +229,3 @@ setupUIActions builder = do
   action builder "configure-playlist" showPlaylistConfigDialog
   action builder "manage-properties"  showPropertyManager
   return ()
-
-action builder name func = do
-  a <- builderGetObject builder castToAction name
-  a `on` actionActivated $ func
-  return a
-
