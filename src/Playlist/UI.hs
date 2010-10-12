@@ -393,12 +393,18 @@ setupServerActions builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  play  <- builderGetObject builder castToAction "play"
-  play `on` actionActivated $ startPlayback False
-  pause <- builderGetObject builder castToAction "pause"
-  pause `on` actionActivated $ pausePlayback
-  stop  <- builderGetObject builder castToAction "stop"
-  stop `on` actionActivated $ stopPlayback
+  play   <- action builder "play"             $ startPlayback False
+  pause  <- action builder "pause"            $ pausePlayback
+  stop   <- action builder  "stop"            $ stopPlayback
+  prev   <- action builder "prev"             $ prevTrack
+  next   <- action builder "next"             $ nextTrack
+  cut    <- action builder "cut"              $ editDelete True
+  copy   <- action builder "copy"             $ editCopy
+  paste  <- action builder "paste"            $ editPaste False
+  append <- action builder "append"           $ editPaste True
+  delete <- action builder "delete"           $ editDelete False
+  action builder           "select-all"       $ editSelectAll
+  action builder           "invert-selection" $ editInvertSelection
 
   let setupPPS = do
         ps <- getPlaybackStatus
@@ -411,13 +417,7 @@ setupServerActions builder = do
         actionSetSensitive pause ePause
         actionSetVisible pause ePause
         actionSetSensitive stop eStop
-
-  prev <- builderGetObject builder castToAction "prev"
-  prev `on` actionActivated $ prevTrack
-  next <- builderGetObject builder castToAction "next"
-  next `on` actionActivated $ nextTrack
-
-  let setupPN = do
+      setupPN = do
         size <- getPlaylistSize
         name <- getPlaylistName
         cpos <- getCurrentTrack
@@ -428,26 +428,9 @@ setupServerActions builder = do
                 (False, False)
         actionSetSensitive prev ep
         actionSetSensitive next en
-
-  cut <- builderGetObject builder castToAction "cut"
-  cut `on` actionActivated $ editDelete True
-  copy <- builderGetObject builder castToAction "copy"
-  copy `on` actionActivated $ editDelete True
-  paste <- builderGetObject builder castToAction "paste"
-  paste `on` actionActivated $ editPaste False
-  append <- builderGetObject builder castToAction "append"
-  append `on` actionActivated $ editPaste True
-  delete <- builderGetObject builder castToAction "delete"
-  delete `on` actionActivated $ editDelete False
-  sall <- builderGetObject builder castToAction "select-all"
-  sall `on` actionActivated $ editSelectAll
-  invs <- builderGetObject builder castToAction "invert-selection"
-  invs `on` actionActivated $ editInvertSelection
-
-  let setupSel = do
+      setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
-        mapM_ (`actionSetSensitive` (n /= 0))
-          [cut, copy, delete]
+        mapM_ (`actionSetSensitive` (n /= 0)) [cut, copy, delete]
       setupPA = do
         en <- editCheckClipboard
         mapM_ (`actionSetSensitive` en) [paste, append]
@@ -471,3 +454,9 @@ setupServerActions builder = do
 setupUIActions builder = do
   quit <- builderGetObject builder castToAction "quit"
   quit `on` actionActivated $ mainQuit
+
+action builder name func = do
+  a <- builderGetObject builder castToAction name
+  a `on` actionActivated $ func
+  return a
+
