@@ -255,6 +255,9 @@ setupUIB builder = do
   setupServerActions builder
   setupPlaybar builder
 
+  playlistView `onRowActivated` \[n] _ ->
+    playTrack n
+
   popup <- getWidget castToMenu "ui/playlist-popup"
   setupTreeViewPopup playlistView popup
 
