@@ -25,12 +25,35 @@
             <property name="label">_Play</property>
             <property name="stock_id">gtk-media-play</property>
           </object>
+          <accelerator key="Return" modifiers="GDK_CONTROL_MASK"/>
         </child>
         <child>
           <object class="GtkAction" id="pause">
             <property name="label">_Pause</property>
             <property name="stock_id">gtk-media-pause</property>
           </object>
+          <accelerator key="Return" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="stop">
+            <property name="label">_Stop</property>
+            <property name="stock_id">gtk-media-stop</property>
+          </object>
+          <accelerator key="s" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="prev">
+            <property name="label">P_revious track</property>
+            <property name="stock_id">gtk-media-previous</property>
+          </object>
+          <accelerator key="p" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="next">
+            <property name="label">_Next revious track</property>
+            <property name="stock_id">gtk-media-next</property>
+          </object>
+          <accelerator key="n" modifiers="GDK_CONTROL_MASK"/>
         </child>
       </object>
     </child>
@@ -38,16 +61,22 @@
       <menubar name="menubar">
         <placeholder name="entries">
           <menu action="music">
+            <menuitem action="prev"/>
             <menuitem action="play"/>
             <menuitem action="pause"/>
+            <menuitem action="stop"/>
+            <menuitem action="next"/>
             <separator/>
             <menuitem action="quit"/>
           </menu>
         </placeholder>
       </menubar>
       <toolbar name="playbar">
+        <toolitem action="prev"/>
         <toolitem action="play"/>
         <toolitem action="pause"/>
+        <toolitem action="stop"/>
+        <toolitem action="next"/>
       </toolbar>
     </ui>
   </object>

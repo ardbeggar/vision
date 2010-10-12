@@ -244,30 +244,6 @@ uiActions =
 
 srvActions orderDialog urlEntryDialog =
   [ ActionEntry
-    { actionEntryName        = "play"
-    , actionEntryLabel       = "_Play"
-    , actionEntryStockId     = Just stockMediaPlay
-    , actionEntryAccelerator = Just "<Control>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = startPlayback False
-    }
-  , ActionEntry
-    { actionEntryName        = "pause"
-    , actionEntryLabel       = "_Pause"
-    , actionEntryStockId     = Just stockMediaPause
-    , actionEntryAccelerator = Just "<Control>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = pausePlayback
-    }
-  , ActionEntry
-    { actionEntryName        = "stop"
-    , actionEntryLabel       = "_Stop"
-    , actionEntryStockId     = Just stockMediaStop
-    , actionEntryAccelerator = Just "<Control>s"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = stopPlayback
-    }
-  , ActionEntry
     { actionEntryName        = "prev"
     , actionEntryLabel       = "P_revious track"
     , actionEntryStockId     = Just stockMediaPrevious
@@ -453,6 +429,7 @@ updateWindowTitle = do
     Just name -> name ++ " - Vision playlist"
 
 setupUIB builder = do
+  setupUIActions builder
   setupServerActions builder
   setupPlaybar builder
 
@@ -487,3 +464,55 @@ setupPlaybar builder = do
 setupServerActions builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
+
+  play  <- builderGetObject builder castToAction "play"
+  play `on` actionActivated $ startPlayback False
+  pause <- builderGetObject builder castToAction "pause"
+  pause `on` actionActivated $ pausePlayback
+  stop  <- builderGetObject builder castToAction "stop"
+  stop `on` actionActivated $ stopPlayback
+
+  let setupPPS = do
+        ps <- getPlaybackStatus
+        let (ePlay, ePause, eStop) = case ps of
+              Just StatusPlay  -> (False, True, True)
+              Just StatusPause -> (True, False, True)
+              _                -> (True, False, False)
+        actionSetSensitive play ePlay
+        actionSetVisible play ePlay
+        actionSetSensitive pause ePause
+        actionSetVisible pause ePause
+        actionSetSensitive stop eStop
+
+  prev <- builderGetObject builder castToAction "prev"
+  prev `on` actionActivated $ prevTrack
+  next <- builderGetObject builder castToAction "next"
+  next `on` actionActivated $ nextTrack
+
+  let setupPN = do
+        size <- getPlaylistSize
+        name <- getPlaylistName
+        cpos <- getCurrentTrack
+        let (ep, en) = case (name, cpos) of
+              (Just n, Just (ct, cn)) ->
+                (n == cn && ct > 0, n == cn && ct < size - 1)
+              _ ->
+                (False, False)
+        actionSetSensitive prev ep
+        actionSetSensitive next en
+
+
+  onPlaybackStatus  . add . ever . const $ setupPPS
+  onCurrentTrack    . add . ever . const $ setupPN
+  onPlaylistUpdated . add . ever . const $ setupPN
+  flip timeoutAdd 0 $ do
+    setupPPS
+    setupPN
+    return False
+
+  return ()
+
+
+setupUIActions builder = do
+  quit <- builderGetObject builder castToAction "quit"
+  quit `on` actionActivated $ mainQuit
