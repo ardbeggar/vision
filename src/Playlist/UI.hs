@@ -155,6 +155,20 @@ setupActions builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
+  mapM_ (uncurry $ action builder)
+    [ ("select-all",         editSelectAll)
+    , ("invert-selection",   editInvertSelection)
+    , ("browse-location",    browseLocation SortAscending Nothing)
+    , ("browse-collection",  browseCollection Nothing)
+    , ("add-media",          runURLEntryDialog urlEntryDialog)
+    , ("clear-playlist",     clearPlaylist)
+    , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)
+    , ("import-properties",  showPropertyImport)
+    , ("quit",               mainQuit)
+    , ("configure-playlist", showPlaylistConfigDialog)
+    , ("manage-properties",  showPropertyManager)
+    ]
+
   play   <- action builder "play"              $ startPlayback False
   pause  <- action builder "pause"             $ pausePlayback
   stop   <- action builder "stop"              $ stopPlayback
@@ -167,18 +181,6 @@ setupActions builder = do
   delete <- action builder "delete"            $ editDelete False
   editp  <- action builder "edit-properties"   $ showPropertyEditor
   export <- action builder "export-properties" $ showPropertyExport
-
-  action builder "select-all"         $ editSelectAll
-  action builder "invert-selection"   $ editInvertSelection
-  action builder "browse-location"    $ browseLocation SortAscending Nothing
-  action builder "browse-collection"  $ browseCollection Nothing
-  action builder "add-media"          $ runURLEntryDialog urlEntryDialog
-  action builder "clear-playlist"     $ clearPlaylist
-  action builder "sort-by"            $ showOrderDialog orderDialog getOrder setOrder
-  action builder "import-properties"  $ showPropertyImport
-  action builder "quit"               $ mainQuit
-  action builder "configure-playlist" $ showPlaylistConfigDialog
-  action builder "manage-properties"  $ showPropertyManager
 
   let setupPPS = do
         ps <- getPlaybackStatus
