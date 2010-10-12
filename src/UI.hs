@@ -37,15 +37,16 @@ module UI
   ) where
 
 import Control.Applicative
-import Control.Monad
 
 import Data.Maybe
 
+import System.Glib.GError
 import Graphics.UI.Gtk
 
 import Context
 import Environment
 import About
+import Utils
 
 
 data UI
@@ -154,7 +155,16 @@ uiActions =
   ]
 
 
-initUIB = liftM augmentContext . makeUI
+initUIB builder = do
+  context <- augmentContext <$> makeUI builder
+  let ?context = context
+
+  about <- builderGetObjectRaw builder "about"
+  withJust about $ \about ->
+    (castToAction about) `on` actionActivated $ showAbout window
+
+  return context
+
 
 makeUI builder = do
   window        <- builderGetObject builder castToWindow "main-window"
