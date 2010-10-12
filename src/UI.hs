@@ -40,7 +40,6 @@ import Control.Applicative
 
 import Data.Maybe
 
-import System.Glib.GError
 import Graphics.UI.Gtk
 
 import Context
