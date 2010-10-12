@@ -48,6 +48,17 @@
             <property name="stock_id">gtk-preferences</property>
           </object>
         </child>
+        <child>
+          <object class="GtkAction" id="help">
+            <property name="label">_Help</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="about">
+            <property name="label">_About</property>
+            <property name="stock_id">gtk-about</property>
+          </object>
+        </child>
       </object>
     </child>
     <child>
@@ -225,6 +236,9 @@
             <menuitem action="import-properties"/>
             <separator/>
             <menuitem action="manage-properties"/>
+          </menu>
+          <menu action="help">
+            <menuitem action="about"/>
           </menu>
         </placeholder>
       </menubar>
