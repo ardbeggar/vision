@@ -63,7 +63,7 @@ showPlaylist = do
 
   setupSearch
   setupDnD
-  setupUIB builder
+  setupUI builder
 
   widgetShowAll window
 

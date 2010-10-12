@@ -19,7 +19,6 @@
 
 module Playlist.UI
   ( setupUI
-  , setupUIB
   ) where
 
 import System.IO.Unsafe
@@ -50,159 +49,21 @@ import Playlist.Config
 import Playlist.Control
 
 
-setupUI = do
-  addUIActions uiActions
-
-  orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
-    let outerw = outer v
-        updateTitle = do
-          name <- getPlaylistName
-          windowSetTitle outerw $
-            "Sort playlist" ++ maybe "" (": " ++) name
-    cid <- onPlaylistUpdated . add . ever . const $ updateTitle
-    outerw `onDestroy` (onPlaylistUpdated $ remove cid)
-    updateTitle
-    windowSetDefaultSize outerw 500 400
-
-  urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
-
-  srvAG <- actionGroupNew "server"
-  actionGroupAddActions srvAG $ srvActions orderDialog urlEntryDialog
-  onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
-  insertActionGroup srvAG 1
-
-  play  <- getAction srvAG "play"
-  pause <- getAction srvAG "pause"
-  stop  <- getAction srvAG "stop"
-  let setupPPS = do
-        ps <- getPlaybackStatus
-        let (ePlay, ePause, eStop) = case ps of
-              Just StatusPlay  -> (False, True, True)
-              Just StatusPause -> (True, False, True)
-              _                -> (True, False, False)
-        actionSetSensitive play ePlay
-        actionSetVisible play ePlay
-        actionSetSensitive pause ePause
-        actionSetVisible pause ePause
-        actionSetSensitive stop eStop
-
-  prev <- getAction srvAG "prev"
-  next <- getAction srvAG "next"
-  let setupPN = do
-        size <- getPlaylistSize
-        name <- getPlaylistName
-        cpos <- getCurrentTrack
-        let (ep, en) = case (name, cpos) of
-              (Just n, Just (ct, cn)) ->
-                (n == cn && ct > 0, n == cn && ct < size - 1)
-              _ ->
-                (False, False)
-        actionSetSensitive prev ep
-        actionSetSensitive next en
-
-  cut    <- getAction srvAG "cut"
-  copy   <- getAction srvAG "copy"
-  delete <- getAction srvAG "delete"
-  editp  <- getAction srvAG "edit-properties"
-  expp   <- getAction srvAG "export-properties"
-  let setupSel = do
-        n <- treeSelectionCountSelectedRows playlistSel
-        mapM_ (`actionSetSensitive` (n /= 0))
-          [cut, copy, delete, editp, expp]
-
-  paste  <- getAction srvAG "paste"
-  append <- getAction srvAG "append"
-  let setupPA = do
-        en <- editCheckClipboard
-        mapM_ (`actionSetSensitive` en) [paste, append]
-
-  onPlaybackStatus   . add . ever . const $ setupPPS
-  onCurrentTrack     . add . ever . const $ setupPN
-  onPlaylistUpdated  . add . ever . const $ setupPN
-  onClipboardTargets . add . ever . const $ setupPA
-  playlistSel `onSelectionChanged` setupSel
-  flip timeoutAdd 0 $ do
-    setupPPS
-    setupPN
-    setupSel
-    setupPA
-    return False
-
-  addUIFromFile "playlist"
+setupUI builder = do
+  setupUIActions builder
+  setupServerActions builder
+  setupPlaybar builder
 
   playlistView `onRowActivated` \[n] _ ->
     playTrack n
-
-  scroll <- scrolledWindowNew Nothing Nothing
-  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
-  scrolledWindowSetShadowType scroll ShadowIn
-  containerAdd scroll playlistView
-  boxPackStartDefaults contents scroll
-
-  playbar <- getWidget castToToolbar "ui/playbar"
-  toolbarSetStyle playbar ToolbarIcons
-  boxPackEnd contents playbar PackNatural 0
-
-  sep <- separatorToolItemNew
-  separatorToolItemSetDraw sep False
-  toolbarInsert playbar sep (-1)
-
-  seekView <- makeSeekControl
-  seekItem <- toolItemNew
-  toolItemSetHomogeneous seekItem False
-  toolItemSetExpand seekItem True
-  containerAdd seekItem seekView
-  toolbarInsert playbar seekItem (-1)
-
-  sep <- separatorToolItemNew
-  separatorToolItemSetDraw sep False
-  toolbarInsert playbar sep (-1)
-
-  volView <- makeVolumeControl
-  volumeItem <- toolItemNew
-  toolItemSetHomogeneous volumeItem False
-  toolItemSetExpand volumeItem False
-  widgetSetSizeRequest volumeItem 100 (-1)
-  containerAdd volumeItem volView
-  toolbarInsert playbar volumeItem (-1)
 
   popup <- getWidget castToMenu "ui/playlist-popup"
   setupTreeViewPopup playlistView popup
 
   window `onDestroy` mainQuit
 
-  onPlaylistUpdated . add . ever . const $ updateWindowTitle
-  updateWindowTitle
+  return ()
 
-
-uiActions =
-  [ ActionEntry
-    { actionEntryName        = "properties"
-    , actionEntryLabel       = "P_roperties"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "manage-properties"
-    , actionEntryLabel       = "_Manage properties"
-    , actionEntryStockId     = Just stockPreferences
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyManager
-    }
-  , ActionEntry
-    { actionEntryName        = "playlist-popup"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  ]
-
-srvActions _orderDialog _urlEntryDialog = []
 
 data URLEntry =
   URLEntry { urlEntry :: Entry
@@ -249,22 +110,6 @@ updateWindowTitle = do
   setWindowTitle $ case maybeName of
     Nothing   -> "Vision playlist"
     Just name -> name ++ " - Vision playlist"
-
-setupUIB builder = do
-  setupUIActions builder
-  setupServerActions builder
-  setupPlaybar builder
-
-  playlistView `onRowActivated` \[n] _ ->
-    playTrack n
-
-  popup <- getWidget castToMenu "ui/playlist-popup"
-  setupTreeViewPopup playlistView popup
-
-  window `onDestroy` mainQuit
-
-  return ()
-
 
 setupPlaybar builder = do
   playbar <- builderGetObject builder castToToolbar "playbar"
