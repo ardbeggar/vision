@@ -239,9 +239,3 @@ runURLEntryDialog dlg =
   (\str ->
     insertURIs (map (encString False ok_url) $ lines str) Nothing)
   False window
-
-updateWindowTitle = do
-  maybeName <- getPlaylistName
-  setWindowTitle $ case maybeName of
-    Nothing   -> "Vision playlist"
-    Just name -> name ++ " - Vision playlist"
