@@ -52,6 +52,11 @@ setupUI builder browse = do
   setupActions builder browse
 
   collFilter `onEntryActivate` applyFilter
+  collFilter `onIconPress` \pos ->
+    case pos of
+      0 -> entrySetText collFilter ""
+      1 -> applyFilter
+      _ -> return ()
 
   popup <- getWidget castToMenu "ui/collection-popup"
   setupTreeViewPopup collView popup
