@@ -305,8 +305,10 @@
                     <property name="invisible_char">●</property>
                     <property name="primary_icon_stock">gtk-clear</property>
                     <property name="primary_icon_activatable">True</property>
+                    <property name="primary_icon_tooltip_text">Clear filter</property>
                     <property name="secondary_icon_stock">gtk-jump-to</property>
                     <property name="secondary_icon_activatable">True</property>
+                    <property name="secondary_icon_tooltip_text">Apply filter to selected collection</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
