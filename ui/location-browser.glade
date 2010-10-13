@@ -201,8 +201,10 @@
     <property name="can_focus">True</property>
     <property name="invisible_char">●</property>
     <property name="primary_icon_stock">gtk-clear</property>
-    <property name="secondary_icon_stock">gtk-jump-to</property>
     <property name="primary_icon_activatable">True</property>
+    <property name="primary_icon_tooltip_text">Clear location</property>
+    <property name="secondary_icon_stock">gtk-jump-to</property>
     <property name="secondary_icon_activatable">True</property>
+    <property name="secondary_icon_tooltip_text">Open location</property>
   </object>
 </interface>
