@@ -34,6 +34,7 @@ module Utils
   , hideOnDeleteEvent
   , eqBy
   , tryModifyMVar_
+  , onIconPress
   ) where
 
 import Prelude hiding (catch)
@@ -45,6 +46,8 @@ import Control.Applicative
 import Control.Concurrent.MVar
 import Data.Char hiding (Control)
 import Codec.Binary.UTF8.String
+
+import Foreign.C.Types
 
 import Graphics.UI.Gtk
 
@@ -174,3 +177,12 @@ tryModifyMVar_ m io =
 
 deriving instance MonadCatchIO (ResultM c a)
 
+
+onIconPress
+  :: EntryClass ec
+  => ec
+  -> (Int -> IO ())
+  -> IO (ConnectId ec)
+onIconPress entry handler =
+  connectGeneric "icon-press" False entry $ \_ pos _ -> do
+    handler $ fromIntegral (pos :: CInt)
