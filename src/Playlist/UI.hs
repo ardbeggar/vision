@@ -49,8 +49,23 @@ import Playlist.Config
 import Playlist.Control
 
 
-setupUI = do
-  addUIActions uiActions
+setupUI builder = do
+  setupActions builder
+  setupPlaybar builder
+
+  playlistView `onRowActivated` \[n] _ ->
+    playTrack n
+
+  popup <- getWidget castToMenu "ui/playlist-popup"
+  setupTreeViewPopup playlistView popup
+
+  window `onDestroy` mainQuit
+
+  return ()
+
+
+setupActions builder = do
+  urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
 
   orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
     let outerw = outer v
@@ -63,16 +78,48 @@ setupUI = do
     updateTitle
     windowSetDefaultSize outerw 500 400
 
-  urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
+  ag <- builderGetObject builder castToActionGroup "server-actions"
+  onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  srvAG <- actionGroupNew "server"
-  actionGroupAddActions srvAG $ srvActions orderDialog urlEntryDialog
-  onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
-  insertActionGroup srvAG 1
+  bindActions builder
+    [ ("play",               startPlayback False)
+    , ("pause",              pausePlayback)
+    , ("stop",               stopPlayback)
+    , ("prev",               prevTrack)
+    , ("next",               nextTrack)
+    , ("quit",               mainQuit)
+    , ("cut",                editDelete True)
+    , ("copy",               editCopy)
+    , ("paste",              editPaste False)
+    , ("append",             editPaste True)
+    , ("delete",             editDelete False)
+    , ("select-all",         editSelectAll)
+    , ("invert-selection",   editInvertSelection)
+    , ("browse-location",    browseLocation SortAscending Nothing)
+    , ("browse-collection",  browseCollection Nothing)
+    , ("add-media",          runURLEntryDialog urlEntryDialog)
+    , ("clear-playlist",     clearPlaylist)
+    , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)
+    , ("configure-playlist", showPlaylistConfigDialog)
+    , ("edit-properties",    showPropertyEditor)
+    , ("export-properties",  showPropertyExport)
+    , ("import-properties",  showPropertyImport)
+    , ("manage-properties",  showPropertyManager)
+    ]
 
-  play  <- getAction srvAG "play"
-  pause <- getAction srvAG "pause"
-  stop  <- getAction srvAG "stop"
+  play   <- action builder "play"
+  pause  <- action builder "pause"
+  stop   <- action builder "stop"
+  prev   <- action builder "prev"
+  next   <- action builder "next"
+  cut    <- action builder "cut"
+  copy   <- action builder "copy"
+  paste  <- action builder "paste"
+  append <- action builder "append"
+  delete <- action builder "delete"
+  editp  <- action builder "edit-properties"
+  export <- action builder "export-properties"
+
   let setupPPS = do
         ps <- getPlaybackStatus
         let (ePlay, ePause, eStop) = case ps of
@@ -84,10 +131,7 @@ setupUI = do
         actionSetSensitive pause ePause
         actionSetVisible pause ePause
         actionSetSensitive stop eStop
-
-  prev <- getAction srvAG "prev"
-  next <- getAction srvAG "next"
-  let setupPN = do
+      setupPN = do
         size <- getPlaylistSize
         name <- getPlaylistName
         cpos <- getCurrentTrack
@@ -98,49 +142,31 @@ setupUI = do
                 (False, False)
         actionSetSensitive prev ep
         actionSetSensitive next en
-
-  cut    <- getAction srvAG "cut"
-  copy   <- getAction srvAG "copy"
-  delete <- getAction srvAG "delete"
-  editp  <- getAction srvAG "edit-properties"
-  expp   <- getAction srvAG "export-properties"
-  let setupSel = do
+      setupSel = do
         n <- treeSelectionCountSelectedRows playlistSel
         mapM_ (`actionSetSensitive` (n /= 0))
-          [cut, copy, delete, editp, expp]
-
-  paste  <- getAction srvAG "paste"
-  append <- getAction srvAG "append"
-  let setupPA = do
+          [cut, copy, delete, editp, export]
+      setupPA = do
         en <- editCheckClipboard
         mapM_ (`actionSetSensitive` en) [paste, append]
 
   onPlaybackStatus   . add . ever . const $ setupPPS
   onCurrentTrack     . add . ever . const $ setupPN
-  onPlaylistUpdated  . add . ever . const $ setupPN
+  onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
   onClipboardTargets . add . ever . const $ setupPA
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
     setupPPS
     setupPN
-    setupSel
     setupPA
+    setupSel
+    updateWindowTitle
     return False
 
-  addUIFromFile "playlist"
+  return ()
 
-  playlistView `onRowActivated` \[n] _ ->
-    playTrack n
-
-  scroll <- scrolledWindowNew Nothing Nothing
-  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
-  scrolledWindowSetShadowType scroll ShadowIn
-  containerAdd scroll playlistView
-  boxPackStartDefaults contents scroll
-
-  playbar <- getWidget castToToolbar "ui/playbar"
-  toolbarSetStyle playbar ToolbarIcons
-  boxPackEnd contents playbar PackNatural 0
+setupPlaybar builder = do
+  playbar <- builderGetObject builder castToToolbar "playbar"
 
   sep <- separatorToolItemNew
   separatorToolItemSetDraw sep False
@@ -165,244 +191,13 @@ setupUI = do
   containerAdd volumeItem volView
   toolbarInsert playbar volumeItem (-1)
 
-  popup <- getWidget castToMenu "ui/playlist-popup"
-  setupTreeViewPopup playlistView popup
+  return ()
 
-  window `onDestroy` mainQuit
-
-  onPlaylistUpdated . add . ever . const $ updateWindowTitle
-  updateWindowTitle
-
-
-uiActions =
-  [ ActionEntry
-    { actionEntryName        = "music"
-    , actionEntryLabel       = "_Music"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "edit"
-    , actionEntryLabel       = "_Edit"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "browse"
-    , actionEntryLabel       = "_Browse"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "playlist"
-    , actionEntryLabel       = "_Playlist"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "configure-playlist"
-    , actionEntryLabel       = "C_onfigure playlist"
-    , actionEntryStockId     = Just stockPreferences
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPlaylistConfigDialog
-    }
-  , ActionEntry
-    { actionEntryName        = "properties"
-    , actionEntryLabel       = "P_roperties"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "manage-properties"
-    , actionEntryLabel       = "_Manage properties"
-    , actionEntryStockId     = Just stockPreferences
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyManager
-    }
-  , ActionEntry
-    { actionEntryName        = "playlist-popup"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  ]
-
-srvActions orderDialog urlEntryDialog =
-  [ ActionEntry
-    { actionEntryName        = "play"
-    , actionEntryLabel       = "_Play"
-    , actionEntryStockId     = Just stockMediaPlay
-    , actionEntryAccelerator = Just "<Control>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = startPlayback False
-    }
-  , ActionEntry
-    { actionEntryName        = "pause"
-    , actionEntryLabel       = "_Pause"
-    , actionEntryStockId     = Just stockMediaPause
-    , actionEntryAccelerator = Just "<Control>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = pausePlayback
-    }
-  , ActionEntry
-    { actionEntryName        = "stop"
-    , actionEntryLabel       = "_Stop"
-    , actionEntryStockId     = Just stockMediaStop
-    , actionEntryAccelerator = Just "<Control>s"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = stopPlayback
-    }
-  , ActionEntry
-    { actionEntryName        = "prev"
-    , actionEntryLabel       = "P_revious track"
-    , actionEntryStockId     = Just stockMediaPrevious
-    , actionEntryAccelerator = Just "<Control>p"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = prevTrack
-    }
-  , ActionEntry
-    { actionEntryName        = "next"
-    , actionEntryLabel       = "_Next track"
-    , actionEntryStockId     = Just stockMediaNext
-    , actionEntryAccelerator = Just "<Control>n"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = nextTrack
-    }
-  , ActionEntry
-    { actionEntryName        = "cut"
-    , actionEntryLabel       = "Cu_t"
-    , actionEntryStockId     = Just stockCut
-    , actionEntryAccelerator = Just "<Control>x"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editDelete True
-    }
-  , ActionEntry
-    { actionEntryName        = "copy"
-    , actionEntryLabel       = "_Copy"
-    , actionEntryStockId     = Just stockCopy
-    , actionEntryAccelerator = Just "<Control>c"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editCopy
-    }
-  , ActionEntry
-    { actionEntryName        = "paste"
-    , actionEntryLabel       = "_Paste"
-    , actionEntryStockId     = Just stockPaste
-    , actionEntryAccelerator = Just "<Control>v"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editPaste False
-    }
-  , ActionEntry
-    { actionEntryName        = "append"
-    , actionEntryLabel       = "_Append"
-    , actionEntryStockId     = Just stockPaste
-    , actionEntryAccelerator = Just "<Control><Shift>v"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editPaste True
-    }
-  , ActionEntry
-    { actionEntryName        = "delete"
-    , actionEntryLabel       = "_Delete"
-    , actionEntryStockId     = Just stockDelete
-    , actionEntryAccelerator = Just "Delete"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editDelete False
-    }
-  , ActionEntry
-    { actionEntryName        = "select-all"
-    , actionEntryLabel       = "_Select all"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editSelectAll
-    }
-  , ActionEntry
-    { actionEntryName        = "invert-selection"
-    , actionEntryLabel       = "_Invert selection"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control><Shift>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = editInvertSelection
-    }
-  , ActionEntry
-    { actionEntryName        = "browse-location"
-    , actionEntryLabel       = "Browse _location"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browseLocation SortAscending Nothing
-    }
-  , ActionEntry
-    { actionEntryName        = "browse-collection"
-    , actionEntryLabel       = "Browse _collection"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browseCollection Nothing
-    }
-  , ActionEntry
-    { actionEntryName        = "add-media"
-    , actionEntryLabel       = "_Add media"
-    , actionEntryStockId     = Just stockAdd
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = runURLEntryDialog urlEntryDialog
-    }
-  , ActionEntry
-    { actionEntryName        = "clear-playlist"
-    , actionEntryLabel       = "_Clear playlist"
-    , actionEntryStockId     = Just stockClear
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = clearPlaylist
-    }
-  , ActionEntry
-    { actionEntryName        = "sort-by"
-    , actionEntryLabel       = "_Sort by…"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showOrderDialog orderDialog getOrder setOrder
-    }
-  , ActionEntry
-    { actionEntryName        = "edit-properties"
-    , actionEntryLabel       = "_Edit properties"
-    , actionEntryStockId     = Just stockEdit
-    , actionEntryAccelerator = Just "<Alt>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyEditor
-    }
-  , ActionEntry
-    { actionEntryName        = "export-properties"
-    , actionEntryLabel       = "E_xport properties"
-    , actionEntryStockId     = Just stockSave
-    , actionEntryAccelerator = Just ""
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyExport
-    }
-  , ActionEntry
-    { actionEntryName        = "import-properties"
-    , actionEntryLabel       = "_Import properties"
-    , actionEntryStockId     = Just stockOpen
-    , actionEntryAccelerator = Just ""
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showPropertyImport
-    }
-  ]
+updateWindowTitle = do
+  maybeName <- getPlaylistName
+  setWindowTitle $ case maybeName of
+    Nothing   -> "Vision playlist"
+    Just name -> name ++ " - Vision playlist"
 
 
 data URLEntry =

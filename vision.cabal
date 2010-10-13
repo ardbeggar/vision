@@ -30,7 +30,8 @@ extra-source-files: configure.ac,
                     src/Collection/List/Makefile.in,
                     Makefile.in,
                     ui/Makefile.in
-data-files:         ui/*.xml
+data-files:         ui/*.xml,
+                    ui/*.glade
 
 executable vision
   main-is:          Vision.hs

@@ -64,10 +64,11 @@ configDlg  = vConfigDlg context
 columns    = vColumns context
 
 
-initView = do
-  context <- initContext
+initView builder = do
+  context <- initContext builder
   let ?context = context
 
+  treeViewSetModel collView collStore
   treeViewSetRulesHint collView True
   treeSelectionSetMode collSel SelectionMultiple
 
@@ -81,10 +82,10 @@ showViewConfigDialog =
   (setColumns True . map fst)
   False window
 
-initContext = do
-  view      <- treeViewNewWithModel collStore
+initContext builder = do
+  view      <- builderGetObject builder castToTreeView "collection-view"
   sel       <- treeViewGetSelection view
-  filter    <- entryNew
+  filter    <- builderGetObject builder castToEntry "filter-entry"
   configDlg <- unsafeInterleaveIO makeConfigDlg
   columns   <- newIORef []
   return $ augmentContext

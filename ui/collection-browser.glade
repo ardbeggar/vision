@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="2.20"/>
+  <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkUIManager" id="ui-manager">
+    <child>
+      <object class="GtkActionGroup" id="ui-actions">
+        <child>
+          <object class="GtkAction" id="collection">
+            <property name="label">_Collection</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="new-window">
+            <property name="label">_New window</property>
+            <property name="stock_id">gtk-new</property>
+          </object>
+          <accelerator key="n" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="edit-filter">
+            <property name="label">_Edit filter</property>
+            <property name="stock_id">gtk-edit</property>
+          </object>
+          <accelerator key="l" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="all-media">
+            <property name="label">A_ll media</property>
+            <property name="stock_id">gtk-new</property>
+          </object>
+          <accelerator key="u" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="close">
+            <property name="label">_Close window</property>
+            <property name="stock_id">gtk-close</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="quit">
+            <property name="label">_Quit</property>
+            <property name="stock_id">gtk-quit</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="edit">
+            <property name="label">_Edit</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="view">
+            <property name="label">_View</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="configure-columns">
+            <property name="label">Configure _columns</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="configure-ordering">
+            <property name="label">Configure _ordering</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="properties">
+            <property name="label">P_roperties</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="manage-properties">
+            <property name="label">_Manage properties…</property>
+            <property name="stock_id">gtk-preferences</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="help">
+            <property name="label">_Help</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="about">
+            <property name="label">_About</property>
+            <property name="stock_id">gtk-about</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkActionGroup" id="server-actions">
+        <child>
+          <object class="GtkAction" id="browse-in-new-window">
+            <property name="label">_Browse in new window</property>
+            <property name="stock_id">gtk-open</property>
+          </object>
+          <accelerator key="Return" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="save-collection">
+            <property name="label">_Save collection…</property>
+            <property name="stock_id">gtk-save</property>
+          </object>
+          <accelerator key="s" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="rename-collection">
+            <property name="label">Rena_me collection…</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="delete-collection">
+            <property name="label">_Delete collection</property>
+            <property name="stock_id">gtk-delete</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="add-to-playlist">
+            <property name="label">_Add to playlist</property>
+            <property name="stock_id">gtk-add</property>
+          </object>
+          <accelerator key="p" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="replace-playlist">
+            <property name="label">_Replace playlist</property>
+          </object>
+          <accelerator key="p" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="coll-add-to-playlist">
+            <property name="label">_Add to playlist</property>
+            <property name="stock_id">gtk-add</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="coll-replace-playlist">
+            <property name="label">_Replace playlist</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="list-add-to-playlist">
+            <property name="label">_Add to playlist</property>
+            <property name="stock_id">gtk-add</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="list-replace-playlist">
+            <property name="label">_Replace playlist</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="copy">
+            <property name="label">_Copy</property>
+            <property name="stock_id">gtk-copy</property>
+          </object>
+          <accelerator key="c" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="select-all">
+            <property name="label">_Select all</property>
+            <property name="stock_id">gtk-select-all</property>
+          </object>
+          <accelerator key="a" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="invert-selection">
+            <property name="label">_Invert selection</property>
+            <property name="stock_id">gtk-select-all</property>
+          </object>
+          <accelerator key="a" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="edit-properties">
+            <property name="label">_Edit properties</property>
+            <property name="stock_id">gtk-edit</property>
+          </object>
+          <accelerator key="Return" modifiers="GDK_MOD1_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="export-properties">
+            <property name="label">E_xport properties…</property>
+            <property name="stock_id">gtk-save</property>
+          </object>
+          <accelerator/>
+        </child>
+        <child>
+          <object class="GtkAction" id="import-properties">
+            <property name="label">_Import properties…</property>
+            <property name="stock_id">gtk-open</property>
+          </object>
+          <accelerator/>
+        </child>
+      </object>
+    </child>
+    <ui>
+      <menubar name="menubar">
+        <placeholder name="entries">
+          <menu action="collection">
+            <menuitem action="new-window"/>
+            <menuitem action="edit-filter"/>
+            <menuitem action="browse-in-new-window"/>
+            <menuitem action="all-media"/>
+            <separator/>
+            <menuitem action="save-collection"/>
+            <menuitem action="rename-collection"/>
+            <menuitem action="delete-collection"/>
+            <separator/>
+            <menuitem action="add-to-playlist"/>
+            <menuitem action="replace-playlist"/>
+            <separator/>
+            <menuitem action="close"/>
+            <menuitem action="quit"/>
+          </menu>
+          <menu action="edit">
+            <menuitem action="copy"/>
+            <separator/>
+            <menuitem action="select-all"/>
+            <menuitem action="invert-selection"/>
+          </menu>
+          <menu action="view">
+            <menuitem action="configure-columns"/>
+            <menuitem action="configure-ordering"/>
+          </menu>
+          <menu action="properties">
+            <menuitem action="edit-properties"/>
+            <menuitem action="export-properties"/>
+            <menuitem action="import-properties"/>
+            <separator/>
+            <menuitem action="manage-properties"/>
+          </menu>
+          <menu action="help">
+            <menuitem action="about"/>
+          </menu>
+        </placeholder>
+      </menubar>
+      <popup action="collection-popup">
+        <menuitem action="coll-add-to-playlist"/>
+        <menuitem action="coll-replace-playlist"/>
+        <separator/>
+        <menuitem action="copy"/>
+        <separator/>
+        <menuitem action="select-all"/>
+        <menuitem action="invert-selection"/>
+        <separator/>
+        <menuitem action="edit-properties"/>
+      </popup>
+      <popup action="list-popup">
+        <menuitem action="list-add-to-playlist"/>
+        <menuitem action="list-replace-playlist"/>
+        <separator/>
+        <menuitem action="rename-collection"/>
+        <menuitem action="delete-collection"/>
+        <separator/>
+        <menuitem action="browse-in-new-window"/>
+      </popup>
+    </ui>
+  </object>
+  <object class="GtkWindow" id="main-window">
+    <child>
+      <object class="GtkVBox" id="contents">
+        <property name="visible">True</property>
+        <child>
+          <object class="GtkMenuBar" constructor="ui-manager" id="menubar">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkHPaned" id="paned">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <child>
+              <object class="GtkScrolledWindow" id="list-scroll">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hscrollbar_policy">automatic</property>
+                <property name="vscrollbar_policy">automatic</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <object class="GtkTreeView" id="list-view">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="headers_visible">False</property>
+                    <property name="headers_clickable">False</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="resize">False</property>
+                <property name="shrink">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkVBox" id="collection-box">
+                <property name="visible">True</property>
+                <property name="spacing">5</property>
+                <child>
+                  <object class="GtkEntry" id="filter-entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="invisible_char">●</property>
+                    <property name="primary_icon_stock">gtk-clear</property>
+                    <property name="primary_icon_activatable">True</property>
+                    <property name="secondary_icon_stock">gtk-jump-to</property>
+                    <property name="secondary_icon_activatable">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow" id="collection-scroll">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="hscrollbar_policy">automatic</property>
+                    <property name="vscrollbar_policy">automatic</property>
+                    <property name="shadow_type">in</property>
+                    <child>
+                      <object class="GtkTreeView" id="collection-view">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="headers_clickable">False</property>
+                        <property name="rules_hint">True</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="resize">True</property>
+                <property name="shrink">False</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

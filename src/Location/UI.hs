@@ -36,41 +36,39 @@ import Location.View
 import Location.Control
 
 
-setupUI browse = do
-  addUIActions $ uiActions browse
+setupUI builder browse = do
+  setupActions builder browse
+  setupToolbar builder
+  setupLocationEntry builder
+  setupLocationView builder
 
-  srvAG <- actionGroupNew "server"
-  actionGroupAddActions srvAG $ srvActions browse
-  onServerConnectionAdd . ever $ actionGroupSetSensitive srvAG
-  insertActionGroup srvAG 1
+setupActions builder browse = do
+  ag <- builderGetObject builder castToActionGroup "server-actions"
+  onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  addUIFromFile "location-browser"
+  bindActions builder
+    [ ("new-window"           , newWindow browse                )
+    , ("open-location"        , openLocation                    )
+    , ("load"                 , loadCurrentLocation             )
+    , ("down"                 , loadAtCursor (loadLocation . Go))
+    , ("browse-in-new-window" , browseInNewWindow browse        )
+    , ("add-to-playlist"      , addToPlaylist                   )
+    , ("replace-playlist"     , replacePlaylist                 )
+    , ("back"                 , loadLocation Back               )
+    , ("forward"              , loadLocation Forward            )
+    , ("up"                   , loadLocation Up                 )
+    , ("refresh"              , loadLocation Refresh            )
+    ]
 
-  toolbar <- getWidget castToToolbar "ui/toolbar"
-  toolbarSetStyle toolbar ToolbarIcons
-  boxPackStart contents toolbar PackNatural 0
+  down    <- action builder "down"
+  binw    <- action builder "browse-in-new-window"
+  addp    <- action builder "add-to-playlist"
+  repp    <- action builder "replace-playlist"
+  back    <- action builder "back"
+  forward <- action builder "forward"
+  up      <- action builder "up"
+  refresh <- action builder "refresh"
 
-  item <- toolItemNew
-  toolItemSetHomogeneous item False
-  toolItemSetExpand item True
-  containerAdd item locationEntry
-  toolbarInsert toolbar item 6
-
-  load <- getAction srvAG "load"
-  locationEntry `onEntryActivate` actionActivate load
-
-  scroll <- scrolledWindowNew Nothing Nothing
-  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
-  containerAdd scroll locationView
-  boxPackStartDefaults contents scroll
-
-  popup <- getWidget castToMenu "ui/location-popup"
-  setupTreeViewPopup locationView popup
-
-  down <- getAction srvAG "down"
-  binw <- getAction srvAG "browse-in-new-window"
-  addp <- getAction srvAG "add-to-playlist"
-  repp <- getAction srvAG "replace-playlist"
   let updateB = do
         rows       <- treeSelectionGetSelectedRows locationSel
         (enp, enn) <- case rows of
@@ -83,12 +81,60 @@ setupUI browse = do
             return (True, False)
         mapM_ (`actionSetSensitive` enp) [addp, repp]
         mapM_ (`actionSetSensitive` enn) [down, binw]
-  locationSel `onSelectionChanged` updateB
-  updateB
+      updateN = do
+        (eb, ef, eu, er) <- canGo
+        actionSetSensitive back eb
+        actionSetSensitive forward ef
+        actionSetSensitive up eu
+        actionSetSensitive refresh er
 
+  locationSel `onSelectionChanged` updateB
+  onLocation . add . ever . const $ updateN
+  flip timeoutAdd 0 $ do
+    updateB
+    updateN
+    updateWindowTitle
+    return False
+
+  return ()
+
+setupToolbar builder = do
+  toolbar <- builderGetObject builder castToToolbar "toolbar"
+
+  item <- separatorToolItemNew
+  separatorToolItemSetDraw item False
+  toolbarInsert toolbar item 4
+
+  item <- toolItemNew
+  toolItemSetHomogeneous item False
+  toolItemSetExpand item True
+  containerAdd item locationEntry
+  toolbarInsert toolbar item 5
+
+  item <- separatorToolItemNew
+  separatorToolItemSetDraw item False
+  toolbarInsert toolbar item 6
+
+setupLocationEntry builder = do
+  load <- action builder "load"
+  locationEntry `onEntryActivate` actionActivate load
+  locationEntry `onIconPress` \pos ->
+    case pos of
+      0 -> entrySetText locationEntry ""
+      1 -> actionActivate load
+      _ -> return ()
+
+  return ()
+
+setupLocationView builder = do
+  popup <- getWidget castToMenu "ui/location-popup"
+  setupTreeViewPopup locationView popup
+
+  down <- action builder "down"
   locationView `onRowActivated` \_ _ ->
     actionActivate down
 
+  binw <- action builder "browse-in-new-window"
   locationView `on` buttonPressEvent $ tryEvent $ do
     MiddleButton <- eventButton
     SingleClick  <- eventClick
@@ -102,149 +148,8 @@ setupUI browse = do
         Nothing           ->
           return ()
 
-  back    <- getAction srvAG "back"
-  forward <- getAction srvAG "forward"
-  up      <- getAction srvAG "up"
-  refresh <- getAction srvAG "refresh"
-  let updateN = do
-        (eb, ef, eu, er) <- canGo
-        actionSetSensitive back eb
-        actionSetSensitive forward ef
-        actionSetSensitive up eu
-        actionSetSensitive refresh er
-  onLocation . add . ever . const $ updateN
-  updateN
-
-  updateWindowTitle
-
   return ()
 
-
-uiActions browse =
-  [ ActionEntry
-    { actionEntryName        = "location"
-    , actionEntryLabel       = "_Location"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "new-window"
-    , actionEntryLabel       = "_New window"
-    , actionEntryStockId     = Just stockNew
-    , actionEntryAccelerator = Just "<Control>n"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = newWindow browse
-    }
-  , ActionEntry
-    { actionEntryName        = "open-location"
-    , actionEntryLabel       = "_Open location"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Just "<Control>l"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = openLocation
-    }
-  , ActionEntry
-    { actionEntryName        = "go"
-    , actionEntryLabel       = "_Go"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "location-popup"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "clear"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Just stockClear
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = clearLocationEntry
-    }
-  ]
-
-srvActions browse =
-  [ ActionEntry
-    { actionEntryName        = "load"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Just stockJumpTo
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadCurrentLocation
-    }
-  , ActionEntry
-    { actionEntryName        = "down"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadAtCursor (loadLocation . Go)
-    }
-  , ActionEntry
-    { actionEntryName        = "browse-in-new-window"
-    , actionEntryLabel       = "_Browse in new window"
-    , actionEntryStockId     = Just stockOpen
-    , actionEntryAccelerator = Just "<Control>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = browseInNewWindow browse
-    }
-  , ActionEntry
-    { actionEntryName        = "add-to-playlist"
-    , actionEntryLabel       = "_Add to playlist"
-    , actionEntryStockId     = Just stockAdd
-    , actionEntryAccelerator = Just "<Control>p"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = addToPlaylist
-    }
-  , ActionEntry
-    { actionEntryName        = "replace-playlist"
-    , actionEntryLabel       = "_Replace playlist"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Just "<Control><Shift>p"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = replacePlaylist
-    }
-  , ActionEntry
-    { actionEntryName        = "back"
-    , actionEntryLabel       = "Go _back"
-    , actionEntryStockId     = Just stockGoBack
-    , actionEntryAccelerator = Just "<Alt>Left"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadLocation Back
-    }
-  , ActionEntry
-    { actionEntryName        = "forward"
-    , actionEntryLabel       = "Go _forward"
-    , actionEntryStockId     = Just stockGoForward
-    , actionEntryAccelerator = Just "<Alt>Right"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadLocation Forward
-    }
-  , ActionEntry
-    { actionEntryName        = "up"
-    , actionEntryLabel       = "Go _up"
-    , actionEntryStockId     = Just stockGoUp
-    , actionEntryAccelerator = Just "<Alt>Up"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadLocation Up
-    }
-  , ActionEntry
-    { actionEntryName        = "refresh"
-    , actionEntryLabel       = "_Refresh"
-    , actionEntryStockId     = Just stockRefresh
-    , actionEntryAccelerator = Just "F5"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = loadLocation Refresh
-    }
-  ]
 
 loadCurrentLocation = do
   text <- trim <$> entryGetText locationEntry
@@ -266,10 +171,6 @@ loadAtCursor func = do
       when (iIsDir item) $ func $ iPath item
     _   ->
       return ()
-
-clearLocationEntry = do
-  entrySetText locationEntry ""
-  widgetGrabFocus locationEntry
 
 browseInNewWindow browse = do
   order <- getSortOrder

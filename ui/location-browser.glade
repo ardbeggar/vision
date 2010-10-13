@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="2.20"/>
+  <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkUIManager" id="ui-manager">
+    <child>
+      <object class="GtkActionGroup" id="ui-actions">
+        <child>
+          <object class="GtkAction" id="location">
+            <property name="label">_Location</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="new-window">
+            <property name="label">_New window</property>
+            <property name="stock_id">gtk-new</property>
+          </object>
+          <accelerator key="n" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="open-location">
+            <property name="label">_Open location</property>
+          </object>
+          <accelerator key="l" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="close">
+            <property name="label">_Close window</property>
+            <property name="stock_id">gtk-close</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="quit">
+            <property name="label">_Quit</property>
+            <property name="stock_id">gtk-quit</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="go">
+            <property name="label">_Go</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="help">
+            <property name="label">_Help</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="about">
+            <property name="label">_About</property>
+            <property name="stock_id">gtk-about</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkActionGroup" id="server-actions">
+        <child>
+          <object class="GtkAction" id="load"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="down"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="browse-in-new-window">
+            <property name="label">_Browse in new window</property>
+            <property name="stock_id">gtk-open</property>
+          </object>
+          <accelerator key="Return" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="add-to-playlist">
+            <property name="label">_Add to playlist</property>
+            <property name="stock_id">gtk-add</property>
+          </object>
+          <accelerator key="p" modifiers="GDK_CONTROL_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="replace-playlist">
+            <property name="label">_Replace playlist</property>
+          </object>
+          <accelerator key="p" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="back">
+            <property name="label">Go _back</property>
+            <property name="stock_id">gtk-go-back</property>
+          </object>
+          <accelerator key="Left" modifiers="GDK_MOD1_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="forward">
+            <property name="label">Go _forward</property>
+            <property name="stock_id">gtk-go-forward</property>
+          </object>
+          <accelerator key="Right" modifiers="GDK_MOD1_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="up">
+            <property name="label">Go _up</property>
+            <property name="stock_id">gtk-go-up</property>
+          </object>
+          <accelerator key="Up" modifiers="GDK_MOD1_MASK"/>
+        </child>
+        <child>
+          <object class="GtkAction" id="refresh">
+            <property name="label">_Refresh</property>
+            <property name="stock_id">gtk-refresh</property>
+          </object>
+          <accelerator key="F5"/>
+        </child>
+      </object>
+    </child>
+    <ui>
+      <menubar action="menubar">
+        <placeholder name="entries">
+          <menu action="location">
+            <menuitem action="new-window"/>
+            <menuitem action="open-location"/>
+            <menuitem action="browse-in-new-window"/>
+            <separator/>
+            <menuitem action="add-to-playlist"/>
+            <menuitem action="replace-playlist"/>
+            <separator/>
+            <menuitem action="close"/>
+            <menuitem action="quit"/>
+          </menu>
+          <menu action="go">
+            <menuitem action="back"/>
+            <menuitem action="forward"/>
+            <menuitem action="up"/>
+            <separator/>
+            <menuitem action="refresh"/>
+          </menu>
+          <menu action="help">
+            <menuitem action="about"/>
+          </menu>
+        </placeholder>
+      </menubar>
+      <toolbar action="toolbar">
+        <toolitem action="back"/>
+        <toolitem action="forward"/>
+        <toolitem action="up"/>
+        <toolitem action="refresh"/>
+      </toolbar>
+      <popup action="location-popup">
+        <menuitem action="add-to-playlist"/>
+        <menuitem action="replace-playlist"/>
+        <separator/>
+        <menuitem action="browse-in-new-window"/>
+      </popup>
+    </ui>
+  </object>
+  <object class="GtkWindow" id="main-window">
+    <child>
+      <object class="GtkVBox" id="contents">
+        <property name="visible">True</property>
+        <child>
+          <object class="GtkMenuBar" id="menubar" constructor="ui-manager">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolbar" id="toolbar" constructor="ui-manager">
+            <property name="visible">True</property>
+            <property name="toolbar_style">icons</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow" id="location-scroll">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="hscrollbar_policy">automatic</property>
+            <property name="vscrollbar_policy">automatic</property>
+            <property name="shadow_type">in</property>
+            <child>
+              <object class="GtkTreeView" id="location-view">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="rules_hint">True</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkEntry" id="location-entry">
+    <property name="visible">True</property>
+    <property name="can_focus">True</property>
+    <property name="invisible_char">●</property>
+    <property name="primary_icon_stock">gtk-clear</property>
+    <property name="secondary_icon_stock">gtk-jump-to</property>
+    <property name="primary_icon_activatable">True</property>
+    <property name="secondary_icon_activatable">True</property>
+  </object>
+</interface>

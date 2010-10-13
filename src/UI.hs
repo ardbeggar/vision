@@ -30,6 +30,12 @@ module UI
   , addUIActions
   , getAction
   , windowGroup
+  , makeUI
+  , makeBuilder
+  , action
+  , actions
+  , bindAction
+  , bindActions
   ) where
 
 import Control.Applicative
@@ -57,38 +63,6 @@ uiManager     = uManager context
 uiActionGroup = uActionGroup context
 windowGroup   = uWindowGroup context
 
-initUI = do
-  context <- initContext
-  let ?context = context
-
-  windowGroupAddWindow windowGroup window
-  containerAdd window contents
-
-  windowAddAccelGroup window =<< uiManagerGetAccelGroup uiManager
-  insertActionGroup uiActionGroup 1
-  addUIActions uiActions
-  addUIFromFile "common"
-
-  menubar <- getWidget castToMenuBar "ui/menubar"
-  boxPackStart contents menubar PackNatural 0
-
-  return ?context
-
-
-initContext = do
-  window        <- windowNew
-  contents      <- vBoxNew False 0
-  uiManager     <- uiManagerNew
-  uiActionGroup <- actionGroupNew "ui"
-  windowGroup   <- windowGroupNew
-  return $ augmentContext
-    UI { uWindow      = window
-       , uContents    = contents
-       , uManager     = uiManager
-       , uActionGroup = uiActionGroup
-       , uWindowGroup = windowGroup
-       }
-
 setWindowTitle = windowSetTitle window
 addUIActions = actionGroupAddActions uiActionGroup
 insertActionGroup = uiManagerInsertActionGroup uiManager
@@ -97,53 +71,53 @@ maybeGetWidget cast name = fmap cast <$> uiManagerGetWidget uiManager name
 getWidget cast name = fromJust <$> maybeGetWidget cast name
 getAction group name = fromJust <$> actionGroupGetAction group name
 
-uiActions =
-  [ ActionEntry
-    { actionEntryName        = "menubar"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "toolbar"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "quit"
-    , actionEntryLabel       = "_Quit"
-    , actionEntryStockId     = Just stockQuit
-    , actionEntryAccelerator = Just "<Control>q"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = mainQuit
-    }
-  , ActionEntry
-    { actionEntryName        = "close-window"
-    , actionEntryLabel       = "_Close window"
-    , actionEntryStockId     = Just stockClose
-    , actionEntryAccelerator = Just "<Control>w"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = widgetDestroy window
-    }
-  , ActionEntry
-    { actionEntryName        = "help"
-    , actionEntryLabel       = "_Help"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "about"
-    , actionEntryLabel       = "_About"
-    , actionEntryStockId     = Just stockAbout
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showAbout window
-    }
-  ]
+
+initUI builder = do
+  context <- augmentContext <$> makeUI builder
+  let ?context = context
+
+  mapM_ (uncurry $ maybeBindAction builder)
+    [ ("close", widgetDestroy window)
+    , ("quit",  mainQuit)
+    , ("about", showAbout window)
+    ]
+
+  return context
+
+makeUI builder = do
+  window        <- builderGetObject builder castToWindow "main-window"
+  contents      <- builderGetObject builder castToVBox "contents"
+  uiManager     <- builderGetObject builder castToUIManager "ui-manager"
+  uiActionGroup <- builderGetObject builder castToActionGroup "ui-actions"
+  windowGroup   <- windowGroupNew
+  return UI { uWindow      = window
+            , uContents    = contents
+            , uManager     = uiManager
+            , uActionGroup = uiActionGroup
+            , uWindowGroup = windowGroup
+            }
+
+makeBuilder name = do
+  builder <- builderNew
+  builderAddFromFile builder $ gladeFilePath name
+  return builder
+
+action builder name =
+  builderGetObject builder castToAction name
+
+actions builder =
+  mapM (action builder)
+
+bindAction builder name func = do
+  a <- action builder name
+  a `on` actionActivated $ func
+
+bindActions builder =
+  mapM (uncurry $ bindAction builder)
+
+maybeBindAction builder name func = do
+  ma <- builderGetObjectRaw builder name
+  case ma of
+    Just a  -> Just <$> on (castToAction a) actionActivated func
+    Nothing -> return Nothing
+

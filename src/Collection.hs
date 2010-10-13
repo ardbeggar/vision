@@ -45,20 +45,20 @@ initCollection = do
 
 
 browseCollection maybeName = do
-  let f = browseCollection
+  builder <- makeBuilder "collection-browser"
 
-  context <- initUI
-  let ?context = context
+  let f = browseCollection
 
   context <- initModel
   let ?context = context
 
-  context <- initView
+  context <- initView builder
   let ?context = context
 
-  context <- initCollectionUI f
+  context <- initUI builder
   let ?context = context
 
+  setupUI builder f
   setupDnD
 
   widgetShowAll window
