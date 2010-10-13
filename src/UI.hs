@@ -34,6 +34,8 @@ module UI
   , makeUI
   , makeBuilder
   , action
+  , bindAction
+  , bindActions
   ) where
 
 import Control.Applicative
@@ -183,7 +185,12 @@ makeBuilder name = do
   builderAddFromFile builder $ gladeFilePath name
   return builder
 
-action builder name func = do
-  a <- builderGetObject builder castToAction name
+action builder name =
+  builderGetObject builder castToAction name
+
+bindAction builder name func = do
+  a <- action builder name
   a `on` actionActivated $ func
-  return a
+
+bindActions builder =
+  mapM (uncurry $ bindAction builder)

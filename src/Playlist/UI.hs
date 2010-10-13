@@ -64,80 +64,6 @@ setupUI builder = do
   return ()
 
 
-data URLEntry =
-  URLEntry { urlEntry :: Entry
-           , urlBox   :: HBox
-           }
-
-instance CompoundWidget URLEntry where
-  type Outer URLEntry = HBox
-  outer = urlBox
-
-instance EditorWidget URLEntry where
-  type Data URLEntry = String
-  setData e     = entrySetText (urlEntry e)
-  getData       = entryGetText . urlEntry
-  clearData     = flip setData ""
-  getState      = const $ return (True, True)
-  resetModified = const $ return ()
-  focusView     = widgetGrabFocus . urlEntry
-
-makeURLEntry _ _ = do
-  box   <- hBoxNew False 0
-  containerSetBorderWidth box 7
-  entry <- entryNew
-  entrySetActivatesDefault entry True
-  boxPackStartDefaults box entry
-  return URLEntry { urlEntry = entry
-                  , urlBox   = box
-                  }
-
-makeURLEntryDialog =
-  makeEditorDialog [] makeURLEntry $ \v -> do
-    let outerw = outer v
-    windowSetTitle outerw "Add media"
-    windowSetDefaultSize outerw 500 (-1)
-
-runURLEntryDialog dlg =
-  runEditorDialog dlg (return "")
-  (\str ->
-    insertURIs (map (encString False ok_url) $ lines str) Nothing)
-  False window
-
-updateWindowTitle = do
-  maybeName <- getPlaylistName
-  setWindowTitle $ case maybeName of
-    Nothing   -> "Vision playlist"
-    Just name -> name ++ " - Vision playlist"
-
-setupPlaybar builder = do
-  playbar <- builderGetObject builder castToToolbar "playbar"
-
-  sep <- separatorToolItemNew
-  separatorToolItemSetDraw sep False
-  toolbarInsert playbar sep (-1)
-
-  seekView <- makeSeekControl
-  seekItem <- toolItemNew
-  toolItemSetHomogeneous seekItem False
-  toolItemSetExpand seekItem True
-  containerAdd seekItem seekView
-  toolbarInsert playbar seekItem (-1)
-
-  sep <- separatorToolItemNew
-  separatorToolItemSetDraw sep False
-  toolbarInsert playbar sep (-1)
-
-  volView <- makeVolumeControl
-  volumeItem <- toolItemNew
-  toolItemSetHomogeneous volumeItem False
-  toolItemSetExpand volumeItem False
-  widgetSetSizeRequest volumeItem 100 (-1)
-  containerAdd volumeItem volView
-  toolbarInsert playbar volumeItem (-1)
-
-  return ()
-
 setupActions builder = do
   urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
 
@@ -155,32 +81,44 @@ setupActions builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  mapM_ (uncurry $ action builder)
-    [ ("select-all",         editSelectAll)
+  bindActions builder
+    [ ("play",               startPlayback False)
+    , ("pause",              pausePlayback)
+    , ("stop",               stopPlayback)
+    , ("prev",               prevTrack)
+    , ("next",               nextTrack)
+    , ("quit",               mainQuit)
+    , ("cut",                editDelete True)
+    , ("copy",               editCopy)
+    , ("paste",              editPaste False)
+    , ("append",             editPaste True)
+    , ("delete",             editDelete False)
+    , ("select-all",         editSelectAll)
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
     , ("browse-collection",  browseCollection Nothing)
     , ("add-media",          runURLEntryDialog urlEntryDialog)
     , ("clear-playlist",     clearPlaylist)
     , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)
-    , ("import-properties",  showPropertyImport)
-    , ("quit",               mainQuit)
     , ("configure-playlist", showPlaylistConfigDialog)
+    , ("edit-properties",    showPropertyEditor)
+    , ("export-properties",  showPropertyExport)
+    , ("import-properties",  showPropertyImport)
     , ("manage-properties",  showPropertyManager)
     ]
 
-  play   <- action builder "play"              $ startPlayback False
-  pause  <- action builder "pause"             $ pausePlayback
-  stop   <- action builder "stop"              $ stopPlayback
-  prev   <- action builder "prev"              $ prevTrack
-  next   <- action builder "next"              $ nextTrack
-  cut    <- action builder "cut"               $ editDelete True
-  copy   <- action builder "copy"              $ editCopy
-  paste  <- action builder "paste"             $ editPaste False
-  append <- action builder "append"            $ editPaste True
-  delete <- action builder "delete"            $ editDelete False
-  editp  <- action builder "edit-properties"   $ showPropertyEditor
-  export <- action builder "export-properties" $ showPropertyExport
+  play   <- action builder "play"
+  pause  <- action builder "pause"
+  stop   <- action builder "stop"
+  prev   <- action builder "prev"
+  next   <- action builder "next"
+  cut    <- action builder "cut"
+  copy   <- action builder "copy"
+  paste  <- action builder "paste"
+  append <- action builder "append"
+  delete <- action builder "delete"
+  editp  <- action builder "edit-properties"
+  export <- action builder "export-properties"
 
   let setupPPS = do
         ps <- getPlaybackStatus
@@ -226,3 +164,79 @@ setupActions builder = do
     return False
 
   return ()
+
+setupPlaybar builder = do
+  playbar <- builderGetObject builder castToToolbar "playbar"
+
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
+
+  seekView <- makeSeekControl
+  seekItem <- toolItemNew
+  toolItemSetHomogeneous seekItem False
+  toolItemSetExpand seekItem True
+  containerAdd seekItem seekView
+  toolbarInsert playbar seekItem (-1)
+
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
+
+  volView <- makeVolumeControl
+  volumeItem <- toolItemNew
+  toolItemSetHomogeneous volumeItem False
+  toolItemSetExpand volumeItem False
+  widgetSetSizeRequest volumeItem 100 (-1)
+  containerAdd volumeItem volView
+  toolbarInsert playbar volumeItem (-1)
+
+  return ()
+
+updateWindowTitle = do
+  maybeName <- getPlaylistName
+  setWindowTitle $ case maybeName of
+    Nothing   -> "Vision playlist"
+    Just name -> name ++ " - Vision playlist"
+
+
+
+data URLEntry =
+  URLEntry { urlEntry :: Entry
+           , urlBox   :: HBox
+           }
+
+instance CompoundWidget URLEntry where
+  type Outer URLEntry = HBox
+  outer = urlBox
+
+instance EditorWidget URLEntry where
+  type Data URLEntry = String
+  setData e     = entrySetText (urlEntry e)
+  getData       = entryGetText . urlEntry
+  clearData     = flip setData ""
+  getState      = const $ return (True, True)
+  resetModified = const $ return ()
+  focusView     = widgetGrabFocus . urlEntry
+
+makeURLEntry _ _ = do
+  box   <- hBoxNew False 0
+  containerSetBorderWidth box 7
+  entry <- entryNew
+  entrySetActivatesDefault entry True
+  boxPackStartDefaults box entry
+  return URLEntry { urlEntry = entry
+                  , urlBox   = box
+                  }
+
+makeURLEntryDialog =
+  makeEditorDialog [] makeURLEntry $ \v -> do
+    let outerw = outer v
+    windowSetTitle outerw "Add media"
+    windowSetDefaultSize outerw 500 (-1)
+
+runURLEntryDialog dlg =
+  runEditorDialog dlg (return "")
+  (\str ->
+    insertURIs (map (encString False ok_url) $ lines str) Nothing)
+  False window
