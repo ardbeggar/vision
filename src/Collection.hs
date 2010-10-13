@@ -52,15 +52,13 @@ browseCollection maybeName = do
   context <- initModel
   let ?context = context
 
-  context <- initView
+  context <- initView builder
   let ?context = context
 
   context <- initUIB builder
   let ?context = context
 
-  context <- initCollectionUI f
-  let ?context = context
-
+  setupUI builder f
   setupDnD
 
   widgetShowAll window

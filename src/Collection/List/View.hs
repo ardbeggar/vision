@@ -48,11 +48,13 @@ listView = vView context
 listSel  = vSel  context
 
 
-initListView = do
-  context <- initContext
+initListView builder = do
+  context <- initContext builder
   let ?context = context
 
   treeSelectionSetMode listSel SelectionBrowse
+
+  treeViewSetModel listView listStore
 
   treeViewSetHeadersVisible listView False
   widgetSetSizeRequest listView 200 (-1)
@@ -80,8 +82,8 @@ resetListView =
   treeViewSetCursor listView [0] Nothing
 
 
-initContext = do
-  view <- treeViewNewWithModel listStore
+initContext builder = do
+  view <- builderGetObject builder castToTreeView "list-view"
   sel  <- treeViewGetSelection view
   return $ augmentContext
     View { vView = view

@@ -34,6 +34,7 @@ module UI
   , makeUI
   , makeBuilder
   , action
+  , actions
   , bindAction
   , bindActions
   ) where
@@ -47,7 +48,6 @@ import Graphics.UI.Gtk
 import Context
 import Environment
 import About
-import Utils
 
 
 data UI
@@ -160,9 +160,11 @@ initUIB builder = do
   context <- augmentContext <$> makeUI builder
   let ?context = context
 
-  about <- builderGetObjectRaw builder "about"
-  withJust about $ \about ->
-    (castToAction about) `on` actionActivated $ showAbout window
+  mapM_ (uncurry $ maybeBindAction builder)
+    [ ("close", widgetDestroy window)
+    , ("quit",  mainQuit)
+    , ("about", showAbout window)
+    ]
 
   return context
 
@@ -188,9 +190,19 @@ makeBuilder name = do
 action builder name =
   builderGetObject builder castToAction name
 
+actions builder =
+  mapM (action builder)
+
 bindAction builder name func = do
   a <- action builder name
   a `on` actionActivated $ func
 
 bindActions builder =
   mapM (uncurry $ bindAction builder)
+
+maybeBindAction builder name func = do
+  ma <- builderGetObjectRaw builder name
+  case ma of
+    Just a  -> Just <$> on (castToAction a) actionActivated func
+    Nothing -> return Nothing
+
