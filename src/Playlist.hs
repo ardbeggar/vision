@@ -43,7 +43,7 @@ initPlaylist =
 showPlaylist = do
   builder <- makeBuilder "playlist"
 
-  context <- initUIB builder
+  context <- initUI builder
   let ?context = context
 
   context <- initModel

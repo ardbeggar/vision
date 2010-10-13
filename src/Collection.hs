@@ -55,7 +55,7 @@ browseCollection maybeName = do
   context <- initView builder
   let ?context = context
 
-  context <- initUIB builder
+  context <- initUI builder
   let ?context = context
 
   setupUI builder f

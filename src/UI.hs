@@ -30,7 +30,6 @@ module UI
   , addUIActions
   , getAction
   , windowGroup
-  , initUIB
   , makeUI
   , makeBuilder
   , action
@@ -64,38 +63,6 @@ uiManager     = uManager context
 uiActionGroup = uActionGroup context
 windowGroup   = uWindowGroup context
 
-initUI = do
-  context <- initContext
-  let ?context = context
-
-  windowGroupAddWindow windowGroup window
-  containerAdd window contents
-
-  windowAddAccelGroup window =<< uiManagerGetAccelGroup uiManager
-  insertActionGroup uiActionGroup 1
-  addUIActions uiActions
-  addUIFromFile "common"
-
-  menubar <- getWidget castToMenuBar "ui/menubar"
-  boxPackStart contents menubar PackNatural 0
-
-  return ?context
-
-
-initContext = do
-  window        <- windowNew
-  contents      <- vBoxNew False 0
-  uiManager     <- uiManagerNew
-  uiActionGroup <- actionGroupNew "ui"
-  windowGroup   <- windowGroupNew
-  return $ augmentContext
-    UI { uWindow      = window
-       , uContents    = contents
-       , uManager     = uiManager
-       , uActionGroup = uiActionGroup
-       , uWindowGroup = windowGroup
-       }
-
 setWindowTitle = windowSetTitle window
 addUIActions = actionGroupAddActions uiActionGroup
 insertActionGroup = uiManagerInsertActionGroup uiManager
@@ -104,59 +71,8 @@ maybeGetWidget cast name = fmap cast <$> uiManagerGetWidget uiManager name
 getWidget cast name = fromJust <$> maybeGetWidget cast name
 getAction group name = fromJust <$> actionGroupGetAction group name
 
-uiActions =
-  [ ActionEntry
-    { actionEntryName        = "menubar"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "toolbar"
-    , actionEntryLabel       = ""
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "quit"
-    , actionEntryLabel       = "_Quit"
-    , actionEntryStockId     = Just stockQuit
-    , actionEntryAccelerator = Just "<Control>q"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = mainQuit
-    }
-  , ActionEntry
-    { actionEntryName        = "close-window"
-    , actionEntryLabel       = "_Close window"
-    , actionEntryStockId     = Just stockClose
-    , actionEntryAccelerator = Just "<Control>w"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = widgetDestroy window
-    }
-  , ActionEntry
-    { actionEntryName        = "help"
-    , actionEntryLabel       = "_Help"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = return ()
-    }
-  , ActionEntry
-    { actionEntryName        = "about"
-    , actionEntryLabel       = "_About"
-    , actionEntryStockId     = Just stockAbout
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = showAbout window
-    }
-  ]
 
-
-initUIB builder = do
+initUI builder = do
   context <- augmentContext <$> makeUI builder
   let ?context = context
 
@@ -167,7 +83,6 @@ initUIB builder = do
     ]
 
   return context
-
 
 makeUI builder = do
   window        <- builderGetObject builder castToWindow "main-window"
