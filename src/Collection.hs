@@ -45,6 +45,8 @@ initCollection = do
 
 
 browseCollection maybeName = do
+  builder <- makeBuilder "collection-browser"
+
   let f = browseCollection
 
   context <- initModel
@@ -53,7 +55,7 @@ browseCollection maybeName = do
   context <- initView
   let ?context = context
 
-  context <- initUI
+  context <- initUIB builder
   let ?context = context
 
   context <- initCollectionUI f
