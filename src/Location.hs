@@ -40,16 +40,18 @@ initLocation =
 browseLocation order maybeURL = do
   let f = browseLocation
 
-  context <- initUI
-  let ?context = context
+  builder <- makeBuilder "location-browser"
 
   context <- initModel order
   let ?context = context
 
-  context <- initView
+  context <- initView builder
   let ?context = context
 
-  setupUI f
+  context <- initUIB builder
+  let ?context = context
+
+  setupUI builder f
   setupDnD
 
   widgetShowAll window

@@ -45,11 +45,11 @@ locationSel   = vSel context
 locationEntry = vEntry context
 
 
-initView = do
-  context <- initContext
+initView builder = do
+  context <- initContext builder
   let ?context = context
 
-  treeViewSetRulesHint locationView True
+  treeViewSetModel locationView sortModel
 
   treeSelectionSetMode locationSel SelectionMultiple
 
@@ -93,10 +93,10 @@ initView = do
   return ?context
 
 
-initContext = do
-  view  <- treeViewNewWithModel sortModel
+initContext builder = do
+  view  <- builderGetObject builder castToTreeView "location-view"
   sel   <- treeViewGetSelection view
-  entry <- entryNew
+  entry <- builderGetObject builder castToEntry "location-entry"
   return $ augmentContext
     View { vView  = view
          , vSel   = sel
