@@ -47,13 +47,13 @@ initCollection = do
 browseCollection maybeName = do
   let f = browseCollection
 
-  context <- initUI
-  let ?context = context
-
   context <- initModel
   let ?context = context
 
   context <- initView
+  let ?context = context
+
+  context <- initUI
   let ?context = context
 
   context <- initCollectionUI f
