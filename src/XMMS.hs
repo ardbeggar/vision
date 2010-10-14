@@ -79,23 +79,19 @@ initContext = do
 scheduleTryConnect = timeoutAdd tryConnect
 
 tryConnect = do
-  putStr "connecting... "
   success <- connect xmms xmmsPath
   if success
     then do
-    putStrLn "connected!"
     disconnectCallbackSet xmms disconnectCallback
     mainLoopGMainInit xmms
     modifyMVar_ state $ \s -> return s { sConnected = True }
     onServerConnection $ invoke True
     return False
     else do
-    putStrLn "failed."
     scheduleTryConnect 1000
     return False
 
 disconnectCallback = do
-  putStrLn "disconnected."
   modifyMVar_ state $ \s -> return s { sConnected = False }
   onServerConnection $ invoke False
   scheduleTryConnect 1000
