@@ -50,13 +50,13 @@ setupUI builder browse = do
   let ?context = context
 
   setupActions builder browse
+  setupConnection builder
 
   collFilter `onEntryActivate` applyFilter
-  collFilter `onIconPress` \pos ->
-    case pos of
-      0 -> entrySetText collFilter ""
-      1 -> applyFilter
-      _ -> return ()
+  collFilter `onIconPress` \icon ->
+    case icon of
+      PrimaryIcon   -> entrySetText collFilter ""
+      SecondaryIcon -> applyFilter
 
   popup <- getWidget castToMenu "ui/collection-popup"
   setupTreeViewPopup collView popup
@@ -75,9 +75,6 @@ setupActions builder browse = do
     let outerw = outer v
     windowSetTitle outerw "Configure ordering"
     windowSetDefaultSize outerw 500 400
-
-  ag <- builderGetObject builder castToActionGroup "server-actions"
-  onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
   bindActions builder
     [ ("new-window"            , newWindow browse                             )
@@ -144,6 +141,16 @@ setupActions builder browse = do
     return False
 
   return ()
+
+setupConnection builder = do
+  ag <- builderGetObject builder castToActionGroup "server-actions"
+
+  onServerConnectionAdd . ever $ \conn -> do
+    actionGroupSetSensitive ag conn
+    collFilter `set` [ secondaryIconSensitive := conn ]
+
+  return ()
+
 
 newWindow browse =
   browse Nothing

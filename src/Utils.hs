@@ -34,7 +34,9 @@ module Utils
   , hideOnDeleteEvent
   , eqBy
   , tryModifyMVar_
+  , EntryIcon (..)
   , onIconPress
+  , secondaryIconSensitive
   ) where
 
 import Prelude hiding (catch)
@@ -50,6 +52,7 @@ import Codec.Binary.UTF8.String
 import Foreign.C.Types
 
 import Graphics.UI.Gtk
+import System.Glib.Properties
 
 import XMMS2.Client
 
@@ -178,11 +181,19 @@ tryModifyMVar_ m io =
 deriving instance MonadCatchIO (ResultM c a)
 
 
+data EntryIcon
+  = PrimaryIcon
+  | SecondaryIcon
+    deriving (Enum, Eq)
+
 onIconPress
   :: EntryClass ec
   => ec
-  -> (Int -> IO ())
+  -> (EntryIcon -> IO ())
   -> IO (ConnectId ec)
 onIconPress entry handler =
-  connectGeneric "icon-press" False entry $ \_ pos _ -> do
-    handler $ fromIntegral (pos :: CInt)
+  connectGeneric "icon-press" False entry $ \_ pos _ ->
+    handler $ toEnum $ fromIntegral (pos :: CInt)
+
+secondaryIconSensitive =
+  newAttrFromBoolProperty "secondary-icon-sensitive"

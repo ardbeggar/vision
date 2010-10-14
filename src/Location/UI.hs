@@ -41,11 +41,9 @@ setupUI builder browse = do
   setupToolbar builder
   setupLocationEntry builder
   setupLocationView builder
+  setupConnection builder
 
 setupActions builder browse = do
-  ag <- builderGetObject builder castToActionGroup "server-actions"
-  onServerConnectionAdd . ever $ actionGroupSetSensitive ag
-
   bindActions builder
     [ ("new-window"           , newWindow browse                )
     , ("open-location"        , openLocation                    )
@@ -118,11 +116,10 @@ setupToolbar builder = do
 setupLocationEntry builder = do
   load <- action builder "load"
   locationEntry `onEntryActivate` actionActivate load
-  locationEntry `onIconPress` \pos ->
-    case pos of
-      0 -> entrySetText locationEntry ""
-      1 -> actionActivate load
-      _ -> return ()
+  locationEntry `onIconPress` \icon ->
+    case icon of
+      PrimaryIcon   -> entrySetText locationEntry ""
+      SecondaryIcon -> actionActivate load
 
   return ()
 
@@ -147,6 +144,15 @@ setupLocationView builder = do
           actionActivate binw
         Nothing           ->
           return ()
+
+  return ()
+
+setupConnection builder = do
+  ag <- builderGetObject builder castToActionGroup "server-actions"
+
+  onServerConnectionAdd . ever $ \conn -> do
+    actionGroupSetSensitive ag conn
+    locationEntry `set` [secondaryIconSensitive := conn]
 
   return ()
 
