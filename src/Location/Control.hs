@@ -43,6 +43,7 @@ import UI
 import Location.History
 import Location.Model
 import Location.View
+import Location.PathComp
 
 
 loadLocation location = do
@@ -52,6 +53,7 @@ loadLocation location = do
     Just url -> do
       addToHistory url
       updateWindowTitle
+      clearPathComp locationComp
       entrySetText locationEntry url
       xformMediaBrowse xmms url >>* handleBrowse url
     Nothing ->

@@ -21,6 +21,7 @@ module Location.PathComp
   , makePathComp
   , pathComp
   , updatePathComp
+  , clearPathComp
   ) where
 
 import Control.Monad
@@ -58,7 +59,8 @@ makePathComp = do
   entryCompletionSetTextModel comp store
 
   entryCompletionSetPopupCompletion comp True
-  entryCompletionSetPopupSingleMatch comp True
+  entryCompletionSetPopupSingleMatch comp False
+  entryCompletionSetInlineCompletion comp True
 
   return PathComp { pathComp = comp
                   , pStore   = store
@@ -80,3 +82,6 @@ updatePathComp pc url = do
               listStoreAppend (pStore pc) . decodeURL $ entryPath e
               return ()
           entryCompletionComplete $ pathComp pc
+
+clearPathComp =
+  listStoreClear . pStore

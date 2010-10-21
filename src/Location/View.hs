@@ -22,6 +22,7 @@ module Location.View
   , locationView
   , locationSel
   , locationEntry
+  , locationComp
   ) where
 
 import Data.List
@@ -38,11 +39,13 @@ data View
   = View { vView  :: TreeView
          , vSel   :: TreeSelection
          , vEntry :: Entry
+         , vComp  :: PathComp
          }
 
 locationView  = vView context
 locationSel   = vSel context
 locationEntry = vEntry context
+locationComp  = vComp context
 
 
 initView builder = do
@@ -87,11 +90,10 @@ initView builder = do
     item <- itemByIter iter
     return $ isInfixOf (map toLower str) (map toLower $ iName item)
 
-  comp <- makePathComp
-  entrySetCompletion locationEntry $ pathComp comp
+  entrySetCompletion locationEntry $ pathComp locationComp
   locationEntry `onEditableChanged` do
     url <- entryGetText locationEntry
-    updatePathComp comp url
+    updatePathComp locationComp url
 
   return ?context
 
@@ -100,9 +102,11 @@ initContext builder = do
   view  <- builderGetObject builder castToTreeView "location-view"
   sel   <- treeViewGetSelection view
   entry <- builderGetObject builder castToEntry "location-entry"
+  comp  <- makePathComp
   return $ augmentContext
     View { vView  = view
          , vSel   = sel
          , vEntry = entry
+         , vComp  = comp
          }
 
