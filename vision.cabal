@@ -66,6 +66,7 @@ executable vision
                     Index,
                     Location,
                     Location.History,
+                    Location.PathComp,
                     Location.Model,
                     Location.View,
                     Location.DnD,

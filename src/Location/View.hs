@@ -31,7 +31,7 @@ import Graphics.UI.Gtk
 
 import Context
 import Location.Model
-import Location.History
+import Location.PathComp
 
 
 data View
@@ -87,8 +87,11 @@ initView builder = do
     item <- itemByIter iter
     return $ isInfixOf (map toLower str) (map toLower $ iName item)
 
-  comp <- makeHistoryCompletion
-  entrySetCompletion locationEntry comp
+  comp <- makePathComp
+  entrySetCompletion locationEntry $ pathComp comp
+  locationEntry `onEditableChanged` do
+    url <- entryGetText locationEntry
+    updatePathComp comp url
 
   return ?context
 
