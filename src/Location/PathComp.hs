@@ -83,5 +83,7 @@ updatePathComp pc url = do
               return ()
           entryCompletionComplete $ pathComp pc
 
-clearPathComp =
-  listStoreClear . pStore
+clearPathComp pc = do
+  listStoreClear $ pStore pc
+  writeIORef (pURL pc) ""
+
