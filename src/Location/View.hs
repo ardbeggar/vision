@@ -25,14 +25,18 @@ module Location.View
   , locationComp
   ) where
 
+import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans
 
 import Data.List
 import Data.Char
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
 import Context
+import Environment
 import Location.Model
 import Location.PathComp
 
@@ -102,7 +106,11 @@ initView builder = do
     []    <- eventModifier
     "Tab" <- eventKeyName
     liftIO $ do
-      url <- entryGetText locationEntry
+      (url, modify, ofs) <- makeURL <$> entryGetText locationEntry
+      when modify $ do
+        pos <- editableGetPosition locationEntry
+        entrySetText locationEntry url
+        editableSetPosition locationEntry $ pos + ofs
       updatePathComp locationComp url
       entryCompletionInsertPrefix $ pathComp locationComp
       entryCompletionComplete $ pathComp locationComp
@@ -122,3 +130,13 @@ initContext builder = do
          , vComp  = comp
          }
 
+
+makeURL url
+  | "://" `isInfixOf` url =
+    (url, False, 0)
+  | "~/" `isPrefixOf` url && isJust homeDir =
+      let pfx = "file://" ++ fromJust homeDir
+          len = length pfx + length url - 1
+      in (pfx ++ tail url, True, len)
+  | otherwise =
+    ("file://" ++ url, True, 7)
