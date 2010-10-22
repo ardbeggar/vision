@@ -81,6 +81,7 @@ updatePathComp pc url = do
             when (entryIsDir e) $ do
               listStoreAppend (pStore pc) . decodeURL $ entryPath e
               return ()
+          entryCompletionInsertPrefix $ pathComp pc
           entryCompletionComplete $ pathComp pc
 
 clearPathComp pc = do

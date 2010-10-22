@@ -25,6 +25,8 @@ module Location.View
   , locationComp
   ) where
 
+import Control.Monad.Trans
+
 import Data.List
 import Data.Char
 
@@ -91,9 +93,19 @@ initView builder = do
     return $ isInfixOf (map toLower str) (map toLower $ iName item)
 
   entrySetCompletion locationEntry $ pathComp locationComp
+
   locationEntry `onEditableChanged` do
     url <- entryGetText locationEntry
     updatePathComp locationComp url
+
+  locationEntry `on` keyPressEvent $ tryEvent $ do
+    []    <- eventModifier
+    "Tab" <- eventKeyName
+    liftIO $ do
+      url <- entryGetText locationEntry
+      updatePathComp locationComp url
+      entryCompletionInsertPrefix $ pathComp locationComp
+      entryCompletionComplete $ pathComp locationComp
 
   return ?context
 
