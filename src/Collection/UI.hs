@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 14 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -113,14 +113,14 @@ setupActions builder browse = do
           [ "add-to-playlist"
           , "replace-playlist"
           ]
-  let updatePA = liftIO $ do
+  let updatePA = do
         list <- widgetGetIsFocus listView
         coll <- widgetGetIsFocus collView
         mapM_ (`actionSetSensitive` (list || coll)) acts
         return False
       setupPA w = do
-        w `on` focusInEvent $ updatePA
-        w `on` focusOutEvent $ updatePA
+        w `on` focusInEvent $ liftIO updatePA
+        w `on` focusOutEvent $ liftIO updatePA
   setupPA listView
   setupPA collView
 

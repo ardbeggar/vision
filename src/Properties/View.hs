@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 22 Mar. 2010
 --
---  Copyright (C) 2009-2010 Oleg Belozeorov
+--  Copyright (C) 2009-2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -112,7 +112,7 @@ makePropertyView make _ notify = do
   panedPack1 paned scroll True False
 
   filter <- treeModelFilterNew propertyStore []
-  treeModelFilterSetVisibleFunc filter $ Just $ \iter -> do
+  treeModelFilterSetVisibleFunc filter $ \iter -> do
     [n]   <- treeModelGetPath propertyStore iter
     prop  <- listStoreGetValue propertyStore n
     seld  <- readIORef selected

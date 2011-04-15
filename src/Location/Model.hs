@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 28 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -218,4 +218,4 @@ getSortOrder =
 setSortOrder order = do
   modifyMVar_ state $ \s ->
     return s { sOrder = order }
-  treeSortableSetDefaultSortFunc sortModel $ compareIters order
+  treeSortableSetDefaultSortFunc sortModel $ Just $ compareIters order

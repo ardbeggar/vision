@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 6 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -34,7 +34,7 @@ module Properties.Editor.Model
 import Prelude hiding (lookup)
 
 import Control.Concurrent.MVar
-import Control.Monad.State hiding (State, withState)
+import Control.Monad.State hiding (State, withState, state)
 import Control.Applicative
 import Control.Arrow
 

@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 5 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -126,10 +126,11 @@ makePropertyManager parent notify = do
   let getByIter iter = do
         [n] <- treeModelGetPath store iter
         listStoreGetValue store n
+      compBy :: Ord a => (Property -> a) -> TreeIter -> TreeIter -> IO Ordering
       compBy f a b =
         comparing f <$> getByIter a <*> getByIter b
 
-  treeSortableSetDefaultSortFunc sorted $ compBy (map toLower . propName)
+  treeSortableSetDefaultSortFunc sorted $ Just $ compBy (map toLower . propName)
   treeSortableSetSortFunc sorted 0 $ compBy (map toLower . propName)
   treeSortableSetSortFunc sorted 1 $ compBy (map toLower . propKey)
   treeSortableSetSortFunc sorted 2 $ compBy (fromEnum . propType)
@@ -288,7 +289,8 @@ makePropertyEntry exists _ notify = do
   tableSetColSpacings table 15
   tableSetRowSpacings table 5
 
-  let addPair m w b = do
+  let addPair :: WidgetClass w => String -> w -> Int -> IO ()
+      addPair m w b = do
         l <- labelNewWithMnemonic m
         miscSetAlignment l 0.0 0.5
         labelSetMnemonicWidget l w

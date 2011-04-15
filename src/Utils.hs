@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 17 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -97,8 +97,6 @@ decodeByte _ = error "invalid URL"
 trd (_, _, c) = c
 
 trim = f . f where f = reverse . dropWhile isSpace
-
-bracket_ f g = bracket f (const g) . const
 
 catchResult def conv =
   (conv <$> result) `catch` \(_ :: XMMSException) -> return def

@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 26 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -16,6 +16,8 @@
 --  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 --  General Public License for more details.
 --
+
+{-# LANGUAGE NoMonoLocalBinds #-}
 
 module Playlist.Edit
   ( editDelete
