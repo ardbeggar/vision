@@ -193,6 +193,28 @@
             <property name="position">2</property>
           </packing>
         </child>
+        <child>
+          <object class="GtkInfoBar" id="info">
+            <property name="visible">False</property>
+            <child internal-child="content_area">
+              <object class="GtkHBox" id="info-contents">
+                <child>
+                  <object class="GtkLabel" id="info-text">
+                    <property name="visible">True</property>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                    <property name="expand">True</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="position">3</property>
+            <property name="expand">False</property>
+          </packing>
+        </child>
       </object>
     </child>
   </object>

@@ -60,8 +60,11 @@ loadLocation location = do
       return ()
 
 handleBrowse url =
-  handleBrowse' `catch` \(_ :: XMMSException) ->
-    liftIO $ putStrLn $ "error loading " ++ url
+  handleBrowse' `catch` \(e :: XMMSException) -> do
+    let t = case e of
+          XMMSError s -> s
+          _           -> "Unknown error"
+    liftIO $ informUser MessageInfo $ escapeMarkup url ++ ": <b>" ++ escapeMarkup t ++ "</b>"
   where handleBrowse' = do
           r <- result
           liftIO $ do
