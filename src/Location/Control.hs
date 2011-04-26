@@ -64,7 +64,7 @@ handleBrowse url =
     let t = case e of
           XMMSError s -> s
           _           -> "Unknown error"
-    liftIO $ informUser MessageInfo $ escapeMarkup url ++ ": <b>" ++ escapeMarkup t ++ "</b>"
+    liftIO $ informUser MessageError $ escapeMarkup url ++ ": <b>" ++ escapeMarkup t ++ "</b>"
   where handleBrowse' = do
           r <- result
           liftIO $ do
