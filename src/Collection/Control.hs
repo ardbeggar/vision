@@ -89,7 +89,8 @@ setOrder order = do
   when loaded loadCurrent
 
 loadCurrent =
-  loadCurrent' `catch` \ParseError -> return ()
+  loadCurrent' `catch` \ParseError ->
+    informUser MessageError "Invalid filter text"
 
 loadCurrent' = do
   text <- trim <$> entryGetText collFilter
@@ -118,7 +119,8 @@ addToPlaylist replace = do
     when coll $ collAddToPlaylist replace
 
 collAddToPlaylist replace =
-  add `catch` \ParseError -> return ()
+  add `catch` \ParseError ->
+    informUser MessageError "Invalid filter text"
   where add = do
           ids <- getSelectedIds
           cur <- getCurColl

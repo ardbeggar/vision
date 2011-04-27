@@ -335,6 +335,13 @@
                     <property name="position">1</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkInfoBar" id="info-bar"/>
+                  <packing>
+                    <property name="position">2</property>
+                    <property name="expand">False</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="resize">True</property>
