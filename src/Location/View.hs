@@ -23,8 +23,6 @@ module Location.View
   , locationSel
   , locationEntry
   , locationComp
-  , locationInfo
-  , informUser
   ) where
 
 import Control.Applicative
@@ -48,16 +46,12 @@ data View
          , vSel   :: TreeSelection
          , vEntry :: Entry
          , vComp  :: PathComp
-         , vInfo  :: InfoBar
-         , vITxt  :: Label
          }
 
 locationView  = vView context
 locationSel   = vSel context
 locationEntry = vEntry context
 locationComp  = vComp context
-locationInfo  = vInfo context
-locationITxt  = vITxt context
 
 
 initView builder = do
@@ -121,17 +115,6 @@ initView builder = do
       entryCompletionInsertPrefix $ pathComp locationComp
       entryCompletionComplete $ pathComp locationComp
 
-  widgetSetNoShowAll locationInfo True
-  widgetHide locationInfo
-  infoBarAddButton locationInfo "_Dismiss" 0
-  infoBarSetDefaultResponse locationInfo 0
-  locationInfo `on` infoBarResponse $ \_ ->
-    widgetHide locationInfo
-  locationInfo `on` infoBarClose $
-    widgetHide locationInfo
-  miscSetAlignment locationITxt 0.0 0.5
-  labelSetUseMarkup locationITxt True
-
   return ?context
 
 
@@ -140,22 +123,12 @@ initContext builder = do
   sel   <- treeViewGetSelection view
   entry <- builderGetObject builder castToEntry "location-entry"
   comp  <- makePathComp
-  info  <- builderGetObject builder castToInfoBar "info"
-  iTxt  <- builderGetObject builder castToLabel "info-text"
   return $ augmentContext
     View { vView  = view
          , vSel   = sel
          , vEntry = entry
          , vComp  = comp
-         , vInfo  = info
-         , vITxt  = iTxt
          }
-
-informUser t m = do
-  locationInfo `set` [ infoBarMessageType := t ]
-  labelSetMarkup locationITxt m
-  widgetSetNoShowAll locationInfo False
-  widgetShowAll locationInfo
 
 makeURL url
   | "://" `isInfixOf` url =
