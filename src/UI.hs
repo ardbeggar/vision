@@ -36,6 +36,7 @@ module UI
   , actions
   , bindAction
   , bindActions
+  , informUser
   ) where
 
 import Control.Applicative
@@ -55,6 +56,8 @@ data UI
        , uManager     :: UIManager
        , uActionGroup :: ActionGroup
        , uWindowGroup :: WindowGroup
+       , uInfoBar     :: InfoBar
+       , uInfoText    :: Label
        }
 
 window        = uWindow context
@@ -62,6 +65,9 @@ contents      = uContents context
 uiManager     = uManager context
 uiActionGroup = uActionGroup context
 windowGroup   = uWindowGroup context
+infoBar       = uInfoBar context
+infoText      = uInfoText context
+
 
 setWindowTitle = windowSetTitle window
 addUIActions = actionGroupAddActions uiActionGroup
@@ -85,16 +91,19 @@ initUI builder = do
   return context
 
 makeUI builder = do
-  window        <- builderGetObject builder castToWindow "main-window"
-  contents      <- builderGetObject builder castToVBox "contents"
-  uiManager     <- builderGetObject builder castToUIManager "ui-manager"
-  uiActionGroup <- builderGetObject builder castToActionGroup "ui-actions"
-  windowGroup   <- windowGroupNew
+  window              <- builderGetObject builder castToWindow "main-window"
+  contents            <- builderGetObject builder castToVBox "contents"
+  uiManager           <- builderGetObject builder castToUIManager "ui-manager"
+  uiActionGroup       <- builderGetObject builder castToActionGroup "ui-actions"
+  windowGroup         <- windowGroupNew
+  (infoBar, infoText) <- makeInfoBar builder
   return UI { uWindow      = window
             , uContents    = contents
             , uManager     = uiManager
             , uActionGroup = uiActionGroup
             , uWindowGroup = windowGroup
+            , uInfoBar     = infoBar
+            , uInfoText    = infoText
             }
 
 makeBuilder name = do
@@ -121,3 +130,26 @@ maybeBindAction builder name func = do
     Just a  -> Just <$> on (castToAction a) actionActivated func
     Nothing -> return Nothing
 
+informUser t m = do
+  infoBar `set` [ infoBarMessageType := t ]
+  labelSetMarkup infoText m
+  widgetSetNoShowAll infoBar False
+  widgetShowAll infoBar
+
+makeInfoBar builder = do
+  infoBar <- builderGetObject builder castToInfoBar "info-bar"
+  widgetSetNoShowAll infoBar True
+  infoBarAddButton infoBar "_Dismiss" 0
+  infoBarSetDefaultResponse infoBar 0
+  infoBar `on` infoBarResponse $ \_ ->
+    widgetHide infoBar
+  infoBar `on` infoBarClose $
+    widgetHide infoBar
+
+  infoText <- labelNew Nothing
+  miscSetAlignment infoText 0.0 0.5
+  labelSetUseMarkup infoText True
+  boxPackStartDefaults infoBar infoText
+  boxReorderChild infoBar infoText 0
+
+  return (infoBar, infoText)
