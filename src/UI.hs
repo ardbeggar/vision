@@ -40,6 +40,7 @@ module UI
   ) where
 
 import Control.Applicative
+import Control.Monad.Trans
 
 import Data.Maybe
 
@@ -87,6 +88,11 @@ initUI builder = do
     , ("quit",  mainQuit)
     , ("about", showAbout window)
     ]
+
+  window `on` keyPressEvent $ tryEvent $ do
+    []       <- eventModifier
+    "Escape" <- eventKeyName
+    liftIO $ infoBarEmitResponse infoBar dismiss
 
   return context
 
@@ -139,12 +145,10 @@ informUser t m = do
 makeInfoBar builder = do
   infoBar <- builderGetObject builder castToInfoBar "info-bar"
   widgetSetNoShowAll infoBar True
-  infoBarAddButton infoBar "_Dismiss" 0
-  infoBarSetDefaultResponse infoBar 0
-  infoBar `on` infoBarResponse $ \_ ->
-    widgetHide infoBar
-  infoBar `on` infoBarClose $
-    widgetHide infoBar
+  infoBarAddButton infoBar "Dismiss" dismiss
+  infoBarSetDefaultResponse infoBar dismiss
+  infoBar `on` infoBarResponse $ const $ widgetHide infoBar
+  infoBar `on` infoBarClose $ widgetHide infoBar
 
   infoText <- labelNew Nothing
   miscSetAlignment infoText 0.0 0.5
@@ -153,3 +157,5 @@ makeInfoBar builder = do
   boxReorderChild infoBar infoText 0
 
   return (infoBar, infoText)
+
+dismiss = 0
