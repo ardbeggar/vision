@@ -91,7 +91,7 @@ exportProps ids file =
     let base = dropFileName $ decodeString file
         text = encodeStrict $ showJSON $ map (exConv base . snd) list
     writeFile file text `catch` \e ->
-      putStrLn $ "Export failed" ++
+      informUser MessageError $ "Property export failed: " ++
       (decodeString file) ++ ": " ++ ioeGetErrorString e
 
 exConv base info = ((url', args), Map.difference info readOnlyProps)
@@ -122,7 +122,7 @@ importProps name =
             Error _ -> erep "invalid file format"
         base = dropFileName decn
         decn = decodeString name
-        erep = putStrLn . (("Import failed: " ++ decn ++ ": ") ++)
+        erep = informUser MessageError . (("Property import failed: " ++ decn ++ ": ") ++)
 
 importOne base ((url, args), props) =
   medialibAddEntryEncoded xmms enc >>* do
