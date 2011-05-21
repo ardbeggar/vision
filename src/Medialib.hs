@@ -38,7 +38,6 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Maybe
 import Data.List
-import Data.IORef
 
 import Graphics.UI.Gtk hiding (add, remove)
 
@@ -150,24 +149,25 @@ retrieveProperties ids f = do
       len        = length ids'
       step       = len `div` 100
 
-  ref <- newIORef (0, ids', [])
-  hid <- onMediaInfo . add $ \(id, _, info) -> do
-    (ctr, todo, ready) <- readIORef ref
-    case todo of
-      (i:is) | i == id ->
-        if null is
-        then do
-          f . Right $ reverse ((id, info) : ready)
-          return False
-        else do
-          let ctr' = ctr + 1
-          when (step == 0 || ctr' `mod` step == 0) $
-            f . Left $ fromIntegral ctr' / fromIntegral len
-          requestInfo $ head is
-          writeIORef ref (ctr', is, (id, info) : ready)
-          return True
-      _ ->
-        return True
+  chan <- dupChan mediaInfoChan
+  let handler st@(ctr, todo, ready) = do
+        (id, _, info) <- readChan chan
+        case todo of
+          (i:is) | i == id ->
+            if null is
+            then do
+              f . Right $ reverse ((id, info) : ready)
+              return ()
+            else do
+              let ctr' = ctr + 1
+              when (step == 0 || ctr' `mod` step == 0) $
+                f . Left $ fromIntegral ctr' / fromIntegral len
+              requestInfo $ head is
+              handler (ctr', is, (id, info) : ready)
+          _ ->
+            handler st
 
+  tid <- forkIOUnmasked $ handler (0, ids', [])
   requestInfo $ head ids
-  return . onMediaInfo $ remove hid
+
+  return $ killThread tid
