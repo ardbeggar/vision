@@ -27,7 +27,6 @@ module Playlist.Index
 
 import Control.Concurrent
 import Control.Applicative
-import Control.Concurrent.MVar
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 
@@ -55,9 +54,7 @@ initIndex = do
   context <- initContext
   let ?context = context
 
-  miChan <- newChan
-  forkIO $ handleInfo miChan
-  onMediaInfo . add . ever $ writeChan miChan
+  dupChan mediaInfoChan >>= forkIO . handleInfo
   onFormatsChanged . add . ever . const $ handleFormats
 
   return ?context
