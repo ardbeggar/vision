@@ -25,6 +25,7 @@ module Playlist.Index
   , addToIndex
   ) where
 
+import Control.Concurrent
 import Control.Applicative
 import Control.Concurrent.MVar
 import Data.IntMap (IntMap)
@@ -54,7 +55,9 @@ initIndex = do
   context <- initContext
   let ?context = context
 
-  onMediaInfo . add . ever $ handleInfo
+  miChan <- newChan
+  forkIO $ handleInfo miChan
+  onMediaInfo . add . ever $ writeChan miChan
   onFormatsChanged . add . ever . const $ handleFormats
 
   return ?context
@@ -65,7 +68,10 @@ initContext = do
   return $ augmentContext
     Index { iTable = table }
 
-handleInfo (id, stamp, info) = do
+handleInfo miChan =
+  mapM_ handleInfo' =<< getChanContents miChan
+
+handleInfo' (id, stamp, info) = do
   let id' = fromIntegral id
   modifyMVar_ index $ \ix ->
     case IntMap.lookup id' ix of
