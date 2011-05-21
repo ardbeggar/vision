@@ -27,7 +27,7 @@ module Index
   , clearIndex
   ) where
 
-import Control.Concurrent.MVar
+import Control.Concurrent
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 
@@ -57,11 +57,14 @@ makeIndex store conv = do
                     , iConv  = conv
                     }
 
-  onMediaInfo . add . ever $ handleInfo index
+  dupChan mediaInfoChan >>= forkIO . handleInfo index
 
   return index
 
-handleInfo index (id, stamp, info) = do
+handleInfo index chan =
+  getChanContents chan >>= mapM_ (handleInfo' index)
+
+handleInfo' index (id, stamp, info) = do
   let id' = fromIntegral id
   modifyMVar_ (iTable index) $ \ix ->
     case IntMap.lookup id' ix of
