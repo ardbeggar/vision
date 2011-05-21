@@ -161,8 +161,7 @@ retrieveProperties ids f = do
             return ()
             else do
             let ctr' = ctr + 1
-            when (step == 0 || ctr' `mod` step == 0) $ do
-              print ctr'
+            when (step == 0 || ctr' `mod` step == 0) $
               f . Left $ fromIntegral ctr' / fromIntegral len
             handler (ctr', todo', (id, info) : ready)
           else
