@@ -37,7 +37,7 @@ import Data.Map (Map)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Maybe
-import Data.List
+import qualified Data.IntSet as IntSet
 
 import Graphics.UI.Gtk hiding (add, remove)
 
@@ -113,7 +113,6 @@ requestInfo id =
       _ ->
         return cache
 
-
 initContext = do
   cache         <- newMVar emptyCache
   onMediaInfo   <- makeHandlerMVar
@@ -145,29 +144,31 @@ getInfo id =
       _                     -> Nothing
 
 retrieveProperties ids f = do
-  let ids'       = nub ids
-      len        = length ids'
+  let ids'       = IntSet.fromList $ map fromIntegral ids
+      len        = IntSet.size ids'
       step       = len `div` 100
 
   chan <- dupChan mediaInfoChan
   let handler st@(ctr, todo, ready) = do
         (id, _, info) <- readChan chan
-        case todo of
-          (i:is) | i == id ->
-            if null is
+        let id' = fromIntegral id
+        if IntSet.member id' todo
+          then do
+          let todo' = IntSet.delete id' todo
+          if IntSet.null todo'
             then do
-              f . Right $ reverse ((id, info) : ready)
-              return ()
+            f . Right $ reverse ((id, info) : ready)
+            return ()
             else do
-              let ctr' = ctr + 1
-              when (step == 0 || ctr' `mod` step == 0) $
-                f . Left $ fromIntegral ctr' / fromIntegral len
-              requestInfo $ head is
-              handler (ctr', is, (id, info) : ready)
-          _ ->
-            handler st
+            let ctr' = ctr + 1
+            when (step == 0 || ctr' `mod` step == 0) $ do
+              print ctr'
+              f . Left $ fromIntegral ctr' / fromIntegral len
+            handler (ctr', todo', (id, info) : ready)
+          else
+          handler st
 
   tid <- forkIOUnmasked $ handler (0, ids', [])
-  requestInfo $ head ids
+  forkIO $ mapM_ (requestInfo . fromIntegral) $ IntSet.toList ids'
 
   return $ killThread tid
