@@ -20,6 +20,8 @@
 module Main
   where
 
+import Control.Concurrent
+
 import Graphics.UI.Gtk
 
 import Environment
@@ -38,6 +40,8 @@ import Playlist
 
 main = do
   initGUI
+
+  timeoutAdd (yield >> return True) 100
 
   context <- initEnvironment
   let ?context = context
