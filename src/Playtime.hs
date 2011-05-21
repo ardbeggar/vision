@@ -22,7 +22,8 @@ module Playtime
   , makeSeekControl
   ) where
 
-import Control.Concurrent.MVar
+import Control.Concurrent
+
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
@@ -78,7 +79,7 @@ initPlaytime = do
       setValue 0
       resetUpdate (+ 1)
 
-  onMediaInfo . add . ever $ handleInfo
+  dupChan mediaInfoChan >>= forkIO . handleInfo
   onPlaybackStatusAdd . ever $ \status ->
     when (fromMaybe StatusStop status == StatusStop) $
       setValue 0
@@ -115,7 +116,10 @@ handleCurrentId = do
       else Just cid
     requestInfo cid
 
-handleInfo (id, _, info) = do
+handleInfo chan =
+  getChanContents chan >>= mapM_ handleInfo'
+
+handleInfo' (id, _, info) = do
   cid <- getCurrentId
   when (cid == Just id) $
     case Map.lookup "duration" info of
