@@ -41,7 +41,7 @@ import Playlist
 main = do
   initGUI
 
-  timeoutAdd (yield >> return True) 100
+  timeoutAdd (yield >> return True) 1
 
   context <- initEnvironment
   let ?context = context
