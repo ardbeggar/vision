@@ -22,7 +22,6 @@ module Medialib
   , MediaInfo
   , initMedialib
   , requestInfo
-  , onMediaInfo
   , getInfo
   , retrieveProperties
   , mediaInfoChan
@@ -39,12 +38,9 @@ import qualified Data.IntMap as IntMap
 import Data.Maybe
 import qualified Data.IntSet as IntSet
 
-import Graphics.UI.Gtk hiding (add, remove)
-
 import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
 
-import Utils
 import Context
 import XMMS
 import Handler
@@ -71,12 +67,10 @@ emptyCache =
 
 data MLib
   = MLib { mCache         :: MVar Cache
-         , mOnMediaInfo   :: HandlerMVar (MediaId, Stamp, MediaInfo)
          , mMediaInfoChan :: Chan (MediaId, Stamp, MediaInfo)
          }
 
 cache         = mCache context
-onMediaInfo   = onHandler $ mOnMediaInfo context
 mediaInfoChan = mMediaInfoChan context
 
 initMedialib = do
@@ -108,19 +102,16 @@ requestInfo id =
         return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
       Just (CEReady s i) -> do
         writeChan mediaInfoChan (id, s, i)
-        idleAdd (onMediaInfo (invoke (id, s, i)) >> return False) priorityHighIdle
         return cache
       _ ->
         return cache
 
 initContext = do
   cache         <- newMVar emptyCache
-  onMediaInfo   <- makeHandlerMVar
   mediaInfoChan <- newChan
   forkIO $ forever $ void $ readChan mediaInfoChan
   return $ augmentContext
     MLib { mCache         = cache
-         , mOnMediaInfo   = onMediaInfo
          , mMediaInfoChan = mediaInfoChan
          }
 
@@ -135,7 +126,6 @@ handleInfo id = do
       return (Cache { cEntries   = IntMap.insert id entry entries
                     , cNextStamp = succ stamp }, stamp)
     writeChan mediaInfoChan (fromIntegral id, stamp, info)
-    onMediaInfo $ invoke (fromIntegral id, stamp, info)
 
 getInfo id =
   withMVar cache $ \cache ->
