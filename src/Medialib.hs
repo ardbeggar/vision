@@ -27,8 +27,6 @@ module Medialib
   , mediaInfoChan
   ) where
 
-import Graphics.UI.Gtk
-
 import Control.Concurrent
 
 import Control.Monad
