@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
+
 module Collection.Control
   ( loadSelected
   , loadNamed
