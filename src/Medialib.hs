@@ -27,6 +27,8 @@ module Medialib
   , mediaInfoChan
   ) where
 
+import Graphics.UI.Gtk
+
 import Control.Concurrent
 
 import Control.Monad
@@ -68,14 +70,18 @@ emptyCache =
 data MLib
   = MLib { mCache         :: MVar Cache
          , mMediaInfoChan :: Chan (MediaId, Stamp, MediaInfo)
+         , mReqChan       :: Chan MediaId
          }
 
 cache         = mCache context
 mediaInfoChan = mMediaInfoChan context
+reqChan       = mReqChan context
 
 initMedialib = do
   context <- initContext
   let ?context = context
+
+  forkIO infoReqJob
 
   onServerConnectionAdd . ever $ \conn ->
     if conn
@@ -98,7 +104,7 @@ requestInfo id =
         entries = cEntries cache in
     case IntMap.lookup id' entries of
       Nothing -> do
-        medialibGetInfo xmms id >>* handleInfo id'
+        writeChan reqChan id
         return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
       Just (CEReady s i) -> do
         writeChan mediaInfoChan (id, s, i)
@@ -109,10 +115,12 @@ requestInfo id =
 initContext = do
   cache         <- newMVar emptyCache
   mediaInfoChan <- newChan
+  reqChan       <- newChan
   forkIO $ forever $ void $ readChan mediaInfoChan
   return $ augmentContext
     MLib { mCache         = cache
          , mMediaInfoChan = mediaInfoChan
+         , mReqChan       = reqChan
          }
 
 handleInfo id = do
@@ -161,3 +169,14 @@ retrieveProperties ids f = do
   forkIO $ mapM_ (requestInfo . fromIntegral) $ IntSet.toList ids'
 
   return $ killThread tid
+
+infoReqJob = do
+  ids <- getChanContents reqChan
+  infoReqJob' ids
+
+infoReqJob' list = do
+  let (h, t) = splitAt 30 list
+  forM_ h $ \id ->
+    medialibGetInfo xmms id >>* handleInfo (fromIntegral id)
+  threadDelay 1
+  infoReqJob' t
