@@ -26,7 +26,10 @@ module Playlist.Index
   ) where
 
 import Control.Concurrent
+import Control.Concurrent.STM
 import Control.Applicative
+import Control.Monad
+
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 
@@ -54,7 +57,7 @@ initIndex = do
   context <- initContext
   let ?context = context
 
-  dupChan mediaInfoChan >>= forkIO . handleInfo
+  (atomically $ dupTChan mediaInfoChan) >>= forkIO . handleInfo
   onFormatsChanged . add . ever . const $ handleFormats
 
   return ?context
@@ -65,8 +68,9 @@ initContext = do
   return $ augmentContext
     Index { iTable = table }
 
-handleInfo miChan =
-  mapM_ handleInfo' =<< getChanContents miChan
+handleInfo chan = forever $ do
+  info <- atomically $ readTChan chan
+  handleInfo' info
 
 handleInfo' (id, stamp, info) = do
   let id' = fromIntegral id

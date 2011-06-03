@@ -23,6 +23,7 @@ module Playtime
   ) where
 
 import Control.Concurrent
+import Control.Concurrent.STM
 
 import Control.Applicative
 import Control.Monad
@@ -79,7 +80,7 @@ initPlaytime = do
       setValue 0
       resetUpdate (+ 1)
 
-  dupChan mediaInfoChan >>= forkIO . handleInfo
+  (atomically $ dupTChan mediaInfoChan) >>= forkIO . handleInfo
   onPlaybackStatusAdd . ever $ \status ->
     when (fromMaybe StatusStop status == StatusStop) $
       setValue 0
@@ -116,8 +117,9 @@ handleCurrentId = do
       else Just cid
     requestInfo cid
 
-handleInfo chan =
-  getChanContents chan >>= mapM_ handleInfo'
+handleInfo chan = forever $ do
+  info <- atomically $ readTChan chan
+  handleInfo' info
 
 handleInfo' (id, _, info) = do
   cid <- getCurrentId

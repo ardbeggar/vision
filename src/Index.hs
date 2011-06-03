@@ -27,7 +27,11 @@ module Index
   , clearIndex
   ) where
 
+import Control.Monad
+
 import Control.Concurrent
+import Control.Concurrent.STM
+
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 
@@ -56,12 +60,13 @@ makeIndex store conv = do
                     , iConv  = conv
                     }
 
-  dupChan mediaInfoChan >>= forkIO . handleInfo index
+  (atomically $ dupTChan mediaInfoChan) >>= forkIO . handleInfo index
 
   return index
 
-handleInfo index chan =
-  getChanContents chan >>= mapM_ (handleInfo' index)
+handleInfo index chan = forever $ do
+  info <- atomically $ readTChan chan
+  handleInfo' index info
 
 handleInfo' index (id, stamp, info) = do
   let id' = fromIntegral id

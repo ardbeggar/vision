@@ -28,6 +28,7 @@ module Medialib
   ) where
 
 import Control.Concurrent
+import Control.Concurrent.STM
 
 import Control.Monad
 import Control.Monad.Trans
@@ -67,7 +68,7 @@ emptyCache =
 
 data MLib
   = MLib { mCache         :: MVar Cache
-         , mMediaInfoChan :: Chan (MediaId, Stamp, MediaInfo)
+         , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
          , mReqChan       :: Chan MediaId
          }
 
@@ -105,16 +106,16 @@ requestInfo id =
         writeChan reqChan id
         return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
       Just (CEReady s i) -> do
-        writeChan mediaInfoChan (id, s, i)
+        atomically $ writeTChan mediaInfoChan (id, s, i)
         return cache
       _ ->
         return cache
 
 initContext = do
   cache         <- newMVar emptyCache
-  mediaInfoChan <- newChan
+  mediaInfoChan <- atomically $ newTChan
   reqChan       <- newChan
-  forkIO $ forever $ void $ readChan mediaInfoChan
+  forkIO $ forever $ void $ atomically $ readTChan mediaInfoChan
   return $ augmentContext
     MLib { mCache         = cache
          , mMediaInfoChan = mediaInfoChan
@@ -131,7 +132,7 @@ handleInfo id = do
           entry   = CEReady stamp info in
       return (Cache { cEntries   = IntMap.insert id entry entries
                     , cNextStamp = succ stamp }, stamp)
-    writeChan mediaInfoChan (fromIntegral id, stamp, info)
+    atomically $ writeTChan mediaInfoChan (fromIntegral id, stamp, info)
 
 getInfo id =
   withMVar cache $ \cache ->
@@ -144,9 +145,9 @@ retrieveProperties ids f = do
       len        = IntSet.size ids'
       step       = len `div` 100
 
-  chan <- dupChan mediaInfoChan
+  chan <- atomically $ dupTChan mediaInfoChan
   let handler st@(ctr, todo, ready) = do
-        (id, _, info) <- readChan chan
+        (id, _, info) <- atomically $ readTChan chan
         let id' = fromIntegral id
         if IntSet.member id' todo
           then do
