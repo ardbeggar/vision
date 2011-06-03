@@ -23,6 +23,7 @@ module Playback
   , onPlaybackStatusAdd
   , onCurrentTrack
   , getPlaybackStatus
+  , playbackStatus
   , getCurrentTrack
   , startPlayback
   , pausePlayback
