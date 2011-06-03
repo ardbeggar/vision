@@ -118,10 +118,7 @@ handleCurrentId = do
     requestInfo cid
 
 handleInfo chan = forever $ do
-  info <- atomically $ readTChan chan
-  handleInfo' info
-
-handleInfo' (id, _, info) = do
+  (id, _, info) <- atomically $ readTChan chan
   cid <- getCurrentId
   when (cid == Just id) $
     case Map.lookup "duration" info of

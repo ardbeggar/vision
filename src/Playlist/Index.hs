@@ -69,10 +69,7 @@ initContext = do
     Index { iTable = table }
 
 handleInfo chan = forever $ do
-  info <- atomically $ readTChan chan
-  handleInfo' info
-
-handleInfo' (id, stamp, info) = do
+  (id, stamp, info) <- atomically $ readTChan chan
   let id' = fromIntegral id
   modifyMVar_ index $ \ix ->
     case IntMap.lookup id' ix of

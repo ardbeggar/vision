@@ -65,10 +65,7 @@ makeIndex store conv = do
   return index
 
 handleInfo index chan = forever $ do
-  info <- atomically $ readTChan chan
-  handleInfo' index info
-
-handleInfo' index (id, stamp, info) = do
+  (id, stamp, info) <- atomically $ readTChan chan
   let id' = fromIntegral id
   modifyMVar_ (iTable index) $ \ix ->
     case IntMap.lookup id' ix of
