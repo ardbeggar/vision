@@ -96,7 +96,8 @@ executable vision
                     Playlist.Format,
                     Playlist.Format.Format,
                     Playlist.Format.Parser,
-                    Playlist.Format.Config
+                    Playlist.Format.Config,
+                    Control.Concurrent.STM.TWatch
   hs-source-dirs:   src
   build-depends:    base >= 4 && < 5, xmms2-client >= 0.0.5.0,
                     xmms2-client-glib >= 0.0.5.0,

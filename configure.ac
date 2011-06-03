@@ -12,5 +12,8 @@ AC_CONFIG_FILES(Makefile
                 src/Playlist/Format/Makefile
                 src/Location/Makefile
                 src/Collection/Makefile
-                src/Collection/List/Makefile)
+                src/Collection/List/Makefile
+                src/Control/Makefile
+                src/Control/Concurrent/Makefile
+                src/Control/Concurrent/STM/Makefile)
 AC_OUTPUT
