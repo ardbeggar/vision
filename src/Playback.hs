@@ -34,10 +34,11 @@ module Playback
   ) where
 
 import Control.Arrow
-import Control.Concurrent.MVar
+import Control.Concurrent.STM
 import Control.Monad.Trans
 
-import XMMS2.Client
+import XMMS2.Client hiding (playbackStatus)
+import qualified XMMS2.Client as XC
 
 import XMMS
 import Handler
@@ -45,18 +46,15 @@ import Context
 import Utils
 
 
-data State
-  = State { sCurrentTrack :: Maybe (Int, String)
-          , sStatus       :: Maybe PlaybackStatus
-          }
-
 data Playback
-  = Playback { pState            :: MVar State
+  = Playback { pPlaybackStatus   :: TVar (Maybe PlaybackStatus)
              , pOnPlaybackStatus :: HandlerMVar (Maybe PlaybackStatus)
+             , pCurrentTrack     :: TVar (Maybe (Int, String))
              , pOnCurrentTrack   :: HandlerMVar (Maybe (Int, String))
              }
 
-state = pState context
+playbackStatus = pPlaybackStatus context
+currentTrack   = pCurrentTrack context
 
 onPlaybackStatus = onHandler (pOnPlaybackStatus context)
 onPlaybackStatusAdd f = do
@@ -67,10 +65,10 @@ onPlaybackStatusAdd f = do
 onCurrentTrack = onHandler (pOnCurrentTrack context)
 
 getPlaybackStatus =
-  withMVar state $ return . sStatus
+  atomically $ readTVar playbackStatus
 
 getCurrentTrack =
-  withMVar state $ return . sCurrentTrack
+  atomically $ readTVar currentTrack
 
 
 initPlayback = do
@@ -95,31 +93,29 @@ initPlayback = do
 
 
 initContext = do
-  state            <- newMVar makeState
+  playbackStatus   <- atomically $ newTVar Nothing
   onPlaybackStatus <- makeHandlerMVar
+  currentTrack     <- atomically $ newTVar Nothing
   onCurrentTrack   <- makeHandlerMVar
   return $ augmentContext
-    Playback { pState            = state
+    Playback { pPlaybackStatus   = playbackStatus
              , pOnPlaybackStatus = onPlaybackStatus
+             , pCurrentTrack     = currentTrack
              , pOnCurrentTrack   = onCurrentTrack
              }
 
-makeState =
-  State { sCurrentTrack = Nothing
-        , sStatus       = Nothing
-        }
-
 resetState = do
-  modifyMVar_ state $ const $ return makeState
+  atomically $ do
+    writeTVar playbackStatus Nothing
+    writeTVar currentTrack Nothing
   invokeOnPlaybackStatus
 
 setStatus s = do
-  modifyMVar_ state $ \state ->
-    return state { sStatus = s }
+  atomically $ writeTVar playbackStatus s
   invokeOnPlaybackStatus
 
 requestStatus =
-  playbackStatus xmms >>* do
+  XC.playbackStatus xmms >>* do
     status <- result
     liftIO . setStatus $ Just status
 
@@ -127,8 +123,10 @@ requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
     new <- catchResult Nothing (Just . first fromIntegral)
     liftIO $ do
-      old <- modifyMVar state $ \state ->
-        return (state { sCurrentTrack = new }, sCurrentTrack state)
+      old <- atomically $ do
+        old <- readTVar currentTrack
+        writeTVar currentTrack new
+        return old
       onCurrentTrack $ invoke old
 
 startPlayback False = do
