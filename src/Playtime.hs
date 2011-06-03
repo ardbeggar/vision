@@ -24,6 +24,7 @@ module Playtime
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.STM.TWatch
 
 import Control.Applicative
 import Control.Monad
@@ -36,7 +37,7 @@ import Data.Maybe
 
 import Graphics.UI.Gtk hiding (add, remove)
 
-import XMMS2.Client
+import XMMS2.Client hiding (playbackStatus)
 
 import XMMS
 import Handler
@@ -189,8 +190,16 @@ makeSeekControl = do
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False
 
-  id <- onPlaybackStatusAdd . ever $
-    widgetSetSensitive view . (Just StatusPlay ==)
-  view `onDestroy` onPlaybackStatus (remove id)
+  vw <- atomically newEmptyTMVar
+  view `onDestroy` (atomically $ putTMVar vw ())
+  sw <- atomically $ newEmptyTWatch playbackStatus
+  let mgr = do
+        msg <- atomically $ msum [Left <$> takeTMVar vw, Right <$> watch sw]
+        case msg of
+          Left _  -> return ()
+          Right s -> do
+            widgetSetSensitive view $ s == (Just StatusPlay)
+            mgr
+  forkIO mgr
 
   return view
