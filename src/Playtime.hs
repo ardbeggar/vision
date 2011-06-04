@@ -31,9 +31,6 @@ import Control.Monad
 import Control.Monad.Trans
 
 import qualified Data.Map as Map
-import Data.IORef
-import Data.Word
-import Data.Maybe
 
 import Graphics.UI.Gtk hiding (add, remove)
 
@@ -82,7 +79,7 @@ initPlaytime = do
       PT time -> adjustmentSetValue adj $ fromIntegral time
       CI mmid -> do
         adjustmentSetValue adj 0
-        adjustmentSetUpper adj 0
+        adjustmentSetUpper adj bigNum
         withJust mmid requestInfo
       MI (mi, _, info) -> do
         ci <- readTVarIO ciV
