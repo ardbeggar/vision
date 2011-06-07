@@ -71,7 +71,13 @@ initPlaytime = do
     else do
       return ()
 
-  forkIO $ evalPTM $ forever $ handleMsg ciW ptW miC psW
+  cId <- adj `onValueChanged` do
+    v <- adjustmentGetValue adj
+    putStrLn $ "Seek to: " ++ show v
+    playbackSeekMs xmms (round v) SeekSet
+    return ()
+
+  forkIO $ evalPTM cId $ forever $ handleMsg ciW ptW miC psW
 
   return ?context
 
@@ -114,17 +120,26 @@ data S =
     , sId :: Maybe MediaId
     , sTd :: Int
     , sPs :: PlaybackStatus
+    , sCi :: ConnectId Adjustment
     }
 
-mkS id =
+mkS id cId =
   S { sPt = 0
     , sId = id
     , sTd = 0
     , sPs = StatusStop
+    , sCi = cId
     }
 
-evalPTM = flip evalStateT (mkS Nothing)
+evalPTM cId f =
+  evalStateT f (mkS Nothing cId)
 
+withoutSeek f = do
+  cId <- gets sCi
+  liftIO $ bracket_
+    (signalBlock cId)
+    (signalUnblock cId)
+    (liftIO f)
 
 data Msg
   = PT Int
@@ -149,7 +164,7 @@ handlePT pt = do
   s <- get
   put s { sPt = pt }
   unless (sTd s == 0 || sPs s == StatusStop) $
-    liftIO $ adjustmentSetValue adj $ fromIntegral pt
+    withoutSeek $ adjustmentSetValue adj $ fromIntegral pt
 
 handleCI id = do
   modify $ \s ->
@@ -157,10 +172,10 @@ handleCI id = do
       , sId = id
       , sTd = 0
       }
-  liftIO $ do
+  withoutSeek $ do
     adjustmentSetValue adj 0
     adjustmentSetUpper adj 0
-    withJust id requestInfo
+  liftIO $ withJust id requestInfo
 
 handleMI (id, _, info) = do
   s <- get
@@ -168,7 +183,7 @@ handleMI (id, _, info) = do
     case Map.lookup "duration" info of
       Just (PropInt32 d) -> do
         put s { sTd = fromIntegral d }
-        liftIO $ do
+        withoutSeek $ do
           adjustmentSetUpper adj $ fromIntegral d
           unless (sPs s == StatusStop) $
             adjustmentSetValue adj $ fromIntegral $ sPt s
@@ -179,6 +194,6 @@ handlePS StatusStop = do
     s { sPs = StatusStop
       , sPt = 0
       }
-  liftIO $ adjustmentSetValue adj 0
+  withoutSeek $ adjustmentSetValue adj 0
 handlePS ps =
   modify $ \s -> s { sPs = ps }
