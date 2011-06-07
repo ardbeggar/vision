@@ -29,10 +29,12 @@ import Control.Concurrent.STM.TWatch
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.State
 
+import Data.Maybe
 import qualified Data.Map as Map
 
-import Graphics.UI.Gtk hiding (add, remove)
+import Graphics.UI.Gtk hiding (add, remove, get)
 
 import XMMS2.Client hiding (playbackStatus)
 
@@ -49,11 +51,6 @@ data Playtime
 
 adj = pAdj context
 
-data Msg
-  = PT Int
-  | CI (Maybe MediaId)
-  | MI (MediaId, Stamp, MediaInfo)
-
 initPlaytime = do
   context <- initContext
   let ?context = context
@@ -63,6 +60,7 @@ initPlaytime = do
   ptV <- atomically $ newTVar 0
   ptW <- atomically $ newEmptyTWatch ptV
   miC <- atomically $ dupTChan mediaInfoChan
+  psW <- atomically $ newEmptyTWatch playbackStatus
   onServerConnectionAdd . ever $ \conn ->
     if conn
     then do
@@ -73,20 +71,7 @@ initPlaytime = do
     else do
       return ()
 
-  forkIO $ forever $ do
-    msg <- atomically $ msum [CI <$> watch ciW, PT <$> watch ptW, MI <$> readTChan miC]
-    case msg of
-      PT time -> adjustmentSetValue adj $ fromIntegral time
-      CI mmid -> do
-        adjustmentSetValue adj 0
-        adjustmentSetUpper adj bigNum
-        withJust mmid requestInfo
-      MI (mi, _, info) -> do
-        ci <- readTVarIO ciV
-        when (ci == Just mi) $
-          case Map.lookup "duration" info of
-            Just (PropInt32 d) -> adjustmentSetUpper adj $ fromIntegral d
-            _                  -> return ()
+  forkIO $ evalPTM $ forever $ handleMsg ciW ptW miC psW
 
   return ?context
 
@@ -98,13 +83,10 @@ handleCurrentId ciV = do
   ci <- catchResult Nothing Just
   liftIO $ atomically $ writeTVar ciV ci
 
-
 initContext = do
-  adj <- adjustmentNew 0 0 bigNum 5000 5000 0
+  adj <- adjustmentNew 0 0 0 5000 5000 0
   return $ augmentContext
     Playtime { pAdj = adj }
-
-bigNum = 10000000000.0
 
 makeSeekControl = do
   view <- hScaleNew adj
@@ -125,3 +107,78 @@ makeSeekControl = do
   forkIO mgr
 
   return view
+
+
+data S =
+  S { sPt :: Int
+    , sId :: Maybe MediaId
+    , sTd :: Int
+    , sPs :: PlaybackStatus
+    }
+
+mkS id =
+  S { sPt = 0
+    , sId = id
+    , sTd = 0
+    , sPs = StatusStop
+    }
+
+evalPTM = flip evalStateT (mkS Nothing)
+
+
+data Msg
+  = PT Int
+  | CI (Maybe MediaId)
+  | MI (MediaId, Stamp, MediaInfo)
+  | PS (Maybe PlaybackStatus)
+
+handleMsg ciW ptW miC psW = do
+  msg <- liftIO $ atomically $
+         msum [ PS <$> watch psW
+              , CI <$> watch ciW
+              , PT <$> watch ptW
+              , MI <$> readTChan miC
+              ]
+  case msg of
+    PT pt -> handlePT pt
+    CI ci -> handleCI ci
+    MI mi -> handleMI mi
+    PS ps -> handlePS $ fromMaybe StatusStop ps
+
+handlePT pt = do
+  s <- get
+  put s { sPt = pt }
+  unless (sTd s == 0 || sPs s == StatusStop) $
+    liftIO $ adjustmentSetValue adj $ fromIntegral pt
+
+handleCI id = do
+  modify $ \s ->
+    s { sPt = 0
+      , sId = id
+      , sTd = 0
+      }
+  liftIO $ do
+    adjustmentSetValue adj 0
+    adjustmentSetUpper adj 0
+    withJust id requestInfo
+
+handleMI (id, _, info) = do
+  s <- get
+  when (sId s == Just id) $
+    case Map.lookup "duration" info of
+      Just (PropInt32 d) -> do
+        put s { sTd = fromIntegral d }
+        liftIO $ do
+          adjustmentSetUpper adj $ fromIntegral d
+          unless (sPs s == StatusStop) $
+            adjustmentSetValue adj $ fromIntegral $ sPt s
+      _                  -> return ()
+
+handlePS StatusStop = do
+  modify $ \s ->
+    s { sPs = StatusStop
+      , sPt = 0
+      }
+  liftIO $ adjustmentSetValue adj 0
+handlePS ps =
+  modify $ \s -> s { sPs = ps }
