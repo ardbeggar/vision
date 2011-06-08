@@ -55,6 +55,7 @@ initPlaytime = do
   context <- initContext
   let ?context = context
 
+  rcV <- atomically $ newTVar Nothing
   ciV <- atomically $ newTVar Nothing
   ciW <- atomically $ newTWatch ciV Nothing
   ptV <- atomically $ newTVar 0
@@ -66,24 +67,37 @@ initPlaytime = do
     then do
       playbackCurrentId xmms >>* handleCurrentId ciV
       broadcastPlaybackCurrentId xmms >>* (handleCurrentId ciV >> persist)
-      playbackPlaytime xmms >>* handlePlaytime ptV
-      signalPlaybackPlaytime xmms >>* (handlePlaytime ptV >> persist)
+      atomically $ writeTVar rcV $ Just 0
     else do
-      return ()
+      atomically $ writeTVar rcV Nothing
+
+  let ptRq = forever $ do
+        atomically $ do
+          rc <- readTVar rcV
+          if rc == Just 0
+            then return ()
+            else retry
+        playbackPlaytime xmms >>* do
+          pt <- catchResult 0 fromIntegral
+          liftIO $ atomically $ writeTVar ptV pt
+        threadDelay 1000000
 
   cId <- adj `onValueChanged` do
+    atomically $ do
+      rc <- readTVar rcV
+      withJust rc $ \rc ->
+        writeTVar rcV $ Just (rc + 1)
     v <- adjustmentGetValue adj
-    putStrLn $ "Seek to: " ++ show v
-    playbackSeekMs xmms (round v) SeekSet
-    return ()
+    playbackSeekMs xmms (round v) SeekSet >>* do
+      liftIO $ atomically $ do
+      rc <- readTVar rcV
+      withJust rc $ \rc ->
+        writeTVar rcV $ Just (rc - 1)
 
   forkIO $ evalPTM cId $ forever $ handleMsg ciW ptW miC psW
+  forkIO $ ptRq
 
   return ?context
-
-handlePlaytime ptV = do
-  pt <- catchResult 0 fromIntegral
-  liftIO $ atomically $ writeTVar ptV pt
 
 handleCurrentId ciV = do
   ci <- catchResult Nothing Just
@@ -187,7 +201,7 @@ handleMI (id, _, info) = do
           adjustmentSetUpper adj $ fromIntegral d
           unless (sPs s == StatusStop) $
             adjustmentSetValue adj $ fromIntegral $ sPt s
-      _                  -> return ()
+      _ -> return ()
 
 handlePS StatusStop = do
   modify $ \s ->
