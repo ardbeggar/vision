@@ -23,10 +23,19 @@ module XMMS
   , connected
   , onServerConnection
   , onServerConnectionAdd
+  , SN ()
+  , mkSN
+  , activateSN
+  , waitSN
+  , doneSN
   ) where
 
 import Prelude hiding (init)
-import Control.Concurrent.MVar
+import Control.Applicative
+import Control.Concurrent
+import Control.Concurrent.STM
+
+import Data.Unique
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -39,23 +48,19 @@ import Utils
 import Context
 
 
-data State
-  = State { sConnected :: Bool }
-
-makeState = State { sConnected = False }
-
-
 data XMMS
   = XMMS { xXMMS               :: Connection
          , xOnServerConnection :: HandlerMVar Bool
-         , xState              :: MVar State
+         , xConnected          :: TVar Bool
+         , xConnectionId       :: TVar Unique
+         , xNWatchers          :: TVar Int
+         , xNWaiting           :: TVar Int
          }
 
 xmms               = xXMMS context
 onServerConnection = onHandler (xOnServerConnection context)
-state              = xState context
 
-connected = withMVar state $ return . sConnected
+connected = readTVarIO $ xConnected context
 
 initXMMS = do
   context <- initContext
@@ -69,11 +74,18 @@ initXMMS = do
 initContext = do
   xmms               <- init "Vision"
   onServerConnection <- makeHandlerMVar
-  state              <- newMVar makeState
+  connected          <- atomically $ newTVar False
+  id                 <- newUnique
+  connectionId       <- atomically $ newTVar id
+  nWatchers          <- atomically $ newTVar 0
+  nWaiting           <- atomically $ newTVar 0
   return $ augmentContext
     XMMS { xXMMS               = xmms
          , xOnServerConnection = onServerConnection
-         , xState              = state
+         , xConnected          = connected
+         , xConnectionId       = connectionId
+         , xNWatchers          = nWatchers
+         , xNWaiting           = nWaiting
          }
 
 scheduleTryConnect = timeoutAdd tryConnect
@@ -84,7 +96,7 @@ tryConnect = do
     then do
     disconnectCallbackSet xmms disconnectCallback
     mainLoopGMainInit xmms
-    modifyMVar_ state $ \s -> return s { sConnected = True }
+    setConnected True
     onServerConnection $ invoke True
     return False
     else do
@@ -92,7 +104,7 @@ tryConnect = do
     return False
 
 disconnectCallback = do
-  modifyMVar_ state $ \s -> return s { sConnected = False }
+  setConnected False
   onServerConnection $ invoke False
   scheduleTryConnect 1000
   return ()
@@ -101,3 +113,53 @@ onServerConnectionAdd f = do
   id <- onServerConnection . add $ f
   f =<< connected
   return id
+
+setConnected conn = do
+  putStrLn $ "Notify: " ++ show conn
+  id <- newUnique
+  atomically $ do
+    writeTVar (xConnected context) conn
+    writeTVar (xConnectionId context) id
+    writeTVar (xNWaiting context) =<< readTVar (xNWatchers context)
+  yield
+  atomically $ do
+    nw <- readTVar $ xNWaiting context
+    if nw == 0
+      then return ()
+      else retry
+  putStrLn "done"
+
+
+data SN a =
+  SN { snValue   :: TVar a
+     , snValueId :: TVar Unique
+     , snOurId   :: TVar (Maybe Unique)
+     , snNWatch  :: TVar Int
+     , snNWait   :: TVar Int
+     }
+
+mkSN = do
+  ourId <- newTVar Nothing
+  return SN { snValue   = xConnected context
+            , snValueId = xConnectionId context
+            , snOurId   = ourId
+            , snNWatch  = xNWatchers context
+            , snNWait   = xNWaiting context
+            }
+
+activateSN sn = do
+  nw <- readTVar (snNWatch sn)
+  writeTVar (snNWatch sn) (nw + 1)
+
+waitSN sn = do
+  oid <- readTVar (snOurId sn)
+  vid <- Just <$> readTVar (snValueId sn)
+  if oid == vid
+    then retry
+    else do
+    writeTVar (snOurId sn) vid
+    readTVar (snValue sn)
+
+doneSN sn = do
+  nw <- readTVar (snNWait sn)
+  writeTVar (snNWait sn) (nw - 1)
