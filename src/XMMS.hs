@@ -26,7 +26,7 @@ module XMMS
   ) where
 
 import Prelude hiding (init)
-import Control.Concurrent.MVar
+import Control.Concurrent.STM
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -39,23 +39,16 @@ import Utils
 import Context
 
 
-data State
-  = State { sConnected :: Bool }
-
-makeState = State { sConnected = False }
-
-
 data XMMS
   = XMMS { xXMMS               :: Connection
          , xOnServerConnection :: HandlerMVar Bool
-         , xState              :: MVar State
+         , xConnected          :: TVar Bool
          }
 
 xmms               = xXMMS context
 onServerConnection = onHandler (xOnServerConnection context)
-state              = xState context
 
-connected = withMVar state $ return . sConnected
+connected = readTVarIO $ xConnected context
 
 initXMMS = do
   context <- initContext
@@ -69,11 +62,11 @@ initXMMS = do
 initContext = do
   xmms               <- init "Vision"
   onServerConnection <- makeHandlerMVar
-  state              <- newMVar makeState
+  connected          <- atomically $ newTVar False
   return $ augmentContext
     XMMS { xXMMS               = xmms
          , xOnServerConnection = onServerConnection
-         , xState              = state
+         , xConnected          = connected
          }
 
 scheduleTryConnect = timeoutAdd tryConnect
@@ -84,7 +77,7 @@ tryConnect = do
     then do
     disconnectCallbackSet xmms disconnectCallback
     mainLoopGMainInit xmms
-    modifyMVar_ state $ \s -> return s { sConnected = True }
+    atomically $ writeTVar (xConnected context) True
     onServerConnection $ invoke True
     return False
     else do
@@ -92,7 +85,7 @@ tryConnect = do
     return False
 
 disconnectCallback = do
-  modifyMVar_ state $ \s -> return s { sConnected = False }
+  atomically $ writeTVar (xConnected context) False
   onServerConnection $ invoke False
   scheduleTryConnect 1000
   return ()
