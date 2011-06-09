@@ -39,7 +39,6 @@ import Graphics.UI.Gtk hiding (add, remove, get)
 import XMMS2.Client hiding (playbackStatus)
 
 import XMMS
-import Handler
 import Medialib
 import Context
 import Utils
@@ -62,14 +61,6 @@ initPlaytime = do
   ptW <- atomically $ newEmptyTWatch ptV
   miC <- atomically $ dupTChan mediaInfoChan
   psW <- atomically $ newEmptyTWatch playbackStatus
-  onServerConnectionAdd . ever $ \conn ->
-    if conn
-    then do
-      playbackCurrentId xmms >>* handleCurrentId ciV
-      broadcastPlaybackCurrentId xmms >>* (handleCurrentId ciV >> persist)
-      atomically $ writeTVar rcV $ Just 0
-    else do
-      atomically $ writeTVar rcV Nothing
 
   let ptRq = forever $ do
         atomically $ do
@@ -90,11 +81,13 @@ initPlaytime = do
     v <- adjustmentGetValue adj
     playbackSeekMs xmms (round v) SeekSet >>* do
       liftIO $ atomically $ do
-      rc <- readTVar rcV
-      withJust rc $ \rc ->
-        writeTVar rcV $ Just (rc - 1)
+        rc <- readTVar rcV
+        withJust rc $ \rc ->
+          writeTVar rcV $ Just (rc - 1)
 
-  forkIO $ evalPTM cId $ forever $ handleMsg ciW ptW miC psW
+  xcN <- atomically $ mkSN
+  atomically $ activateSN xcN
+  forkIO $ evalPTM cId $ forever $ handleMsg ciV ciW ptW miC psW xcN rcV
   forkIO $ ptRq
 
   return ?context
@@ -160,19 +153,36 @@ data Msg
   | CI (Maybe MediaId)
   | MI (MediaId, Stamp, MediaInfo)
   | PS (Maybe PlaybackStatus)
+  | XC Bool
 
-handleMsg ciW ptW miC psW = do
+handleMsg ciV ciW ptW miC psW xcN rcV = do
   msg <- liftIO $ atomically $
-         msum [ PS <$> watch psW
+         msum [ XC <$> waitSN xcN
+              , PS <$> watch psW
               , CI <$> watch ciW
               , PT <$> watch ptW
               , MI <$> readTChan miC
               ]
   case msg of
+    XC xc -> handleXC xc xcN ciV rcV
     PT pt -> handlePT pt
     CI ci -> handleCI ci
     MI mi -> handleMI mi
     PS ps -> handlePS $ fromMaybe StatusStop ps
+
+handleXC xc xcN ciV rcV = do
+  liftIO $ putStrLn $ "connected: " ++ show xc
+  if xc
+    then liftIO $ do
+    playbackCurrentId xmms >>* handleCurrentId ciV
+    broadcastPlaybackCurrentId xmms >>* (handleCurrentId ciV >> persist)
+    atomically $ writeTVar rcV $ Just 0
+    else do
+    cId <- gets sCi
+    put $ mkS Nothing cId
+    liftIO $ atomically $ writeTVar rcV Nothing
+  liftIO $ putStrLn "handled"
+  liftIO $ atomically $ doneSN xcN
 
 handlePT pt = do
   s <- get
