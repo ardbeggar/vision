@@ -59,7 +59,6 @@ initPlaytime = do
   ciW <- atomically $ newTWatch ciV Nothing
   ptV <- atomically $ newTVar 0
   ptW <- atomically $ newEmptyTWatch ptV
-  miC <- atomically $ dupTChan mediaInfoChan
   psW <- atomically $ newEmptyTWatch playbackStatus
 
   let ptRq = forever $ do
@@ -87,7 +86,7 @@ initPlaytime = do
 
   xcN <- atomically $ mkSN
   atomically $ activateSN xcN
-  forkIO $ evalPTM cId $ forever $ handleMsg ciV ciW ptW miC psW xcN rcV
+  forkIO $ evalPTM cId $ xmmsNC ciV ciW ptW psW xcN rcV
   forkIO $ ptRq
 
   return ?context
@@ -155,7 +154,23 @@ data Msg
   | PS (Maybe PlaybackStatus)
   | XC Bool
 
-handleMsg ciV ciW ptW miC psW xcN rcV = do
+xmmsNC ciV ciW ptW psW xcN rcV = do
+  conn <- liftIO $ atomically $ waitSN xcN
+  if conn
+    then do
+    miC <- liftIO $ do
+      playbackCurrentId xmms >>*
+        handleCurrentId ciV
+      broadcastPlaybackCurrentId xmms >>*
+        (handleCurrentId ciV >> persist)
+      atomically $ writeTVar rcV $ Just 0
+      atomically $ doneSN xcN
+      atomically $ dupTChan mediaInfoChan
+    xmmsC ciV ciW ptW miC psW xcN rcV
+    else
+    xmmsNC ciV ciW ptW psW xcN rcV
+
+xmmsC ciV ciW ptW miC psW xcN rcV = do
   msg <- liftIO $ atomically $
          msum [ XC <$> waitSN xcN
               , PS <$> watch psW
@@ -164,25 +179,25 @@ handleMsg ciV ciW ptW miC psW xcN rcV = do
               , MI <$> readTChan miC
               ]
   case msg of
-    XC xc -> handleXC xc xcN ciV rcV
-    PT pt -> handlePT pt
-    CI ci -> handleCI ci
-    MI mi -> handleMI mi
-    PS ps -> handlePS $ fromMaybe StatusStop ps
-
-handleXC xc xcN ciV rcV = do
-  liftIO $ putStrLn $ "connected: " ++ show xc
-  if xc
-    then liftIO $ do
-    playbackCurrentId xmms >>* handleCurrentId ciV
-    broadcastPlaybackCurrentId xmms >>* (handleCurrentId ciV >> persist)
-    atomically $ writeTVar rcV $ Just 0
-    else do
-    cId <- gets sCi
-    put $ mkS Nothing cId
-    liftIO $ atomically $ writeTVar rcV Nothing
-  liftIO $ putStrLn "handled"
-  liftIO $ atomically $ doneSN xcN
+    XC False -> do
+      cId <- gets sCi
+      put $ mkS Nothing cId
+      liftIO $ do
+        atomically $ writeTVar rcV Nothing
+        atomically $ doneSN xcN
+      xmmsNC ciV ciW ptW psW xcN rcV
+    PT pt -> do
+      handlePT pt
+      xmmsC ciV ciW ptW miC psW xcN rcV
+    CI ci -> do
+      handleCI ci
+      xmmsC ciV ciW ptW miC psW xcN rcV
+    MI mi -> do
+      handleMI mi
+      xmmsC ciV ciW ptW miC psW xcN rcV
+    PS ps -> do
+      handlePS $ fromMaybe StatusStop ps
+      xmmsC ciV ciW ptW miC psW xcN rcV
 
 handlePT pt = do
   s <- get
