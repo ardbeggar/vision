@@ -19,6 +19,7 @@
 
 module Playtime
   ( initPlaytime
+  , currentId
   , makeSeekControl
   ) where
 
@@ -46,17 +47,21 @@ import Playback
 
 
 data Playtime
-  = Playtime { pAdj :: Adjustment }
+  = Playtime { pAdj        :: Adjustment
+             , pCurrentIdV :: TVar (Maybe MediaId)
+             }
 
-adj = pAdj context
+adj        = pAdj context
+currentId  = readTVar currentIdV
+currentIdV = pCurrentIdV context
+
 
 initPlaytime = do
   context <- initContext
   let ?context = context
 
   rcV <- atomically $ newTVar Nothing
-  ciV <- atomically $ newTVar Nothing
-  ciW <- atomically $ newTWatch ciV Nothing
+  ciW <- atomically $ newTWatch currentIdV Nothing
   ptV <- atomically $ newTVar 0
   ptW <- atomically $ newEmptyTWatch ptV
   psW <- atomically $ newEmptyTWatch playbackStatus
@@ -86,19 +91,22 @@ initPlaytime = do
 
   xcN <- atomically $ mkSN
   atomically $ activateSN xcN
-  forkIO $ evalPTM cId $ xmmsNC ciV ciW ptW psW xcN rcV
+  forkIO $ evalPTM cId $ xmmsNC ciW ptW psW xcN rcV
   forkIO $ ptRq
 
   return ?context
 
-handleCurrentId ciV = do
+handleCurrentId = do
   ci <- catchResult Nothing Just
-  liftIO $ atomically $ writeTVar ciV ci
+  liftIO $ atomically $ writeTVar currentIdV ci
 
 initContext = do
-  adj <- adjustmentNew 0 0 0 5000 5000 0
+  adj        <- adjustmentNew 0 0 0 5000 5000 0
+  currentIdV <- newTVarIO Nothing
   return $ augmentContext
-    Playtime { pAdj = adj }
+    Playtime { pAdj        = adj
+             , pCurrentIdV = currentIdV
+             }
 
 makeSeekControl = do
   view <- hScaleNew adj
@@ -154,23 +162,23 @@ data Msg
   | PS (Maybe PlaybackStatus)
   | XC Bool
 
-xmmsNC ciV ciW ptW psW xcN rcV = do
+xmmsNC ciW ptW psW xcN rcV = do
   conn <- liftIO $ atomically $ waitSN xcN
   if conn
     then do
     miC <- liftIO $ do
       playbackCurrentId xmms >>*
-        handleCurrentId ciV
+        handleCurrentId
       broadcastPlaybackCurrentId xmms >>*
-        (handleCurrentId ciV >> persist)
+        (handleCurrentId >> persist)
       atomically $ writeTVar rcV $ Just 0
       atomically $ doneSN xcN
       atomically $ dupTChan mediaInfoChan
-    xmmsC ciV ciW ptW miC psW xcN rcV
+    xmmsC ciW ptW miC psW xcN rcV
     else
-    xmmsNC ciV ciW ptW psW xcN rcV
+    xmmsNC ciW ptW psW xcN rcV
 
-xmmsC ciV ciW ptW miC psW xcN rcV = do
+xmmsC ciW ptW miC psW xcN rcV = do
   msg <- liftIO $ atomically $
          msum [ XC <$> waitSN xcN
               , PS <$> watch psW
@@ -185,19 +193,19 @@ xmmsC ciV ciW ptW miC psW xcN rcV = do
       liftIO $ do
         atomically $ writeTVar rcV Nothing
         atomically $ doneSN xcN
-      xmmsNC ciV ciW ptW psW xcN rcV
+      xmmsNC ciW ptW psW xcN rcV
     PT pt -> do
       handlePT pt
-      xmmsC ciV ciW ptW miC psW xcN rcV
+      xmmsC ciW ptW miC psW xcN rcV
     CI ci -> do
       handleCI ci
-      xmmsC ciV ciW ptW miC psW xcN rcV
+      xmmsC ciW ptW miC psW xcN rcV
     MI mi -> do
       handleMI mi
-      xmmsC ciV ciW ptW miC psW xcN rcV
+      xmmsC ciW ptW miC psW xcN rcV
     PS ps -> do
       handlePS $ fromMaybe StatusStop ps
-      xmmsC ciV ciW ptW miC psW xcN rcV
+      xmmsC ciW ptW miC psW xcN rcV
 
 handlePT pt = do
   s <- get
