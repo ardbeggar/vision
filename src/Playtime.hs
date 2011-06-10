@@ -61,7 +61,6 @@ initPlaytime = do
   let ?context = context
 
   rcV <- atomically $ newTVar Nothing
-  ciW <- atomically $ newTWatch currentIdV Nothing
   ptV <- atomically $ newTVar 0
   ptW <- atomically $ newEmptyTWatch ptV
   psW <- atomically $ newEmptyTWatch playbackStatus
@@ -91,7 +90,7 @@ initPlaytime = do
 
   xcN <- atomically $ mkSN
   atomically $ activateSN xcN
-  forkIO $ evalPTM cId $ xmmsNC ciW ptW psW xcN rcV
+  forkIO $ evalPTM cId $ xmmsNC ptW psW xcN rcV
   forkIO $ ptRq
 
   return ?context
@@ -162,21 +161,23 @@ data Msg
   | PS (Maybe PlaybackStatus)
   | XC Bool
 
-xmmsNC ciW ptW psW xcN rcV = do
+xmmsNC ptW psW xcN rcV = do
   conn <- liftIO $ atomically $ waitSN xcN
   if conn
     then do
-    miC <- liftIO $ do
+    (miC, ciW) <- liftIO $ do
       playbackCurrentId xmms >>*
         handleCurrentId
       broadcastPlaybackCurrentId xmms >>*
         (handleCurrentId >> persist)
       atomically $ writeTVar rcV $ Just 0
       atomically $ doneSN xcN
-      atomically $ dupTChan mediaInfoChan
+      miC <- atomically $ dupTChan mediaInfoChan
+      ciW <- atomically $ newTWatch currentIdV Nothing
+      return (miC, ciW)
     xmmsC ciW ptW miC psW xcN rcV
     else
-    xmmsNC ciW ptW psW xcN rcV
+    xmmsNC ptW psW xcN rcV
 
 xmmsC ciW ptW miC psW xcN rcV = do
   msg <- liftIO $ atomically $
@@ -193,7 +194,7 @@ xmmsC ciW ptW miC psW xcN rcV = do
       liftIO $ do
         atomically $ writeTVar rcV Nothing
         atomically $ doneSN xcN
-      xmmsNC ciW ptW psW xcN rcV
+      xmmsNC ptW psW xcN rcV
     PT pt -> do
       handlePT pt
       xmmsC ciW ptW miC psW xcN rcV
