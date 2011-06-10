@@ -106,7 +106,9 @@ requestInfo id =
         writeChan reqChan id
         return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
       Just (CEReady s i) -> do
-        atomically $ writeTChan mediaInfoChan (id, s, i)
+        atomically $ do
+          writeTChan mediaInfoChan (id, s, i)
+          void $ readTChan mediaInfoChan
         return cache
       _ ->
         return cache
@@ -115,7 +117,6 @@ initContext = do
   cache         <- newMVar emptyCache
   mediaInfoChan <- atomically $ newTChan
   reqChan       <- newChan
-  forkIO $ forever $ void $ atomically $ readTChan mediaInfoChan
   return $ augmentContext
     MLib { mCache         = cache
          , mMediaInfoChan = mediaInfoChan
@@ -132,7 +133,9 @@ handleInfo id = do
           entry   = CEReady stamp info in
       return (Cache { cEntries   = IntMap.insert id entry entries
                     , cNextStamp = succ stamp }, stamp)
-    atomically $ writeTChan mediaInfoChan (fromIntegral id, stamp, info)
+    atomically $ do
+      writeTChan mediaInfoChan (fromIntegral id, stamp, info)
+      void $ readTChan mediaInfoChan
 
 getInfo id =
   withMVar cache $ \cache ->
