@@ -113,17 +113,12 @@ makeSeekControl = do
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False
 
-  vw <- atomically newEmptyTMVar
-  view `onDestroy` (atomically $ putTMVar vw ())
-  sw <- atomically $ newEmptyTWatch playbackStatus
-  let mgr = do
-        msg <- atomically $ msum [Left <$> takeTMVar vw, Right <$> watch sw]
-        case msg of
-          Left _  -> return ()
-          Right s -> do
-            widgetSetSensitive view $ s == (Just StatusPlay)
-            mgr
-  forkIO mgr
+  w <- atomically $ newEmptyTWatch playbackStatus
+  t <- forkIO $ forever $ do
+    s <- atomically $ watch w
+    widgetSetSensitive view $ s == (Just StatusPlay)
+
+  view `onDestroy` (killThread t)
 
   return view
 
