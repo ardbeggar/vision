@@ -30,7 +30,7 @@ module Medialib
 import Control.Concurrent
 import Control.Concurrent.STM
 
-import Control.Monad
+import Control.Monad (when, void, forever)
 import Control.Monad.Trans
 
 import Data.Map (Map)
@@ -38,6 +38,9 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Maybe
 import qualified Data.IntSet as IntSet
+import Data.Sequence (Seq, (|>))
+import qualified Data.Sequence as Seq
+import Data.Foldable (forM_)
 
 import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
@@ -69,12 +72,11 @@ emptyCache =
 data MLib
   = MLib { mCache         :: MVar Cache
          , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
-         , mReqChan       :: Chan MediaId
+         , mReq           :: TVar (Seq MediaId)
          }
 
 cache         = mCache context
 mediaInfoChan = mMediaInfoChan context
-reqChan       = mReqChan context
 
 initMedialib = do
   context <- initContext
@@ -103,7 +105,9 @@ requestInfo id =
         entries = cEntries cache in
     case IntMap.lookup id' entries of
       Nothing -> do
-        writeChan reqChan id
+        atomically $ do
+          r <- readTVar (mReq context)
+          writeTVar (mReq context) (r |> id)
         return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
       Just (CEReady s i) -> do
         atomically $ do
@@ -116,11 +120,11 @@ requestInfo id =
 initContext = do
   cache         <- newMVar emptyCache
   mediaInfoChan <- atomically $ newTChan
-  reqChan       <- newChan
+  req           <- newTVarIO Seq.empty
   return $ augmentContext
     MLib { mCache         = cache
          , mMediaInfoChan = mediaInfoChan
-         , mReqChan       = reqChan
+         , mReq           = req
          }
 
 handleInfo id = do
@@ -172,13 +176,17 @@ retrieveProperties ids f = do
 
   return $ killThread tid
 
-infoReqJob = do
-  ids <- getChanContents reqChan
-  infoReqJob' ids
-
-infoReqJob' list = do
-  let (h, t) = splitAt 30 list
-  forM_ h $ \id ->
+infoReqJob = forever $ do
+  ids <- atomically $ do
+    r <- readTVar (mReq context)
+    if Seq.null r
+      then retry
+      else do
+      let (h, t) = Seq.splitAt 30 r
+      writeTVar (mReq context) t
+      return h
+  forM_ ids $ \id ->
     medialibGetInfo xmms id >>* handleInfo (fromIntegral id)
   threadDelay 1
-  infoReqJob' t
+
+
