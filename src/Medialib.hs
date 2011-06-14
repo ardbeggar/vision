@@ -36,7 +36,7 @@ import Data.Map (Map)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
-import Data.Sequence (Seq, (|>))
+import Data.Sequence (Seq, (|>), (<|))
 import qualified Data.Sequence as Seq
 import Data.Foldable (forM_)
 
@@ -81,7 +81,11 @@ initMedialib = do
   let ?context = context
 
   forkIO infoReqJob
+  setupConn
 
+  return ?context
+
+setupConn = do
   onServerConnectionAdd . ever $ \conn ->
     if conn
     then broadcastMedialibEntryChanged xmms >>* do
@@ -89,13 +93,14 @@ initMedialib = do
       let id' = fromIntegral id
       liftIO $ withMVar cache $ \cache ->
         when (IntMap.member id' $ cEntries cache) $
-          medialibGetInfo xmms id >>* handleInfo id'
+          atomically $ do
+            r <- readTVar (mReq context)
+            writeTVar (mReq context) (id <| r)
       persist
     else
       modifyMVar_ cache $ \cache ->
         return cache { cEntries = IntMap.empty }
 
-  return ?context
 
 requestInfo id =
   modifyMVar_ cache $ \cache ->
