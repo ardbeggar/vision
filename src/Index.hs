@@ -39,7 +39,7 @@ import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
 
-import Medialib hiding (getInfo)
+import Medialib
 
 
 data IndexEntry i

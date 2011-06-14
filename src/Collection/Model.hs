@@ -50,7 +50,7 @@ import XMMS2.Client
 import Context
 import Index hiding (getInfo)
 import qualified Index as Index
-import Medialib hiding (getInfo)
+import Medialib
 import Collection.Common
 import qualified Properties as P
 import Config

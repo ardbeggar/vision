@@ -22,7 +22,6 @@ module Medialib
   , MediaInfo
   , initMedialib
   , requestInfo
-  , getInfo
   , retrieveProperties
   , mediaInfoChan
   ) where
@@ -140,12 +139,6 @@ handleInfo id = do
     atomically $ do
       writeTChan mediaInfoChan (fromIntegral id, stamp, info)
       void $ readTChan mediaInfoChan
-
-getInfo id =
-  withMVar cache $ \cache ->
-    return $ case IntMap.lookup (fromIntegral id) $ cEntries cache of
-      Just (CEReady _ info) -> Just info
-      _                     -> Nothing
 
 retrieveProperties ids f = do
   let ids'       = IntSet.fromList $ map fromIntegral ids
