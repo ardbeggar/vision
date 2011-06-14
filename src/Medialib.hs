@@ -35,7 +35,6 @@ import Control.Monad.Trans
 import Data.Map (Map)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
-import Data.Maybe
 import qualified Data.IntSet as IntSet
 import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as Seq
@@ -89,7 +88,7 @@ initMedialib = do
       id <- result
       let id' = fromIntegral id
       liftIO $ withMVar cache $ \cache ->
-        when (isJust . IntMap.lookup id' $ cEntries cache) $
+        when (IntMap.member id' $ cEntries cache) $
           medialibGetInfo xmms id >>* handleInfo id'
       persist
     else
