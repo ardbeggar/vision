@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 18 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -123,11 +123,13 @@ initContext = do
          , mReq           = req
          }
 
-handleInfo id = do
+handleInfo tv id = do
   rawv <- resultRawValue
   liftIO $ do
     info  <- valueGet =<< propdictToDict rawv []
     stamp <- atomically $ do
+      nr <- readTVar tv
+      writeTVar tv $ nr - 1
       cc <- readTVar cache
       let stamp   = cNextStamp cc
           entries = cEntries cc
@@ -170,17 +172,22 @@ retrieveProperties ids f = do
 
   return $ killThread tid
 
-infoReqJob = forever $ do
-  ids <- atomically $ do
-    r <- readTVar (mReq context)
-    if Seq.null r
-      then retry
-      else do
-      let (h, t) = Seq.splitAt 30 r
-      writeTVar (mReq context) t
-      return h
-  forM_ ids $ \id ->
-    medialibGetInfo xmms id >>* handleInfo (fromIntegral id)
-  threadDelay 1
+infoReqJob = do
+  tv <- newTVarIO 0
+  forever $ do
+    (ids, c) <- atomically $ do
+      r <- readTVar (mReq context)
+      if Seq.null r
+        then retry
+        else do
+        let (h, t) = Seq.splitAt 30 r
+        writeTVar (mReq context) t
+        cn <- readTVar tv
+        writeTVar tv $ cn + Seq.length h
+        return (h, cn + Seq.length h)
+    forM_ ids $ \id ->
+      medialibGetInfo xmms id >>* handleInfo tv (fromIntegral id)
+    print c
+    threadDelay 1
 
 
