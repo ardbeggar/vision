@@ -68,7 +68,7 @@ emptyCache =
 
 
 data MLib
-  = MLib { mCache         :: MVar Cache
+  = MLib { mCache         :: TVar Cache
          , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
          , mReq           :: TVar (Seq MediaId)
          }
@@ -91,38 +91,31 @@ setupConn = do
     then broadcastMedialibEntryChanged xmms >>* do
       id <- result
       let id' = fromIntegral id
-      liftIO $ withMVar cache $ \cache ->
-        when (IntMap.member id' $ cEntries cache) $
-          atomically $ do
-            r <- readTVar (mReq context)
-            writeTVar (mReq context) (id <| r)
-      persist
-    else
-      modifyMVar_ cache $ \cache ->
-        return cache { cEntries = IntMap.empty }
-
-
-requestInfo id =
-  modifyMVar_ cache $ \cache ->
-    let id'     = fromIntegral id
-        entries = cEntries cache in
-    case IntMap.lookup id' entries of
-      Nothing -> do
-        atomically $ do
+      liftIO $ atomically $ do
+        cc <- readTVar cache
+        when (IntMap.member id' $ cEntries cc) $ do
           r <- readTVar (mReq context)
-          writeTVar (mReq context) (r |> id)
-        return cache { cEntries = IntMap.insert id' CERetrieving $ cEntries cache }
-      Just (CEReady s i) -> do
-        atomically $ do
-          writeTChan mediaInfoChan (id, s, i)
-          void $ readTChan mediaInfoChan
-        return cache
-      _ ->
-        return cache
+          writeTVar (mReq context) (id <| r)
+      persist
+    else atomically $ writeTVar cache emptyCache
+
+requestInfo id = atomically $ do
+  cc <- readTVar cache
+  let id'     = fromIntegral id
+      entries = cEntries cc
+  case IntMap.lookup id' entries of
+    Nothing -> do
+      r <- readTVar (mReq context)
+      writeTVar (mReq context) (r |> id)
+      writeTVar cache $ cc { cEntries = IntMap.insert id' CERetrieving entries }
+    Just (CEReady s i) -> do
+      writeTChan mediaInfoChan (id, s, i)
+      void $ readTChan mediaInfoChan
+    _ -> return ()
 
 initContext = do
-  cache         <- newMVar emptyCache
-  mediaInfoChan <- atomically $ newTChan
+  cache         <- newTVarIO emptyCache
+  mediaInfoChan <- newTChanIO
   req           <- newTVarIO Seq.empty
   return $ augmentContext
     MLib { mCache         = cache
@@ -134,12 +127,16 @@ handleInfo id = do
   rawv <- resultRawValue
   liftIO $ do
     info  <- valueGet =<< propdictToDict rawv []
-    stamp <- modifyMVar cache $ \cache ->
-      let stamp   = cNextStamp cache
-          entries = cEntries cache
-          entry   = CEReady stamp info in
-      return (Cache { cEntries   = IntMap.insert id entry entries
-                    , cNextStamp = succ stamp }, stamp)
+    stamp <- atomically $ do
+      cc <- readTVar cache
+      let stamp   = cNextStamp cc
+          entries = cEntries cc
+          entry   = CEReady stamp info
+      writeTVar cache $
+        Cache { cEntries   = IntMap.insert id entry entries
+              , cNextStamp = succ stamp
+              }
+      return stamp
     atomically $ do
       writeTChan mediaInfoChan (fromIntegral id, stamp, info)
       void $ readTChan mediaInfoChan
