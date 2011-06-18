@@ -36,8 +36,8 @@ import Data.Map (Map)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
-import Data.Sequence (Seq, ViewL (..), viewl, (|>), (<|))
-import qualified Data.Sequence as Seq
+import Data.PSQueue (PSQ, Binding (..))
+import qualified Data.PSQueue as PSQ
 
 import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
@@ -69,7 +69,7 @@ emptyCache =
 data MLib
   = MLib { mCache         :: TVar Cache
          , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
-         , mReq           :: TVar (Seq MediaId)
+         , mReq           :: TVar (PSQ MediaId Int)
          }
 
 cache         = mCache context
@@ -94,7 +94,7 @@ setupConn = do
         cc <- readTVar cache
         when (IntMap.member id' $ cEntries cc) $ do
           r <- readTVar (mReq context)
-          writeTVar (mReq context) (id <| r)
+          writeTVar (mReq context) $ PSQ.insert id 10 r
       persist
     else atomically $ writeTVar cache emptyCache
 
@@ -105,7 +105,7 @@ requestInfo id = atomically $ do
   case IntMap.lookup id' entries of
     Nothing -> do
       r <- readTVar (mReq context)
-      writeTVar (mReq context) (r |> id)
+      writeTVar (mReq context) $ PSQ.insert id 0 r
       writeTVar cache $ cc { cEntries = IntMap.insert id' CERetrieving entries }
     Just (CEReady s i) -> do
       writeTChan mediaInfoChan (id, s, i)
@@ -115,7 +115,7 @@ requestInfo id = atomically $ do
 initContext = do
   cache         <- newTVarIO emptyCache
   mediaInfoChan <- newTChanIO
-  req           <- newTVarIO Seq.empty
+  req           <- newTVarIO PSQ.empty
   return $ augmentContext
     MLib { mCache         = cache
          , mMediaInfoChan = mediaInfoChan
@@ -158,9 +158,9 @@ infoReqJob = do
       c <- readTVar tv
       when (c > 100) retry
       r <- readTVar (mReq context)
-      case viewl r of
-        EmptyL     -> retry
-        id :< rest -> do
+      case PSQ.minView r of
+        Nothing               -> retry
+        Just (id :-> _, rest) -> do
           writeTVar (mReq context) rest
           writeTVar tv $ c + 1
           return id
