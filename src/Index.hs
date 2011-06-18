@@ -44,7 +44,7 @@ import Medialib
 
 data IndexEntry i
   = IENone
-  | IERetrieving
+  | IERetrieving Int
   | IEReady Stamp MediaInfo i
 
 data Index i
@@ -97,15 +97,20 @@ touch index ref = do
 
 getInfo index id force = do
   let id' = fromIntegral id
+      pri = if force then 0 else 15
   modifyMVar (iTable index) $ \ix ->
     case IntMap.lookup id' ix of
       Just (IEReady _ _ info, _) ->
         return (ix, Just info)
-      Just (IENone, list) | force -> do
-        requestInfo 0 id
-        return (IntMap.insert id'(IERetrieving, list) ix, Nothing)
+      Just (IENone, list) -> do
+        requestInfo pri id
+        return (IntMap.insert id' (IERetrieving pri, list) ix, Nothing)
+      Just (IERetrieving old, list) | old > pri -> do
+        requestInfo pri id
+        return (IntMap.insert id' (IERetrieving pri, list) ix, Nothing)
       _ ->
         return (ix, Nothing)
+
 
 addToIndex index id n =
   modifyMVar_ (iTable index) $ \ix -> do

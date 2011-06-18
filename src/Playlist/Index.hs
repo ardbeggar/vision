@@ -44,7 +44,7 @@ import Playlist.Format
 
 data IndexEntry
   = IENone
-  | IERetrieving
+  | IERetrieving Int
   | IEReady Stamp MediaInfo TrackInfo
 
 data Index
@@ -106,13 +106,17 @@ touch ref = do
 
 getInfo id force = do
   let id' = fromIntegral id
+      pri = if force then 0 else 15
   modifyMVar index $ \ix ->
     case IntMap.lookup id' ix of
       Just (IEReady _ _ info, _) ->
         return (ix, Just info)
-      Just (IENone, list) | force -> do
-        requestInfo 0 id
-        return (IntMap.insert id'(IERetrieving, list) ix, Nothing)
+      Just (IENone, list) -> do
+        requestInfo pri id
+        return (IntMap.insert id' (IERetrieving pri, list) ix, Nothing)
+      Just (IERetrieving old, list) | old > pri -> do
+        requestInfo pri id
+        return (IntMap.insert id' (IERetrieving pri, list) ix, Nothing)
       _ ->
         return (ix, Nothing)
 
