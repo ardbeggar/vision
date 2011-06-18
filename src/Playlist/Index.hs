@@ -90,7 +90,7 @@ updateIndex ix id stamp info old list =
   if upd
   then do
     ti <- makeTrackInfo info
-    mapM_ touch list
+    idleAdd (mapM_ touch list >> return False) priorityDefault
     return $ IntMap.insert id (IEReady stamp info ti, list) ix
   else
     return ix

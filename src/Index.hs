@@ -78,7 +78,7 @@ updateIndex index ix id stamp info old list =
   if upd
   then do
     ti <- iConv index info
-    mapM_ (touch index) list
+    idleAdd (mapM_ (touch index) list >> return False) priorityDefaultIdle
     return $ IntMap.insert id (IEReady stamp info ti, list) ix
   else
     return ix
