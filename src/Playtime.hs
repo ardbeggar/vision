@@ -218,7 +218,7 @@ handleCI id = do
   withoutSeek $ do
     adjustmentSetValue adj 0
     adjustmentSetUpper adj 0
-  liftIO $ withJust id requestInfo
+  liftIO $ withJust id $ requestInfo 0
 
 handleMI (id, _, info) = do
   s <- get

@@ -111,7 +111,7 @@ getInfo id force = do
       Just (IEReady _ _ info, _) ->
         return (ix, Just info)
       Just (IENone, list) | force -> do
-        requestInfo id
+        requestInfo 0 id
         return (IntMap.insert id'(IERetrieving, list) ix, Nothing)
       _ ->
         return (ix, Nothing)

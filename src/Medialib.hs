@@ -53,7 +53,7 @@ type MediaInfo = Map String Property
 
 data CacheEntry
   = CEReady Stamp MediaInfo
-  | CERetrieving
+  | CERetrieving Int
 
 data Cache
   = Cache { cEntries   :: IntMap CacheEntry
@@ -98,15 +98,19 @@ setupConn = do
       persist
     else atomically $ writeTVar cache emptyCache
 
-requestInfo id = atomically $ do
+requestInfo prio id = atomically $ do
   cc <- readTVar cache
   let id'     = fromIntegral id
       entries = cEntries cc
   case IntMap.lookup id' entries of
     Nothing -> do
       r <- readTVar (mReq context)
-      writeTVar (mReq context) $ PSQ.insert id 0 r
-      writeTVar cache $ cc { cEntries = IntMap.insert id' CERetrieving entries }
+      writeTVar (mReq context) $ PSQ.insert id prio r
+      writeTVar cache $ cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
+    Just (CERetrieving old) | old > prio -> do
+      r <- readTVar (mReq context)
+      writeTVar (mReq context) $ PSQ.update (const $ Just prio) id r
+      writeTVar cache $ cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
     Just (CEReady s i) -> do
       writeTChan mediaInfoChan (id, s, i)
       void $ readTChan mediaInfoChan
@@ -147,7 +151,7 @@ retrieveProperties ids f = do
           handler st
 
   tid <- forkIOUnmasked $ handler (0, ids', [])
-  forkIO $ mapM_ (requestInfo . fromIntegral) $ IntSet.toList ids'
+  forkIO $ mapM_ (requestInfo 20 . fromIntegral) $ IntSet.toList ids'
 
   return $ killThread tid
 
