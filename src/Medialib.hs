@@ -38,7 +38,6 @@ import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
 import Data.Sequence (Seq, ViewL (..), viewl, (|>), (<|))
 import qualified Data.Sequence as Seq
-import Data.Foldable (forM_)
 
 import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
@@ -123,26 +122,6 @@ initContext = do
          , mReq           = req
          }
 
-handleInfo tv id = do
-  rawv <- resultRawValue
-  liftIO $ do
-    info  <- valueGet =<< propdictToDict rawv []
-    stamp <- atomically $ do
-      nr <- readTVar tv
-      writeTVar tv $ nr - 1
-      cc <- readTVar cache
-      let stamp   = cNextStamp cc
-          entries = cEntries cc
-          entry   = CEReady stamp info
-      writeTVar cache $
-        Cache { cEntries   = IntMap.insert id entry entries
-              , cNextStamp = succ stamp
-              }
-      return stamp
-    atomically $ do
-      writeTChan mediaInfoChan (fromIntegral id, stamp, info)
-      void $ readTChan mediaInfoChan
-
 retrieveProperties ids f = do
   let ids'       = IntSet.fromList $ map fromIntegral ids
       len        = IntSet.size ids'
@@ -185,8 +164,22 @@ infoReqJob = do
           writeTVar (mReq context) rest
           writeTVar tv $ c + 1
           return id
-    medialibGetInfo xmms id >>* handleInfo tv (fromIntegral id)
-
-
-
-
+    medialibGetInfo xmms id >>* do
+      rawv <- resultRawValue
+      liftIO $ do
+        info  <- valueGet =<< propdictToDict rawv []
+        stamp <- atomically $ do
+          c <- readTVar tv
+          writeTVar tv $ c - 1
+          cc <- readTVar cache
+          let stamp   = cNextStamp cc
+              entries = cEntries cc
+              entry   = CEReady stamp info
+          writeTVar cache $
+            Cache { cEntries   = IntMap.insert (fromIntegral id) entry entries
+                  , cNextStamp = succ stamp
+                  }
+          return stamp
+        atomically $ do
+          writeTChan mediaInfoChan (id, stamp, info)
+          void $ readTChan mediaInfoChan
