@@ -36,7 +36,7 @@ import Data.Map (Map)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
-import Data.Sequence (Seq, (|>), (<|))
+import Data.Sequence (Seq, ViewL (..), viewl, (|>), (<|))
 import qualified Data.Sequence as Seq
 import Data.Foldable (forM_)
 
@@ -175,19 +175,18 @@ retrieveProperties ids f = do
 infoReqJob = do
   tv <- newTVarIO 0
   forever $ do
-    (ids, c) <- atomically $ do
+    id <- atomically $ do
+      c <- readTVar tv
+      when (c > 100) retry
       r <- readTVar (mReq context)
-      if Seq.null r
-        then retry
-        else do
-        let (h, t) = Seq.splitAt 30 r
-        writeTVar (mReq context) t
-        cn <- readTVar tv
-        writeTVar tv $ cn + Seq.length h
-        return (h, cn + Seq.length h)
-    forM_ ids $ \id ->
-      medialibGetInfo xmms id >>* handleInfo tv (fromIntegral id)
-    print c
-    threadDelay 1
+      case viewl r of
+        EmptyL     -> retry
+        id :< rest -> do
+          writeTVar (mReq context) rest
+          writeTVar tv $ c + 1
+          return id
+    medialibGetInfo xmms id >>* handleInfo tv (fromIntegral id)
+
+
 
 
