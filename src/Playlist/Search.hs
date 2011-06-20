@@ -26,6 +26,7 @@ import Data.Char
 
 import Graphics.UI.Gtk
 
+import Medialib
 import Playlist.Model
 import Playlist.Index
 import Playlist.View
@@ -37,5 +38,5 @@ setupSearch = do
   treeViewSetSearchEqualFunc playlistView $ Just $ \str iter -> do
     [n]  <- treeModelGetPath playlistStore iter
     mid  <- listStoreGetValue playlistStore n
-    info <- getInfo mid True
+    info <- getInfo mid Search
     return $ isInfixOf (map toLower str) (trackInfoText info)

@@ -44,6 +44,7 @@ import Config
 import Compound
 import Editor
 import Context
+import Medialib
 import Prelude hiding (lookup)
 import Properties
 import Collection.Model
@@ -125,8 +126,8 @@ getInfoIfNeeded iter = do
   mid <- listStoreGetValue collStore n
   rng <- treeViewGetVisibleRange collView
   getInfo mid $ case rng of
-    ([f], [t]) -> n >= f && t >= n
-    _          -> False
+    ([f], [t]) | n >= f && t >= n -> Visible
+    _                             -> Background
 
 makeConfigDlg =
   makeEditorDialog [(stockApply, ResponseApply)]
@@ -153,7 +154,7 @@ setupSearch props = do
   treeViewSetSearchEqualFunc collView $ Just $ \str iter -> do
     [n]  <- treeModelGetPath collStore iter
     mid  <- listStoreGetValue collStore n
-    search (map toLower str) props <$> getInfo mid True
+    search (map toLower str) props <$> getInfo mid Search
 
 search _ _ Nothing = False
 search _ [] _ = False

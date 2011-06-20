@@ -35,6 +35,7 @@ import Graphics.UI.Gtk hiding (add)
 import XMMS2.Client
 
 import Context
+import Medialib
 import Handler
 import Playback
 import Playlist.Model
@@ -115,8 +116,8 @@ getInfoIfNeeded iter = do
   mid <- listStoreGetValue playlistStore n
   rng <- treeViewGetVisibleRange playlistView
   getInfo mid $ case rng of
-    ([f], [t]) -> n >= f && t >= n
-    _          -> False
+    ([f], [t]) | n >= f && t >= n -> Visible
+    _                             -> Background
 
 
 initContext builder = do

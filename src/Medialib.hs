@@ -20,6 +20,7 @@
 module Medialib
   ( Stamp
   , MediaInfo
+  , RequestPriority (..)
   , initMedialib
   , requestInfo
   , retrieveProperties
@@ -50,10 +51,17 @@ import Handler
 type Stamp = Int
 type MediaInfo = Map String Property
 
+data RequestPriority
+  = Current
+  | Visible
+  | Search
+  | Changed
+  | Background
+    deriving (Eq, Ord)
 
 data CacheEntry
   = CEReady Stamp MediaInfo
-  | CERetrieving Int
+  | CERetrieving RequestPriority
 
 data Cache
   = Cache { cEntries   :: IntMap CacheEntry
@@ -69,7 +77,7 @@ emptyCache =
 data MLib
   = MLib { mCache         :: TVar Cache
          , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
-         , mReq           :: TVar (PSQ MediaId Int)
+         , mReq           :: TVar (PSQ MediaId RequestPriority)
          }
 
 cache         = mCache context
@@ -94,7 +102,7 @@ setupConn = do
         cc <- readTVar cache
         when (IntMap.member id' $ cEntries cc) $ do
           r <- readTVar (mReq context)
-          writeTVar (mReq context) $ PSQ.insert id 10 r
+          writeTVar (mReq context) $ PSQ.insert id Changed r
       persist
     else atomically $ writeTVar cache emptyCache
 
@@ -151,7 +159,7 @@ retrieveProperties ids f = do
           handler st
 
   tid <- forkIOUnmasked $ handler (0, ids', [])
-  forkIO $ mapM_ (requestInfo 20 . fromIntegral) $ IntSet.toList ids'
+  forkIO $ mapM_ (requestInfo Background . fromIntegral) $ IntSet.toList ids'
 
   return $ killThread tid
 
