@@ -21,6 +21,7 @@ module Playlist.Model
   ( initModel
   , clearModel
   , playlistStore
+  , playlistName
   , getPlaylistName
   , setPlaylistName
   , getPlaylistSize
@@ -29,7 +30,7 @@ module Playlist.Model
   , playlistGetIds
   ) where
 
-import Control.Concurrent.MVar
+import Control.Concurrent.STM
 
 import Data.Int
 
@@ -39,22 +40,18 @@ import Context
 import Utils
 
 
-data State
-  = State { sName :: Maybe String }
-
 data Model
   = Model { mStore               :: ListStore Int32
           , mOnPlaylistUpdated   :: HandlerMVar ()
-          , mState               :: MVar State
+          , mPlaylistName        :: TVar (Maybe String)
           }
 
 playlistStore = mStore context
 onPlaylistUpdated = onHandler (mOnPlaylistUpdated context)
-state = mState context
+playlistName = mPlaylistName context
 
-getPlaylistName      = withMVar state (return . sName)
-setPlaylistName name = modifyMVar_ state $ \s ->
-  return s { sName = name }
+getPlaylistName = readTVarIO playlistName
+setPlaylistName = atomically . writeTVar playlistName
 
 getPlaylistSize = listStoreGetSize playlistStore
 
@@ -79,13 +76,9 @@ clearModel =
 initContext = do
   store               <- listStoreNewDND [] Nothing Nothing
   onPlaylistUpdated   <- makeHandlerMVar
-  state               <- newMVar makeState
+  playlistName        <- newTVarIO Nothing
   return $ augmentContext
     Model { mStore               = store
           , mOnPlaylistUpdated   = onPlaylistUpdated
-          , mState               = state
+          , mPlaylistName        = playlistName
           }
-
-makeState =
-  State { sName = Nothing }
-
