@@ -26,7 +26,6 @@ module Playlist.Model
   , getPlaylistSize
   , touchPlaylist
   , onPlaylistUpdated
-  , beforeDeletingTrack
   , playlistGetIds
   ) where
 
@@ -46,13 +45,11 @@ data State
 data Model
   = Model { mStore               :: ListStore Int32
           , mOnPlaylistUpdated   :: HandlerMVar ()
-          , mBeforeDeletingTrack :: HandlerMVar Int
           , mState               :: MVar State
           }
 
 playlistStore = mStore context
 onPlaylistUpdated = onHandler (mOnPlaylistUpdated context)
-beforeDeletingTrack = onHandler (mBeforeDeletingTrack context)
 state = mState context
 
 getPlaylistName      = withMVar state (return . sName)
@@ -82,12 +79,10 @@ clearModel =
 initContext = do
   store               <- listStoreNewDND [] Nothing Nothing
   onPlaylistUpdated   <- makeHandlerMVar
-  beforeDeletingTrack <- makeHandlerMVar
   state               <- newMVar makeState
   return $ augmentContext
     Model { mStore               = store
           , mOnPlaylistUpdated   = onPlaylistUpdated
-          , mBeforeDeletingTrack = beforeDeletingTrack
           , mState               = state
           }
 
