@@ -109,11 +109,11 @@ initView builder = do
   playlistStore `on` rowDeleted $ \[d] -> do
     cur <- readIORef playlistCur
     case cur of
-      ([n], c) | n == d -> do
-        s <- getPlaylistSize
-        let n' = if n < s then n else max (n - 1) 0
-            c' = maybe Nothing (Just . (, False)) c
-        treeViewSetCursor playlistView [n'] c'
+      ([n], c) | n >= d -> do
+          s <- getPlaylistSize
+          let n' = if n < s && n == d then n else max (n - 1) 0
+              c' = maybe Nothing (Just . (, False)) c
+          treeViewSetCursor playlistView [n'] c'
       _ -> return ()
 
   return ?context
