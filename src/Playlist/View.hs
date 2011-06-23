@@ -18,6 +18,7 @@
 --
 
 {-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Playlist.View
   ( initView
@@ -29,6 +30,7 @@ module Playlist.View
 import Control.Applicative
 
 import Data.Maybe
+import Data.IORef
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -36,7 +38,6 @@ import XMMS2.Client
 
 import Context
 import Medialib
-import Handler
 import Playback
 import Playlist.Model
 import Playlist.Index
@@ -45,10 +46,13 @@ import Playlist.Format
 
 data View
   = View { vView :: TreeView
-         , vSel  :: TreeSelection }
+         , vSel  :: TreeSelection
+         , vCur  :: IORef (TreePath, Maybe TreeViewColumn)
+         }
 
 playlistView = vView context
 playlistSel  = vSel context
+playlistCur  = vCur context
 
 
 initView builder = do
@@ -98,14 +102,18 @@ initView builder = do
     info <- getInfoIfNeeded iter
     cell `set` [ cellText := trackInfoDuration info ]
 
-  beforeDeletingTrack . add . ever $ \t -> do
-    cursor <- treeViewGetCursor playlistView
-    case cursor of
-      ([p], c) | p == t -> do
+  playlistView `on` cursorChanged $ do
+    cur <- treeViewGetCursor playlistView
+    writeIORef playlistCur cur
+
+  playlistStore `on` rowDeleted $ \[d] -> do
+    cur <- readIORef playlistCur
+    case cur of
+      ([n], c) | n == d -> do
         s <- getPlaylistSize
-        let p' = if p + 1 < s then p + 1 else max (p - 1) 0
+        let n' = if n < s then n else max (n - 1) 0
             c' = maybe Nothing (Just . (, False)) c
-        treeViewSetCursor playlistView [p'] c'
+        treeViewSetCursor playlistView [n'] c'
       _ -> return ()
 
   return ?context
@@ -123,9 +131,12 @@ getInfoIfNeeded iter = do
 initContext builder = do
   view <- builderGetObject builder castToTreeView "playlist-view"
   sel  <- treeViewGetSelection view
+  cur  <- newIORef ([], Nothing)
   return $ augmentContext
     View { vView = view
-         , vSel  = sel }
+         , vSel  = sel
+         , vCur  = cur
+         }
 
 
 getSelectedTracks =
