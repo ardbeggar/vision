@@ -23,6 +23,12 @@ module Playlist.UI
   ( setupUI
   ) where
 
+import Control.Monad
+
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TWatch
+
 import System.IO.Unsafe
 
 import Network.URL
@@ -71,14 +77,13 @@ setupActions builder = do
 
   orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
     let outerw = outer v
-        updateTitle = do
-          name <- getPlaylistName
-          windowSetTitle outerw $
-            "Sort playlist" ++ maybe "" (": " ++) name
-    cid <- onPlaylistUpdated . add . ever . const $ updateTitle
-    outerw `onDestroy` (onPlaylistUpdated $ remove cid)
-    updateTitle
     windowSetDefaultSize outerw 500 400
+    nw  <- atomically $ newEmptyTWatch playlistName
+    tid <- forkIO $ forever $ do
+      name <- atomically $ watch nw
+      windowSetTitle outerw $
+        "Sort playlist" ++ maybe "" (": " ++) name
+    outerw `onDestroy` (killThread tid)
 
   ag <- builderGetObject builder castToActionGroup "server-actions"
   onServerConnectionAdd . ever $ actionGroupSetSensitive ag
