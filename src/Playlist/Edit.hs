@@ -53,6 +53,8 @@ editDelete cut = do
 editCopy = copyIds =<< getSelectedTracks
 
 editPaste append = do
+  return ()
+{-
   targets <- getClipboardTargets
   paste targets
   where paste targets
@@ -72,6 +74,7 @@ editPaste append = do
               put contents $ case path of
                 [n] | not append -> Just n
                 _                -> Nothing
+-}
 
 editSelectAll =
   treeSelectionSelectAll playlistSel
@@ -82,17 +85,23 @@ editInvertSelection = do
   mapM_ (treeSelectionUnselectPath playlistSel) rows
 
 editCheckClipboard = do
+  return False
+  {-
   targets <- getClipboardTargets
   return $
     elem xmms2MlibIdTarget targets ||
     elem uriListTarget targets ||
     elem stringTarget targets
+-}
 
 copyIds tracks = do
+  return ()
+{-
   ids <- playlistGetIds tracks
   clipboardSetWithData clipboard
     [(xmms2MlibIdTarget, 0)]
     (const $ selectionDataSet selectionTypeInteger ids)
     (return ())
   return ()
+-}
 

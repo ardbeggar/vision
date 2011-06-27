@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 26 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DeriveDataTypeable, NoMonoLocalBinds #-}
+
 module Clipboard
   ( initClipboard
   , clipboard
@@ -26,11 +28,15 @@ module Clipboard
 
 import Control.Concurrent.MVar
 import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.Index
+import Control.Monad.ReaderX
+import Control.Monad.ToIO
 
 import Data.Maybe
+import Data.Typeable
 
-import Graphics.UI.Gtk hiding (Clipboard)
-import qualified Graphics.UI.Gtk as G
+import Graphics.UI.Gtk
 
 import Context
 import Handler
@@ -43,50 +49,57 @@ data State
 makeState =
   State { sTargets = [] }
 
-data Clipboard
-  = Clipboard { cState              :: MVar State
-              , cClipboard          :: G.Clipboard
-              , cOnClipboardTargets :: HandlerMVar ()
-              }
+data Ix = Ix deriving (Typeable)
+instance Index Ix where getVal = Ix
 
-state = cState context
+data Env
+  = Env { cState              :: MVar State
+        , cClipboard          :: Clipboard
+        , cOnClipboardTargets :: HandlerMVar ()
+        }
+    deriving (Typeable)
 
-clipboard = cClipboard context
+clipboardEnv :: (Ix, Env)
+clipboardEnv = undefined
 
-onClipboardTargets = onHandler $ cOnClipboardTargets context
+clipboard = asksx Ix cClipboard
 
-getClipboardTargets = withMVar state $ return . sTargets
+onClipboardTargets f = do
+  handler <- asksx Ix cOnClipboardTargets
+  liftIO $ onHandler handler f
+
+getClipboardTargets = asksx Ix cState >>= \state ->
+  liftIO $ withMVar state $ return . sTargets
 
 updateClipboardTargets targets = do
+  state <- asksx Ix cState
   let targets' = fromMaybe [] targets
-  modifyMVar state $ \state ->
+  liftIO $ modifyMVar state $ \state ->
     return (state { sTargets = targets' }, sTargets state /= targets')
 
 
 initClipboard = do
-  context <- initContext
-  let ?context = context
+  env <- makeEnv
+  addEnv Ix env
+  runEnvT (Ix, env) $ runIn clipboardEnv >>= \run ->
+    liftIO $ timeoutAdd (run checkClipboard) 0
+  return ()
 
-  timeoutAdd checkClipboard 0
-
-  return ?context
-
-
-initContext = do
+makeEnv = liftIO $ do
   state              <- newMVar makeState
   clipboard          <- clipboardGet selectionClipboard
   onClipboardTargets <- makeHandlerMVar
-  return $ augmentContext
-    Clipboard { cState              = state
-              , cClipboard          = clipboard
-              , cOnClipboardTargets = onClipboardTargets
-              }
+  return Env { cState              = state
+             , cClipboard          = clipboard
+             , cOnClipboardTargets = onClipboardTargets
+             }
 
 checkClipboard = do
-  clipboard <- clipboardGet selectionClipboard
-  clipboardRequestTargets clipboard $ \targets -> do
-    changed <- updateClipboardTargets targets
-    when changed $ onClipboardTargets $ invoke ()
-    timeoutAdd checkClipboard 250
-    return ()
+  clipboard <- asksx Ix cClipboard
+  io $ \run ->
+    clipboardRequestTargets clipboard $ \targets -> run $ do
+      changed <- updateClipboardTargets targets
+      when changed $ onClipboardTargets $ invoke ()
+      io $ \run -> timeoutAdd (run checkClipboard) 250
+      return ()
   return False

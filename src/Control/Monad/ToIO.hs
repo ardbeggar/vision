@@ -30,7 +30,7 @@ class (Monad t, MonadIO t) => ToIO t where
 
 io :: ToIO m => ((m a -> IO a) -> IO b) -> m b
 io f = do
-  toio <- toIO
+  toio :: (m a -> IO a) <- toIO
   liftIO $ f toio
 
 instance ToIO IO where

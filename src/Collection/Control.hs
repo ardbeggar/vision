@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -241,12 +241,15 @@ updateWindowTitle = do
   setWindowTitle $ t ++ "Vision collection browser"
 
 editCopy = do
+  return ()
+{-
   ids <- getSelectedIds
   clipboardSetWithData clipboard
     [(xmms2MlibIdTarget, 0)]
     (const $ selectionDataSet selectionTypeInteger ids)
     (return ())
   return ()
+-}
 
 editSelectAll =
   treeSelectionSelectAll collSel

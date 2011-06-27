@@ -70,8 +70,7 @@ main = do
     context <- liftIO $ initPlaytime
     let ?context = context
 
-    context <- liftIO $ initClipboard
-    let ?context = context
+    initClipboard
 
     context <- liftIO $ initLocation
     let ?context = context

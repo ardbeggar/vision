@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 22 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -153,19 +153,20 @@ setupActions builder = do
         n <- treeSelectionCountSelectedRows playlistSel
         mapM_ (`actionSetSensitive` (n /= 0))
           [cut, copy, delete, editp, export]
-      setupPA = do
-        en <- editCheckClipboard
-        mapM_ (`actionSetSensitive` en) [paste, append]
+--      setupPA = do
+--        return ()
+--        en <- editCheckClipboard
+--        mapM_ (`actionSetSensitive` en) [paste, append]
 
   onPlaybackStatus   . add . ever . const $ setupPPS
   onCurrentTrack     . add . ever . const $ setupPN
   onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
-  onClipboardTargets . add . ever . const $ setupPA
+--  onClipboardTargets . add . ever . const $ setupPA
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
     setupPPS
     setupPN
-    setupPA
+--    setupPA
     setupSel
     updateWindowTitle
     return False
