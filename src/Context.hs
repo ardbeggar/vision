@@ -28,7 +28,14 @@ module Context
   , makeContext
   , augmentContext
   , context
+  , runIn
+  , (<&>)
   ) where
+
+import Control.Monad.ReaderX
+import Control.Monad.ToIO
+import Prelude hiding (catch)
+import Control.Monad.CatchIO
 
 
 infixr 9 :*
@@ -56,3 +63,40 @@ augmentContext c = c :* ?context
 
 context :: (?context :: a, ContextClass c a) => c
 context = ctxt ?context
+
+
+instance (Index ix, MonadCatchIO m) =>
+         MonadCatchIO (ReaderTX ix env m) where
+  m `catch` f = mkReaderTX getVal $ \r ->
+    (runReaderTX getVal m r)
+    `catch`
+    (\e -> runReaderTX getVal (f e) r)
+  block       = mapReaderTX getVal block
+  unblock     = mapReaderTX getVal unblock
+
+instance (Index ix, ToIO m) => ToIO (ReaderTX ix env m) where
+  toIO = do
+    let val = getVal
+    env <- askx val
+    t <- lift toIO
+    return $ \rx -> t $ runReaderTX val rx env
+
+runIn ::
+  MonadReaderX ix r m
+  => (ix, r)
+  -> m (ReaderTX ix r n a -> n a)
+runIn _ = do
+  let a = getVal
+  b <- askx a
+  return $ \m ->
+    runReaderTX a m b
+
+(<&>) ::
+  MonadReaderX ix r m
+  => m (n a -> c)
+  -> (ix, r)
+  -> m (ReaderTX ix r n a -> c)
+a <&> b = do
+  a' <- a
+  b' <- runIn b
+  return $ a' . b'

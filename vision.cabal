@@ -105,7 +105,7 @@ executable vision
                     gtk, containers, mtl, utf8-string,
                     filepath, directory, glib, array,
                     MonadCatchIO-transformers, json, parsec >= 3.0.1,
-                    url, stm, PSQueue
+                    url, stm, PSQueue, mtlx
   extensions:       ImplicitParams, NoMonomorphismRestriction,
                     FlexibleContexts, FlexibleInstances,
                     TypeFamilies, ScopedTypeVariables,
