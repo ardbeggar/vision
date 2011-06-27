@@ -21,6 +21,7 @@ module Main
   where
 
 import Control.Concurrent
+import Control.Monad.Trans
 
 import Graphics.UI.Gtk
 
@@ -36,6 +37,7 @@ import Clipboard
 import Location
 import Collection
 import Playlist
+import Context
 
 
 main = do
@@ -43,42 +45,43 @@ main = do
 
   timeoutAdd (yield >> return True) 100
 
-  context <- initEnvironment
-  let ?context = context
+  startEnvM $ do
+    context <- liftIO $ initEnvironment
+    let ?context = context
 
-  context <- initAbout
-  let ?context = context
+    context <- liftIO $ initAbout
+    let ?context = context
 
-  context <- initXMMS
-  let ?context = context
+    context <- liftIO $ initXMMS
+    let ?context = context
 
-  context <- initMedialib
-  let ?context = context
+    context <- liftIO $ initMedialib
+    let ?context = context
 
-  context <- initProperties
-  let ?context = context
+    context <- liftIO $ initProperties
+    let ?context = context
 
-  context <- initPlayback
-  let ?context = context
+    context <- liftIO $ initPlayback
+    let ?context = context
 
-  context <- initVolume
-  let ?context = context
+    context <- liftIO $ initVolume
+    let ?context = context
 
-  context <- initPlaytime
-  let ?context = context
+    context <- liftIO $ initPlaytime
+    let ?context = context
 
-  context <- initClipboard
-  let ?context = context
+    context <- liftIO $ initClipboard
+    let ?context = context
 
-  context <- initLocation
-  let ?context = context
+    context <- liftIO $ initLocation
+    let ?context = context
 
-  context <- initCollection
-  let ?context = context
+    context <- liftIO $ initCollection
+    let ?context = context
 
-  context <- initPlaylist
-  let ?context = context
+    context <- liftIO $ initPlaylist
+    let ?context = context
 
-  showPlaylist
+    liftIO showPlaylist
 
   mainGUI

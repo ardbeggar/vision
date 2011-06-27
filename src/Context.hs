@@ -20,7 +20,9 @@
 {-# LANGUAGE MultiParamTypeClasses,
              FlexibleInstances,
              OverlappingInstances,
-             TypeOperators #-}
+             TypeOperators,
+             DeriveDataTypeable,
+             UndecidableInstances #-}
 
 module Context
   ( ContextClass
@@ -30,12 +32,23 @@ module Context
   , context
   , runIn
   , (<&>)
+  , startEnvM
+  , addEnv
+  , getEnv
+  , envEnv
   ) where
 
 import Control.Monad.ReaderX
 import Control.Monad.ToIO
 import Prelude hiding (catch)
 import Control.Monad.CatchIO
+
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+import Control.Concurrent.STM
+
+import Data.Typeable
+import Data.Dynamic
 
 
 infixr 9 :*
@@ -100,3 +113,41 @@ a <&> b = do
   a' <- a
   b' <- runIn b
   return $ a' . b'
+
+
+data Ix = Ix deriving Typeable
+instance Index Ix where getVal = Ix
+
+type EnvMap = TVar (IntMap Dynamic)
+
+envEnv :: (Ix, EnvMap)
+envEnv = undefined
+
+class    (MonadReaderX Ix EnvMap m, MonadIO m) => EnvM m
+instance (MonadReaderX Ix EnvMap m, MonadIO m) => EnvM m
+
+startEnvM :: ReaderTX Ix (TVar (IntMap Dynamic)) IO a -> IO a
+startEnvM f = do
+  v <- newTVarIO $ IntMap.empty
+  runReaderTX Ix f v
+
+addEnv :: (EnvM m, Typeable ix, Typeable r) => ix -> r -> m ()
+addEnv ix r = do
+  let val = (ix, r)
+  var <- askx Ix
+  liftIO $ do
+    key <- typeRepKey $ typeOf val
+    atomically $ do
+      map <- readTVar var
+      writeTVar var $ IntMap.insert key (toDyn val) map
+
+getEnv :: (EnvM m, Typeable ix, Typeable r) => (ix, r) -> m (Maybe (ix, r))
+getEnv spec = do
+  var <- askx Ix
+  liftIO $ do
+    key <- typeRepKey $ typeOf spec
+    atomically $ do
+      map <- readTVar var
+      case IntMap.lookup key map of
+        Nothing -> return Nothing
+        Just dv -> return $ fromDynamic dv

@@ -34,7 +34,7 @@ import System.Environment
 import System.FilePath
 import Control.Applicative
 
-import Context
+import Context hiding (getEnv)
 
 import Paths_vision
 
