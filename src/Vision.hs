@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 11 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -45,7 +45,7 @@ main = do
 
   timeoutAdd (yield >> return True) 100
 
-  startEnvM $ do
+  startRegistry $ do
     context <- liftIO $ initEnvironment
     let ?context = context
 

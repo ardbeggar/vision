@@ -30,12 +30,15 @@ module Context
   , makeContext
   , augmentContext
   , context
+  , EnvM
+  , runEnvT
   , runIn
   , (<&>)
-  , startEnvM
+  , startRegistry
+  , registryEnv
+  , RegistryEnvOp
   , addEnv
   , getEnv
-  , envEnv
   ) where
 
 import Control.Monad.ReaderX
@@ -78,6 +81,12 @@ context :: (?context :: a, ContextClass c a) => c
 context = ctxt ?context
 
 
+class    MonadReaderX ix r m => EnvM ix r m
+instance MonadReaderX ix r m => EnvM ix r m
+
+runEnvT :: Index ix => (ix, r) -> ReaderTX ix r m a -> m a
+runEnvT (ix, r) f = runReaderTX ix f r
+
 instance (Index ix, MonadCatchIO m) =>
          MonadCatchIO (ReaderTX ix env m) where
   m `catch` f = mkReaderTX getVal $ \r ->
@@ -87,22 +96,23 @@ instance (Index ix, MonadCatchIO m) =>
   block       = mapReaderTX getVal block
   unblock     = mapReaderTX getVal unblock
 
-instance (Index ix, ToIO m) => ToIO (ReaderTX ix env m) where
+instance (Index ix, ToIO m) => ToIO (ReaderTX ix r m) where
   toIO = do
-    let val = getVal
-    env <- askx val
+    let ix = getVal
+    r <- askx ix
     t <- lift toIO
-    return $ \rx -> t $ runReaderTX val rx env
+    return $ \m ->
+      t $ runReaderTX ix m r
 
 runIn ::
   MonadReaderX ix r m
   => (ix, r)
   -> m (ReaderTX ix r n a -> n a)
 runIn _ = do
-  let a = getVal
-  b <- askx a
+  let ix = getVal
+  b <- askx ix
   return $ \m ->
-    runReaderTX a m b
+    runReaderTX ix m b
 
 (<&>) ::
   MonadReaderX ix r m
@@ -120,18 +130,21 @@ instance Index Ix where getVal = Ix
 
 type EnvMap = TVar (IntMap Dynamic)
 
-envEnv :: (Ix, EnvMap)
-envEnv = undefined
+registryEnv :: (Ix, EnvMap)
+registryEnv = undefined
 
-class    (MonadReaderX Ix EnvMap m, MonadIO m) => EnvM m
-instance (MonadReaderX Ix EnvMap m, MonadIO m) => EnvM m
+class    (EnvM Ix EnvMap m, MonadIO m) => RegistryM m
+instance (EnvM Ix EnvMap m, MonadIO m) => RegistryM m
 
-startEnvM :: ReaderTX Ix (TVar (IntMap Dynamic)) IO a -> IO a
-startEnvM f = do
+startRegistry :: ReaderTX Ix EnvMap IO a -> IO a
+startRegistry f = do
   v <- newTVarIO $ IntMap.empty
-  runReaderTX Ix f v
+  runEnvT (Ix, v) (addEnv Ix v >> getEnv (Ix, v) >> f)
 
-addEnv :: (EnvM m, Typeable ix, Typeable r) => ix -> r -> m ()
+class    (RegistryM m, Index ix, Typeable ix, Typeable r) => RegistryEnvOp ix r m
+instance (RegistryM m, Index ix, Typeable ix, Typeable r) => RegistryEnvOp ix r m
+
+addEnv :: RegistryEnvOp ix r m => ix -> r -> m ()
 addEnv ix r = do
   let val = (ix, r)
   var <- askx Ix
@@ -141,7 +154,7 @@ addEnv ix r = do
       map <- readTVar var
       writeTVar var $ IntMap.insert key (toDyn val) map
 
-getEnv :: (EnvM m, Typeable ix, Typeable r) => (ix, r) -> m (Maybe (ix, r))
+getEnv :: RegistryEnvOp ix r m => (ix, r) -> m (Maybe (ix, r))
 getEnv spec = do
   var <- askx Ix
   liftIO $ do
