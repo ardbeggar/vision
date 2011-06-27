@@ -115,7 +115,6 @@ onServerConnectionAdd f = do
   return id
 
 setConnected conn = do
-  putStrLn $ "Notify: " ++ show conn
   id <- newUnique
   atomically $ do
     writeTVar (xConnected context) conn
@@ -127,7 +126,6 @@ setConnected conn = do
     if nw == 0
       then return ()
       else retry
-  putStrLn "done"
 
 
 data SN a =
