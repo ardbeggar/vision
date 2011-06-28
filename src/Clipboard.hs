@@ -81,8 +81,8 @@ updateClipboardTargets targets = do
 initClipboard = do
   env <- makeEnv
   addEnv Ix env
-  runEnvT (Ix, env) $ runIn clipboardEnv >>= \run ->
-    liftIO $ timeoutAdd (run checkClipboard) 0
+  runEnvT (Ix, env) $ runIn clipboardEnv $> do
+    io $ \run -> timeoutAdd (run checkClipboard) 0
   return ()
 
 makeEnv = liftIO $ do

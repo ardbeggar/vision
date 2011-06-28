@@ -33,7 +33,8 @@ module Context
   , EnvM
   , runEnvT
   , runIn
-  , (<&>)
+  , (&>)
+  , ($>)
   , startRegistry
   , registryEnv
   , RegistryEnvOp
@@ -114,16 +115,20 @@ runIn _ = do
   return $ \m ->
     runReaderTX ix m b
 
-(<&>) ::
+(&>) ::
   MonadReaderX ix r m
   => m (n a -> c)
   -> (ix, r)
   -> m (ReaderTX ix r n a -> c)
-a <&> b = do
+a &> b = do
   a' <- a
   b' <- runIn b
   return $ a' . b'
 
+($>) :: MonadIO m => m (t -> IO b) -> t -> m b
+r $> f = do
+  r' <- r
+  liftIO $ r' f
 
 data Ix = Ix deriving Typeable
 instance Index Ix where getVal = Ix
