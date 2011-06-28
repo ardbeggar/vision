@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE UndecidableInstances #-}
+
 module Playback
   ( initPlayback
   , onPlaybackStatus
@@ -32,6 +34,7 @@ module Playback
   , prevTrack
   , nextTrack
   , requestCurrentTrack
+  , PlaybackCC
   ) where
 
 import Control.Arrow
@@ -46,6 +49,9 @@ import Handler
 import Context
 import Utils
 
+
+class    ContextClass Playback c => PlaybackCC c
+instance ContextClass Playback c => PlaybackCC c
 
 data Playback
   = Playback { pPlaybackStatus   :: TVar (Maybe PlaybackStatus)
