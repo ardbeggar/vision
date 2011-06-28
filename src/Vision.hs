@@ -81,6 +81,6 @@ main = do
     context <- liftIO $ initPlaylist
     let ?context = context
 
-    liftIO showPlaylist
+    showPlaylist
 
   mainGUI

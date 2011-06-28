@@ -43,14 +43,15 @@ import Playlist.Control
 
 
 editDelete cut = do
-  tracks <- getSelectedTracks
+  tracks <- liftIO $ getSelectedTracks
   when cut $ copyIds tracks
-  removeTracks tracks
-  maybeTrack <- currentTrackThisPlaylist
-  withJust maybeTrack $ \t ->
-    when (t `elem` tracks) restartPlayback
+  liftIO $ do
+    removeTracks tracks
+    maybeTrack <- currentTrackThisPlaylist
+    withJust maybeTrack $ \t ->
+      when (t `elem` tracks) restartPlayback
 
-editCopy = copyIds =<< getSelectedTracks
+editCopy = copyIds =<< liftIO getSelectedTracks
 
 editPaste append = do
   return ()
@@ -85,23 +86,20 @@ editInvertSelection = do
   mapM_ (treeSelectionUnselectPath playlistSel) rows
 
 editCheckClipboard = do
-  return False
-  {-
+  liftIO $ putStrLn "zopa"
   targets <- getClipboardTargets
   return $
     elem xmms2MlibIdTarget targets ||
     elem uriListTarget targets ||
     elem stringTarget targets
--}
 
 copyIds tracks = do
-  return ()
-{-
-  ids <- playlistGetIds tracks
-  clipboardSetWithData clipboard
-    [(xmms2MlibIdTarget, 0)]
-    (const $ selectionDataSet selectionTypeInteger ids)
-    (return ())
-  return ()
--}
+  clipboard <- clipboard
+  liftIO $ do
+    ids <- playlistGetIds tracks
+    clipboardSetWithData clipboard
+      [(xmms2MlibIdTarget, 0)]
+      (const $ selectionDataSet selectionTypeInteger ids)
+      (return ())
+    return ()
 

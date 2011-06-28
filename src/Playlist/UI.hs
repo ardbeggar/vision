@@ -24,6 +24,8 @@ module Playlist.UI
   ) where
 
 import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.ToIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -49,6 +51,7 @@ import Location
 import Collection
 import Compound
 import Editor
+import Context
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
@@ -58,24 +61,28 @@ import Playlist.Control
 
 
 setupUI builder = do
-  setupActions builder
-  setupPlaybar builder
+  Just env <- getEnv clipboardEnv
+  runEnvT env $ runIn clipboardEnv $> do
+    setupActions builder
 
-  playlistView `onRowActivated` \[n] _ ->
-    playTrack n
+    liftIO $ do
+      setupPlaybar builder
 
-  popup <- getWidget castToMenu "ui/playlist-popup"
-  setupTreeViewPopup playlistView popup
+      playlistView `onRowActivated` \[n] _ ->
+        playTrack n
 
-  window `onDestroy` mainQuit
+      popup <- getWidget castToMenu "ui/playlist-popup"
+      setupTreeViewPopup playlistView popup
+
+      window `onDestroy` mainQuit
 
   return ()
 
 
 setupActions builder = do
-  urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
+  urlEntryDialog <- liftIO $ unsafeInterleaveIO $ makeURLEntryDialog
 
-  orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
+  orderDialog <- liftIO $ unsafeInterleaveIO $ makeOrderDialog $ \v -> do
     let outerw = outer v
     windowSetDefaultSize outerw 500 400
     nw  <- atomically $ newEmptyTWatch playlistName
@@ -85,21 +92,22 @@ setupActions builder = do
         "Sort playlist" ++ maybe "" (": " ++) name
     outerw `onDestroy` (killThread tid)
 
-  ag <- builderGetObject builder castToActionGroup "server-actions"
-  onServerConnectionAdd . ever $ actionGroupSetSensitive ag
+  ag <- liftIO $ builderGetObject builder castToActionGroup "server-actions"
+  liftIO $ onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  bindActions builder
+  runC <- runIn clipboardEnv
+  liftIO $ bindActions builder
     [ ("play",               startPlayback False)
     , ("pause",              pausePlayback)
     , ("stop",               stopPlayback)
     , ("prev",               prevTrack)
     , ("next",               nextTrack)
     , ("quit",               mainQuit)
-    , ("cut",                editDelete True)
-    , ("copy",               editCopy)
+    , ("cut",                runC $ editDelete True)
+    , ("copy",               runC editCopy)
     , ("paste",              editPaste False)
     , ("append",             editPaste True)
-    , ("delete",             editDelete False)
+    , ("delete",             runC $ editDelete False)
     , ("select-all",         editSelectAll)
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
@@ -114,18 +122,18 @@ setupActions builder = do
     , ("manage-properties",  showPropertyManager)
     ]
 
-  play   <- action builder "play"
-  pause  <- action builder "pause"
-  stop   <- action builder "stop"
-  prev   <- action builder "prev"
-  next   <- action builder "next"
-  cut    <- action builder "cut"
-  copy   <- action builder "copy"
-  paste  <- action builder "paste"
-  append <- action builder "append"
-  delete <- action builder "delete"
-  editp  <- action builder "edit-properties"
-  export <- action builder "export-properties"
+  play   <- liftIO $ action builder "play"
+  pause  <- liftIO $ action builder "pause"
+  stop   <- liftIO $ action builder "stop"
+  prev   <- liftIO $ action builder "prev"
+  next   <- liftIO $ action builder "next"
+  cut    <- liftIO $ action builder "cut"
+  copy   <- liftIO $ action builder "copy"
+  paste  <- liftIO $ action builder "paste"
+  append <- liftIO $ action builder "append"
+  delete <- liftIO $ action builder "delete"
+  editp  <- liftIO $ action builder "edit-properties"
+  export <- liftIO $ action builder "export-properties"
 
   let setupPPS = do
         ps <- getPlaybackStatus
@@ -153,20 +161,20 @@ setupActions builder = do
         n <- treeSelectionCountSelectedRows playlistSel
         mapM_ (`actionSetSensitive` (n /= 0))
           [cut, copy, delete, editp, export]
---      setupPA = do
---        return ()
---        en <- editCheckClipboard
---        mapM_ (`actionSetSensitive` en) [paste, append]
+      setupPA = do
+        en <- editCheckClipboard
+        liftIO $ mapM_ (`actionSetSensitive` en) [paste, append]
 
-  onPlaybackStatus   . add . ever . const $ setupPPS
-  onCurrentTrack     . add . ever . const $ setupPN
-  onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
---  onClipboardTargets . add . ever . const $ setupPA
-  playlistSel `onSelectionChanged` setupSel
-  flip timeoutAdd 0 $ do
+  liftIO $ onPlaybackStatus   . add . ever . const $ setupPPS
+  liftIO $ onCurrentTrack     . add . ever . const $ setupPN
+  liftIO $ onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
+  t <- toIO
+  onClipboardTargets . add . ever . const $ (putStrLn "tratata" >> t setupPA)
+  liftIO $ playlistSel `onSelectionChanged` setupSel
+  io $ \run -> flip timeoutAdd 0 $ do
     setupPPS
     setupPN
---    setupPA
+    run setupPA
     setupSel
     updateWindowTitle
     return False
