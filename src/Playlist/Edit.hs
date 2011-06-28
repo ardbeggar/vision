@@ -44,14 +44,15 @@ import Playlist.Control
 
 editDelete cut = do
   tracks <- liftIO $ getSelectedTracks
-  when cut $ copyIds tracks
+  when cut $ (copyIds =<< liftIO (playlistGetIds tracks))
   liftIO $ do
     removeTracks tracks
     maybeTrack <- currentTrackThisPlaylist
     withJust maybeTrack $ \t ->
       when (t `elem` tracks) restartPlayback
 
-editCopy = copyIds =<< liftIO getSelectedTracks
+editCopy =
+  copyIds =<< liftIO (playlistGetIds =<< getSelectedTracks)
 
 editPaste append = do
   clipboard <- clipboard
@@ -89,14 +90,3 @@ editCheckClipboard = do
     elem xmms2MlibIdTarget targets ||
     elem uriListTarget targets ||
     elem stringTarget targets
-
-copyIds tracks = do
-  clipboard <- clipboard
-  liftIO $ do
-    ids <- playlistGetIds tracks
-    clipboardSetWithData clipboard
-      [(xmms2MlibIdTarget, 0)]
-      (const $ selectionDataSet selectionTypeInteger ids)
-      (return ())
-    return ()
-

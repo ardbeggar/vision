@@ -25,6 +25,7 @@ module Clipboard
   , clipboard
   , onClipboardTargets
   , getClipboardTargets
+  , copyIds
   , ClipboardM
   ) where
 
@@ -40,9 +41,12 @@ import Data.Typeable
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client (MediaId)
+
 import Context
 import Handler
 import Utils
+import Atoms (xmms2MlibIdTarget)
 
 
 class    (EnvM Ix Env m, MonadIO m) => ClipboardM m
@@ -75,6 +79,16 @@ onClipboardTargets f = do
 
 getClipboardTargets = asksx Ix cState >>= \state ->
   liftIO $ withMVar state $ return . sTargets
+
+copyIds :: ClipboardM m => [MediaId] -> m ()
+copyIds ids = do
+  clipboard <- clipboard
+  liftIO $ do
+    clipboardSetWithData clipboard
+      [(xmms2MlibIdTarget, 0)]
+      (const $ selectionDataSet selectionTypeInteger ids)
+      (return ())
+    return ()
 
 updateClipboardTargets targets = do
   state <- asksx Ix cState
