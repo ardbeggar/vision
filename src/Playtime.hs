@@ -17,10 +17,13 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DeriveDataTypeable, UndecidableInstances #-}
+
 module Playtime
   ( initPlaytime
-  , currentId
   , makeSeekControl
+  , PlaytimeM
+  , playtimeEnv
   ) where
 
 import Control.Concurrent
@@ -31,9 +34,12 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.State
+import Control.Monad.Index
+import Control.Monad.ReaderX
 
 import Data.Maybe
 import qualified Data.Map as Map
+import Data.Typeable
 
 import Graphics.UI.Gtk hiding (add, remove, get)
 
@@ -41,7 +47,7 @@ import XMMS2.Client hiding (playbackStatus)
 
 import XMMS
 import Medialib
-import Context
+import Context hiding (makeContext)
 import Utils
 import Playback
 
@@ -50,77 +56,94 @@ data Playtime
   = Playtime { pAdj        :: Adjustment
              , pCurrentIdV :: TVar (Maybe MediaId)
              }
+    deriving (Typeable)
 
 adj        = pAdj context
-currentId  = readTVar currentIdV
 currentIdV = pCurrentIdV context
 
 
+data Ix = Ix deriving (Typeable)
+instance Index Ix where getVal = Ix
+
+class    (EnvM Ix Playtime m, MonadIO m) => PlaytimeM m
+instance (EnvM Ix Playtime m, MonadIO m) => PlaytimeM m
+
+playtimeEnv :: (Ix, Playtime)
+playtimeEnv = undefined
+
 initPlaytime = do
-  context <- initContext
-  let ?context = context
+  pt <- makeContext
+  let ?context = augmentContext pt
+  addEnv Ix pt
 
-  rcV <- atomically $ newTVar Nothing
-  ptV <- atomically $ newTVar 0
-  ptW <- atomically $ newEmptyTWatch ptV
-  psW <- atomically $ newEmptyTWatch playbackStatus
+  liftIO $ do
+    rcV <- atomically $ newTVar Nothing
+    ptV <- atomically $ newTVar 0
+    ptW <- atomically $ newEmptyTWatch ptV
+    psW <- atomically $ newEmptyTWatch playbackStatus
 
-  let ptRq = forever $ do
-        atomically $ do
-          rc <- readTVar rcV
-          if rc == Just 0
-            then return ()
-            else retry
-        playbackPlaytime xmms >>* do
-          pt <- catchResult 0 fromIntegral
-          liftIO $ atomically $ writeTVar ptV pt
-        threadDelay 1000000
+    let ptRq = forever $ do
+          atomically $ do
+            rc <- readTVar rcV
+            if rc == Just 0
+              then return ()
+              else retry
+          playbackPlaytime xmms >>* do
+            pt <- catchResult 0 fromIntegral
+            liftIO $ atomically $ writeTVar ptV pt
+          threadDelay 1000000
 
-  cId <- adj `onValueChanged` do
-    atomically $ do
-      rc <- readTVar rcV
-      withJust rc $ \rc ->
-        writeTVar rcV $ Just (rc + 1)
-    v <- adjustmentGetValue adj
-    playbackSeekMs xmms (round v) SeekSet >>* do
-      liftIO $ atomically $ do
+    cId <- adj `onValueChanged` do
+      atomically $ do
         rc <- readTVar rcV
         withJust rc $ \rc ->
-          writeTVar rcV $ Just (rc - 1)
+          writeTVar rcV $ Just (rc + 1)
+      v <- adjustmentGetValue adj
+      playbackSeekMs xmms (round v) SeekSet >>* do
+        liftIO $ atomically $ do
+          rc <- readTVar rcV
+          withJust rc $ \rc ->
+            writeTVar rcV $ Just (rc - 1)
 
-  xcN <- atomically $ mkSN
-  atomically $ activateSN xcN
-  forkIO $ evalPTM cId $ xmmsNC ptW psW xcN rcV
-  forkIO $ ptRq
+    xcN <- atomically $ mkSN
+    atomically $ activateSN xcN
+    forkIO $ evalPTM cId $ xmmsNC ptW psW xcN rcV
+    forkIO $ ptRq
 
-  return ?context
+  return ()
 
 handleCurrentId = do
   ci <- catchResult Nothing Just
   liftIO $ atomically $ writeTVar currentIdV ci
 
-initContext = do
+makeContext = liftIO $ do
   adj        <- adjustmentNew 0 0 0 5000 5000 0
   currentIdV <- newTVarIO Nothing
-  return $ augmentContext
-    Playtime { pAdj        = adj
-             , pCurrentIdV = currentIdV
-             }
+  return Playtime { pAdj        = adj
+                  , pCurrentIdV = currentIdV
+                  }
 
+makeSeekControl
+  :: ( PlaytimeM m
+     , PlaybackCC a
+     , ?context :: a
+     ) => m HScale
 makeSeekControl = do
-  view <- hScaleNew adj
-  scaleSetDrawValue view False
-  rangeSetUpdatePolicy view UpdateContinuous
-  widgetSetCanFocus view False
+  adj <- asksx Ix pAdj
+  liftIO $ do
+    view <- hScaleNew adj
+    scaleSetDrawValue view False
+    rangeSetUpdatePolicy view UpdateContinuous
+    widgetSetCanFocus view False
 
-  w <- atomically $ newEmptyTWatch playbackStatus
-  t <- forkIO $ forever $ do
-    s <- atomically $ watch w
-    widgetSetSensitive view $ s == (Just StatusPlay)
+    w <- atomically $ newEmptyTWatch playbackStatus
+    t <- forkIO $ forever $ do
+      s <- atomically $ watch w
+      widgetSetSensitive view $ s == (Just StatusPlay)
 
-  view `onDestroy` (killThread t)
+    view `onDestroy` (killThread t)
 
-  return view
+    return view
 
 
 data S =
@@ -183,6 +206,7 @@ xmmsC ciW ptW miC psW xcN rcV = do
               , MI <$> readTChan miC
               ]
   case msg of
+    XC True -> fail "aaa"
     XC False -> do
       cId <- gets sCi
       put $ mkS Nothing cId

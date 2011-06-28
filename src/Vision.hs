@@ -67,9 +67,7 @@ main = do
     context <- liftIO $ initVolume
     let ?context = context
 
-    context <- liftIO $ initPlaytime
-    let ?context = context
-
+    initPlaytime
     initClipboard
 
     context <- liftIO $ initLocation

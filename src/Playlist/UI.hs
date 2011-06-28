@@ -25,7 +25,6 @@ module Playlist.UI
 
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.ToIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -61,20 +60,22 @@ import Playlist.Control
 
 
 setupUI builder = do
+  Just env <- getEnv playtimeEnv
+  runEnvT env $ runIn playtimeEnv $>
+    setupPlaybar builder
+
   Just env <- getEnv clipboardEnv
-  runEnvT env $ runIn clipboardEnv $> do
+  runEnvT env $ runIn clipboardEnv $>
     setupActions builder
 
-    liftIO $ do
-      setupPlaybar builder
+  liftIO $ do
+    playlistView `onRowActivated` \[n] _ ->
+      playTrack n
 
-      playlistView `onRowActivated` \[n] _ ->
-        playTrack n
+    popup <- getWidget castToMenu "ui/playlist-popup"
+    setupTreeViewPopup playlistView popup
 
-      popup <- getWidget castToMenu "ui/playlist-popup"
-      setupTreeViewPopup playlistView popup
-
-      window `onDestroy` mainQuit
+    window `onDestroy` mainQuit
 
   return ()
 
@@ -171,41 +172,44 @@ setupActions builder = do
   t <- runIn clipboardEnv
   onClipboardTargets . add . ever . const $ t setupPA
   liftIO $ playlistSel `onSelectionChanged` setupSel
-  io $ \run -> flip timeoutAdd 0 $ do
+  liftIO $ flip timeoutAdd 0 $ do
     setupPPS
     setupPN
-    run setupPA
+    t setupPA
     setupSel
     updateWindowTitle
     return False
 
   return ()
 
+
 setupPlaybar builder = do
-  playbar <- builderGetObject builder castToToolbar "playbar"
-
-  sep <- separatorToolItemNew
-  separatorToolItemSetDraw sep False
-  toolbarInsert playbar sep (-1)
-
   seekView <- makeSeekControl
-  seekItem <- toolItemNew
-  toolItemSetHomogeneous seekItem False
-  toolItemSetExpand seekItem True
-  containerAdd seekItem seekView
-  toolbarInsert playbar seekItem (-1)
 
-  sep <- separatorToolItemNew
-  separatorToolItemSetDraw sep False
-  toolbarInsert playbar sep (-1)
+  liftIO $ do
+    playbar <- builderGetObject builder castToToolbar "playbar"
 
-  volView <- makeVolumeControl
-  volumeItem <- toolItemNew
-  toolItemSetHomogeneous volumeItem False
-  toolItemSetExpand volumeItem False
-  widgetSetSizeRequest volumeItem 100 (-1)
-  containerAdd volumeItem volView
-  toolbarInsert playbar volumeItem (-1)
+    sep <- separatorToolItemNew
+    separatorToolItemSetDraw sep False
+    toolbarInsert playbar sep (-1)
+
+    seekItem <- toolItemNew
+    toolItemSetHomogeneous seekItem False
+    toolItemSetExpand seekItem True
+    containerAdd seekItem seekView
+    toolbarInsert playbar seekItem (-1)
+
+    sep <- separatorToolItemNew
+    separatorToolItemSetDraw sep False
+    toolbarInsert playbar sep (-1)
+
+    volView <- makeVolumeControl
+    volumeItem <- toolItemNew
+    toolItemSetHomogeneous volumeItem False
+    toolItemSetExpand volumeItem False
+    widgetSetSizeRequest volumeItem 100 (-1)
+    containerAdd volumeItem volView
+    toolbarInsert playbar volumeItem (-1)
 
   return ()
 
