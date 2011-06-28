@@ -36,7 +36,6 @@ import Playlist.Search
 import Playlist.Update
 import Playlist.DnD
 import Playlist.UI
-import Context
 
 
 initPlaylist =
