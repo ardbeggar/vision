@@ -54,20 +54,19 @@ editDelete cut = do
 editCopy = copyIds =<< liftIO getSelectedTracks
 
 editPaste append = do
-  return ()
-{-
-  targets <- getClipboardTargets
-  paste targets
-  where paste targets
+  clipboard <- clipboard
+  targets   <- getClipboardTargets
+  liftIO $ paste clipboard targets
+  where paste clipboard targets
           | xmms2MlibIdTarget `elem` targets =
-            p xmms2MlibIdTarget (selectionDataGet selectionTypeInteger) insertIds
+            p clipboard xmms2MlibIdTarget (selectionDataGet selectionTypeInteger) insertIds
           | uriListTarget `elem` targets =
-            p uriListTarget selectionDataGetURIs insertURIs
+            p clipboard uriListTarget selectionDataGetURIs insertURIs
           | stringTarget `elem` targets =
-            p stringTarget selectionDataGetText $ insertURIs . lines
+            p clipboard stringTarget selectionDataGetText $ insertURIs . lines
           | otherwise =
             return ()
-        p target get put =
+        p clipboard target get put =
           clipboardRequestContents clipboard target $ do
             maybeContents <- get
             withJust maybeContents $ \contents -> liftIO $ do
@@ -75,7 +74,6 @@ editPaste append = do
               put contents $ case path of
                 [n] | not append -> Just n
                 _                -> Nothing
--}
 
 editSelectAll =
   treeSelectionSelectAll playlistSel
