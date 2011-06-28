@@ -17,13 +17,15 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DeriveDataTypeable, NoMonoLocalBinds #-}
+{-# LANGUAGE DeriveDataTypeable, UndecidableInstances #-}
 
 module Clipboard
   ( initClipboard
+  , clipboardEnv
   , clipboard
   , onClipboardTargets
   , getClipboardTargets
+  , ClipboardM
   ) where
 
 import Control.Concurrent.MVar
@@ -42,6 +44,9 @@ import Context
 import Handler
 import Utils
 
+
+class    (EnvM Ix Env m, MonadIO m) => ClipboardM m
+instance (EnvM Ix Env m, MonadIO m) => ClipboardM m
 
 data State
   = State { sTargets :: [TargetTag] }
