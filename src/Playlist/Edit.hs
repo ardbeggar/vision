@@ -86,7 +86,6 @@ editInvertSelection = do
   mapM_ (treeSelectionUnselectPath playlistSel) rows
 
 editCheckClipboard = do
-  liftIO $ putStrLn "zopa"
   targets <- getClipboardTargets
   return $
     elem xmms2MlibIdTarget targets ||

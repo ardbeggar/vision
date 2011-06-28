@@ -168,8 +168,8 @@ setupActions builder = do
   liftIO $ onPlaybackStatus   . add . ever . const $ setupPPS
   liftIO $ onCurrentTrack     . add . ever . const $ setupPN
   liftIO $ onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
-  t <- toIO
-  onClipboardTargets . add . ever . const $ (putStrLn "tratata" >> t setupPA)
+  t <- runIn clipboardEnv
+  onClipboardTargets . add . ever . const $ t setupPA
   liftIO $ playlistSel `onSelectionChanged` setupSel
   io $ \run -> flip timeoutAdd 0 $ do
     setupPPS
