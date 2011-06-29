@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 27 Jun. 2011
+--  Created: 29 Jun. 2011
 --
 --  Copyright (C) 2011 Oleg Belozeorov
 --
@@ -19,20 +19,15 @@
 
 {-# LANGUAGE RankNTypes #-}
 
-module Control.Monad.ToIO
-  ( ToIO (..)
-  , io
+module Control.Monad.W
+  ( W (..)
+  , withW
   ) where
 
-import Control.Monad.Trans
-import Control.Monad.W
 
+newtype W m n = W { runW :: forall a. m a -> n a }
 
-class (Monad t, MonadIO t) => ToIO t where
-  toIO :: t (W t IO)
-
-io :: ToIO t => ((forall a. t a -> IO a) -> IO b) -> t b
-io f = withW toIO $ \w -> liftIO $ f w
-
-instance ToIO IO where
-  toIO = return $ W id
+withW :: Monad m => m (W t t1) -> ((forall a. t a -> t1 a) -> m b) -> m b
+withW w f = do
+  w' <- w
+  f $ runW w'

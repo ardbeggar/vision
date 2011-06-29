@@ -25,6 +25,7 @@ module Playlist.UI
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.W
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -96,8 +97,8 @@ setupActions builder = do
   ag <- liftIO $ builderGetObject builder castToActionGroup "server-actions"
   liftIO $ onServerConnectionAdd . ever $ actionGroupSetSensitive ag
 
-  runC <- runIn clipboardEnv
-  liftIO $ bindActions builder
+  withW (runIn clipboardEnv) $ \runC ->
+    liftIO $ bindActions builder
     [ ("play",               startPlayback False)
     , ("pause",              pausePlayback)
     , ("stop",               stopPlayback)
@@ -166,19 +167,19 @@ setupActions builder = do
         en <- editCheckClipboard
         liftIO $ mapM_ (`actionSetSensitive` en) [paste, append]
 
-  liftIO $ onPlaybackStatus   . add . ever . const $ setupPPS
-  liftIO $ onCurrentTrack     . add . ever . const $ setupPN
-  liftIO $ onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
-  t <- runIn clipboardEnv
-  onClipboardTargets . add . ever . const $ t setupPA
-  liftIO $ playlistSel `onSelectionChanged` setupSel
-  liftIO $ flip timeoutAdd 0 $ do
-    setupPPS
-    setupPN
-    t setupPA
-    setupSel
-    updateWindowTitle
-    return False
+  withW (runIn clipboardEnv) $ \run -> do
+    liftIO $ onPlaybackStatus   . add . ever . const $ setupPPS
+    liftIO $ onCurrentTrack     . add . ever . const $ setupPN
+    liftIO $ onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
+    onClipboardTargets . add . ever . const $ run setupPA
+    liftIO $ playlistSel `onSelectionChanged` setupSel
+    liftIO $ flip timeoutAdd 0 $ do
+      setupPPS
+      setupPN
+      run setupPA
+      setupSel
+      updateWindowTitle
+      return False
 
   return ()
 

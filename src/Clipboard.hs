@@ -119,6 +119,6 @@ checkClipboard = do
     clipboardRequestTargets clipboard $ \targets -> run $ do
       changed <- updateClipboardTargets targets
       when changed $ onClipboardTargets $ invoke ()
-      io $ \run -> timeoutAdd (run checkClipboard) 250
+      liftIO $ timeoutAdd (run checkClipboard) 250
       return ()
   return False

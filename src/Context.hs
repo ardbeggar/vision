@@ -44,6 +44,7 @@ module Context
 
 import Control.Monad.ReaderX
 import Control.Monad.ToIO
+import Control.Monad.W
 import Prelude hiding (catch)
 import Control.Monad.CatchIO
 
@@ -102,33 +103,31 @@ instance (Index ix, ToIO m) => ToIO (ReaderTX ix r m) where
     let ix = getVal
     r <- askx ix
     t <- lift toIO
-    return $ \m ->
-      t $ runReaderTX ix m r
+    return $ W $ \m ->
+      runW t $ runReaderTX ix m r
 
 runIn ::
   MonadReaderX ix r m
   => (ix, r)
-  -> m (ReaderTX ix r n a -> n a)
+  -> m (W (ReaderTX ix r n) n)
 runIn _ = do
   let ix = getVal
   b <- askx ix
-  return $ \m ->
+  return $ W $ \m ->
     runReaderTX ix m b
 
 (&>) ::
-  MonadReaderX ix r m
-  => m (n a -> c)
-  -> (ix, r)
-  -> m (ReaderTX ix r n a -> c)
+  MonadReaderX ix r m =>
+  m (W n n1) -> (ix, r) -> m (W (ReaderTX ix r n) n1)
 a &> b = do
   a' <- a
   b' <- runIn b
-  return $ a' . b'
+  return $ W $ runW a' . runW b'
 
-($>) :: MonadIO m => m (t -> IO b) -> t -> m b
+($>) :: MonadIO m => m (W n IO) -> n b -> m b
 r $> f = do
   r' <- r
-  liftIO $ r' f
+  liftIO $ runW r' f
 
 data Ix = Ix deriving Typeable
 instance Index Ix where getVal = Ix

@@ -59,8 +59,6 @@ import XMMS2.Client
 import XMMS
 import Utils
 import UI
-import Atoms
-import Clipboard
 import qualified Properties as P
 import Collection.Common
 import Collection.Model hiding (setOrder)
