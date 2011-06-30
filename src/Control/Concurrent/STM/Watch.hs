@@ -19,46 +19,13 @@
 
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Control.Concurrent.STM.TGVar
-  ( TGVar
-  , newTGVar
-  , readTGVar
-  , readTGVarIO
-  , writeTGVar
-  , TGWatch
-  , newTGWatch
-  , module Control.Concurrent.STM.Watch
+module Control.Concurrent.STM.Watch
+  ( Watch (..)
   ) where
 
 import Control.Concurrent.STM
-import Control.Concurrent.STM.Watch
-
-import Control.Applicative
 
 
-data TGVar a = T (TVar (a, Integer))
+class Watch a w where
+  watch :: w -> STM a
 
-newTGVar x = T <$> newTVar (x, 1)
-
-readTGVar (T v) = fst <$> readTVar v
-
-readTGVarIO (T v) = fst <$> readTVarIO v
-
-writeTGVar (T v) x = do
-  (_, g) <- readTVar v
-  writeTVar v (x, g + 1)
-
-
-data TGWatch a = W (TGVar a) (TVar Integer)
-
-newTGWatch v = W v <$> newTVar 0
-
-instance Watch a (TGWatch a) where
-  watch (W (T v) g) = do
-    this      <- readTVar g
-    (x, that) <- readTVar v
-    if this /= that
-      then do
-      writeTVar g that
-      return x
-      else retry

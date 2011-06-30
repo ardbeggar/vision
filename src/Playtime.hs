@@ -88,13 +88,13 @@ initPlaytime = do
           | xc = do
             rt <- forkIO requestPlaytime
             ct <- forkIO $ evalPTM cId dispatch
-            xc <- atomically $ watchG xcW
+            xc <- atomically $ watch xcW
             killThread rt
             killThread ct
             atomically $ writeTVar seekCountV Nothing
             mon xc
           | otherwise = do
-            xc <- atomically $ watchG xcW
+            xc <- atomically $ watch xcW
             mon xc
     forkIO $ mon False
 

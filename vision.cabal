@@ -99,6 +99,7 @@ executable vision
                     Playlist.Format.Config,
                     Control.Concurrent.STM.TWatch,
                     Control.Concurrent.STM.TGVar,
+                    Control.Concurrent.STM.Watch,
                     Control.Monad.ToIO,
                     Control.Monad.W
   hs-source-dirs:   src
