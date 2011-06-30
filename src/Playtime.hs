@@ -26,6 +26,7 @@ module Playtime
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TWatch
+import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
 import Control.Monad
@@ -49,63 +50,79 @@ import Playback
 data Playtime
   = Playtime { pAdj        :: Adjustment
              , pCurrentIdV :: TVar (Maybe MediaId)
+             , pPlaytimeV  :: TVar Int
+             , pSeekCountV :: TVar (Maybe Int)
              }
 
 adj        = pAdj context
 currentId  = readTVar currentIdV
 currentIdV = pCurrentIdV context
+playtimeV  = pPlaytimeV context
+seekCountV = pSeekCountV context
 
 
 initPlaytime = do
   context <- initContext
   let ?context = context
 
-  rcV <- atomically $ newTVar Nothing
-  ptV <- atomically $ newTVar 0
-  ptW <- atomically $ newEmptyTWatch ptV
-  psW <- atomically $ newEmptyTWatch playbackStatus
-
-  let ptRq = forever $ do
-        atomically $ do
-          rc <- readTVar rcV
-          if rc == Just 0
-            then return ()
-            else retry
-        playbackPlaytime xmms >>* do
-          pt <- catchResult 0 fromIntegral
-          liftIO $ atomically $ writeTVar ptV pt
-        threadDelay 1000000
-
-  cId <- adj `onValueChanged` do
-    atomically $ do
-      rc <- readTVar rcV
-      withJust rc $ \rc ->
-        writeTVar rcV $ Just (rc + 1)
-    v <- adjustmentGetValue adj
-    playbackSeekMs xmms (round v) SeekSet >>* do
-      liftIO $ atomically $ do
-        rc <- readTVar rcV
-        withJust rc $ \rc ->
-          writeTVar rcV $ Just (rc - 1)
-
-  xcN <- atomically $ mkSN
-  atomically $ activateSN xcN
-  forkIO $ evalPTM cId $ xmmsNC ptW psW xcN rcV
-  forkIO $ ptRq
+  cId <- setupSeek
+  xcW <- atomically $ newTGWatch connectedV
+  let mon xc
+        | xc = do
+          rt <- forkIO requestPlaytime
+          ct <- forkIO $ evalPTM cId dispatch
+          xc <- atomically $ watchG xcW
+          killThread rt
+          killThread ct
+          atomically $ writeTVar seekCountV Nothing
+          mon xc
+        | otherwise = do
+          xc <- atomically $ watchG xcW
+          mon xc
+  forkIO $ mon False
 
   return ?context
+
+initContext = do
+  adj        <- adjustmentNew 0 0 0 5000 5000 0
+  currentIdV <- newTVarIO Nothing
+  playtimeV  <- newTVarIO 0
+  seekCountV <- newTVarIO Nothing
+  return $ augmentContext
+    Playtime { pAdj        = adj
+             , pCurrentIdV = currentIdV
+             , pPlaytimeV  = playtimeV
+             , pSeekCountV = seekCountV
+             }
+
+requestPlaytime = forever $ do
+  checkSeekCount
+  playbackPlaytime xmms >>* do
+    pt <- catchResult 0 fromIntegral
+    liftIO $ atomically $ writeTVar playtimeV pt
+  threadDelay 1000000
+
+checkSeekCount = atomically $ do
+  rc <- readTVar seekCountV
+  if rc == Just 0
+    then return ()
+    else retry
+
+modSeekCount op = atomically $ do
+  rc <- readTVar seekCountV
+  withJust rc $ \rc ->
+    writeTVar seekCountV $ Just $ op rc
 
 handleCurrentId = do
   ci <- catchResult Nothing Just
   liftIO $ atomically $ writeTVar currentIdV ci
 
-initContext = do
-  adj        <- adjustmentNew 0 0 0 5000 5000 0
-  currentIdV <- newTVarIO Nothing
-  return $ augmentContext
-    Playtime { pAdj        = adj
-             , pCurrentIdV = currentIdV
-             }
+setupSeek =  adj `onValueChanged` do
+  modSeekCount (+ 1)
+  v <- adjustmentGetValue adj
+  playbackSeekMs xmms (round v) SeekSet >>* do
+    liftIO $ modSeekCount $ \n -> n - 1
+
 
 makeSeekControl = do
   view <- hScaleNew adj
@@ -154,54 +171,32 @@ data Msg
   | CI (Maybe MediaId)
   | MI (MediaId, Stamp, MediaInfo)
   | PS (Maybe PlaybackStatus)
-  | XC Bool
 
-xmmsNC ptW psW xcN rcV = do
-  conn <- liftIO $ atomically $ waitSN xcN
-  if conn
-    then do
-    (miC, ciW) <- liftIO $ do
-      playbackCurrentId xmms >>*
-        handleCurrentId
-      broadcastPlaybackCurrentId xmms >>*
-        (handleCurrentId >> persist)
-      atomically $ writeTVar rcV $ Just 0
-      atomically $ doneSN xcN
-      miC <- atomically $ dupTChan mediaInfoChan
-      ciW <- atomically $ newTWatch currentIdV Nothing
-      return (miC, ciW)
-    xmmsC ciW ptW miC psW xcN rcV
-    else
-    xmmsNC ptW psW xcN rcV
 
-xmmsC ciW ptW miC psW xcN rcV = do
-  msg <- liftIO $ atomically $
-         msum [ XC <$> waitSN xcN
-              , PS <$> watch psW
-              , CI <$> watch ciW
-              , PT <$> watch ptW
-              , MI <$> readTChan miC
-              ]
-  case msg of
-    XC False -> do
-      cId <- gets sCi
-      put $ mkS Nothing cId
-      liftIO $ do
-        atomically $ writeTVar rcV Nothing
-        atomically $ doneSN xcN
-      xmmsNC ptW psW xcN rcV
-    PT pt -> do
-      handlePT pt
-      xmmsC ciW ptW miC psW xcN rcV
-    CI ci -> do
-      handleCI ci
-      xmmsC ciW ptW miC psW xcN rcV
-    MI mi -> do
-      handleMI mi
-      xmmsC ciW ptW miC psW xcN rcV
-    PS ps -> do
-      handlePS $ fromMaybe StatusStop ps
-      xmmsC ciW ptW miC psW xcN rcV
+dispatch = do
+  (miC, ciW, psW, ptW) <- liftIO $ do
+    playbackCurrentId xmms >>*
+      handleCurrentId
+    broadcastPlaybackCurrentId xmms >>*
+      (handleCurrentId >> persist)
+    atomically $ writeTVar seekCountV $ Just 0
+    miC <- atomically $ dupTChan mediaInfoChan
+    ciW <- atomically $ newTWatch currentIdV Nothing
+    psW <- atomically $ newEmptyTWatch playbackStatus
+    ptW <- atomically $ newEmptyTWatch playtimeV
+    return (miC, ciW, psW, ptW)
+  forever $ do
+    msg <- liftIO $ atomically $
+           msum [ PS <$> watch psW
+                , CI <$> watch ciW
+                , PT <$> watch ptW
+                , MI <$> readTChan miC
+                ]
+    case msg of
+      PT pt -> handlePT pt
+      CI ci -> handleCI ci
+      MI mi -> handleMI mi
+      PS ps -> handlePS $ fromMaybe StatusStop ps
 
 handlePT pt = do
   s <- get
