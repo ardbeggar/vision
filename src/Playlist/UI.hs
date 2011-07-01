@@ -171,7 +171,12 @@ setupActions builder = do
     void $ atomically $ watch ctW
     postGUISync setupPA
 
-  onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
+  pnW <- atomically $ newEmptyTWatch playlistName
+  forkIO $ forever $ do
+    name <- atomically $ watch pnW
+    setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
+
+  onPlaylistUpdated  . add . ever . const $ setupPN
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
     setupSel
