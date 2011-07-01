@@ -29,6 +29,7 @@ module Medialib
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
 
 import Control.Monad (when, void, forever)
 import Control.Monad.Trans
@@ -45,7 +46,6 @@ import XMMS2.Client.Bindings (propdictToDict)
 
 import Context
 import XMMS
-import Handler
 import Utils
 
 
@@ -78,39 +78,44 @@ emptyCache =
 data MLib
   = MLib { mCache         :: TVar (Maybe Cache)
          , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
-         , mReq           :: TVar (PSQ MediaId RequestPriority)
+         , mReqQ          :: TVar (PSQ MediaId RequestPriority)
          }
 
 cache         = mCache context
+reqQ          = mReqQ context
 mediaInfoChan = mMediaInfoChan context
 
 initMedialib = do
   context <- initContext
   let ?context = context
 
-  forkIO infoReqJob
-  setupConn
+  xcW <- atomically $ newTGWatch connectedV
+  let mon xc
+        | xc = do
+          atomically $ writeTVar cache $ Just emptyCache
+          broadcastMedialibEntryChanged xmms >>* do
+            id <- result
+            let id' = fromIntegral id
+            liftIO $ atomically $ do
+              cc <- readTVar cache
+              withJust cc $ \cc ->
+                when (IntMap.member id' $ cEntries cc) $ do
+                  r <- readTVar reqQ
+                  writeTVar reqQ $ PSQ.insert id Changed r
+            persist
+          rt <- forkIO infoReqJob
+          xc <- atomically $ watch xcW
+          killThread rt
+          atomically $ do
+            writeTVar cache Nothing
+            writeTVar reqQ PSQ.empty
+          mon xc
+        | otherwise = do
+          xc <- atomically $ watch xcW
+          mon xc
+  forkIO $ mon False
 
   return ?context
-
-setupConn = do
-  onServerConnectionAdd . ever $ \conn ->
-    if conn
-    then do
-      atomically $ writeTVar cache $ Just emptyCache
-      broadcastMedialibEntryChanged xmms >>* do
-      id <- result
-      let id' = fromIntegral id
-      liftIO $ atomically $ do
-        cc <- readTVar cache
-        withJust cc $ \cc ->
-          when (IntMap.member id' $ cEntries cc) $ do
-            r <- readTVar (mReq context)
-            writeTVar (mReq context) $ PSQ.insert id Changed r
-      persist
-    else atomically $ do
-      writeTVar (mReq context) PSQ.empty
-      writeTVar cache Nothing
 
 requestInfo prio id = atomically $ do
   cc <- readTVar cache
@@ -119,13 +124,15 @@ requestInfo prio id = atomically $ do
         entries = cEntries cc
     in case IntMap.lookup id' entries of
       Nothing -> do
-        r <- readTVar (mReq context)
-        writeTVar (mReq context) $ PSQ.insert id prio r
-        writeTVar cache $ Just cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
+        r <- readTVar reqQ
+        writeTVar reqQ $ PSQ.insert id prio r
+        writeTVar cache $ Just
+          cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
       Just (CERetrieving old) | old > prio -> do
-        r <- readTVar (mReq context)
-        writeTVar (mReq context) $ PSQ.update (const $ Just prio) id r
-        writeTVar cache $ Just cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
+        r <- readTVar reqQ
+        writeTVar reqQ $ PSQ.update (const $ Just prio) id r
+        writeTVar cache $ Just
+          cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
       Just (CEReady s i) -> do
         writeTChan mediaInfoChan (id, s, i)
         void $ readTChan mediaInfoChan
@@ -134,11 +141,11 @@ requestInfo prio id = atomically $ do
 initContext = do
   cache         <- newTVarIO Nothing
   mediaInfoChan <- newTChanIO
-  req           <- newTVarIO PSQ.empty
+  reqQ          <- newTVarIO PSQ.empty
   return $ augmentContext
     MLib { mCache         = cache
          , mMediaInfoChan = mediaInfoChan
-         , mReq           = req
+         , mReqQ          = reqQ
          }
 
 retrieveProperties ids f = do
@@ -176,11 +183,11 @@ infoReqJob = do
     id <- atomically $ do
       c <- readTVar tv
       when (c > 100) retry
-      r <- readTVar (mReq context)
+      r <- readTVar reqQ
       case PSQ.minView r of
         Nothing               -> retry
         Just (id :-> _, rest) -> do
-          writeTVar (mReq context) rest
+          writeTVar reqQ rest
           writeTVar tv $ c + 1
           return id
     medialibGetInfo xmms id >>* do
