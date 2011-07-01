@@ -26,13 +26,18 @@ import Control.Monad
 import Control.Monad.Trans
 import Data.Maybe
 
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TWatch
+
 import Graphics.UI.Gtk hiding (add)
 
-import XMMS2.Client
+import XMMS2.Client hiding (playbackStatus)
 
 import XMMS
 import Handler
 import Playback
+import Utils
 import Playlist.Model
 import Playlist.Index
 
@@ -51,30 +56,33 @@ initUpdate = do
       setPlaylistName Nothing
       clearModel
 
-  onPlaybackStatus . add . ever . const $ do
-    maybeCT <- getCurrentTrack
-    name    <- fromMaybe "" <$> getPlaylistName
-    size    <- getPlaylistSize
-    case maybeCT of
-      Just (ct, cname) | cname == name && ct < size ->
-        touchPlaylist ct
-      _ ->
-        return ()
+  psW <- atomically $ newTWatch playbackStatus Nothing
+  forkIO $ forever $ do
+    void $ atomically $ watch psW
+    postGUISync $ do
+      maybeCT <- getCurrentTrack
+      name    <- fromMaybe "" <$> getPlaylistName
+      size    <- getPlaylistSize
+      case maybeCT of
+        Just (ct, cname) | cname == name && ct < size ->
+          touchPlaylist ct
+        _ ->
+          return ()
 
-  onCurrentTrack . add . ever $ \old -> do
-    name <- fromMaybe "" <$> getPlaylistName
-    size <- getPlaylistSize
-    case old of
-      Just (ot, oname) | oname == name && ot < size ->
-        touchPlaylist ot
-      _ ->
-        return ()
-    new <- getCurrentTrack
-    case new of
-      Just (nt, nname) | nname == name && nt < size ->
-        touchPlaylist nt
-      _ ->
-        return ()
+  ctW <- atomically $ newEmptyTWatch currentTrack
+  let monCT old = do
+        new <- atomically $ watch ctW
+        postGUISync $ do
+          name <- fromMaybe "" <$> getPlaylistName
+          size <- getPlaylistSize
+          withJust old $ \(ot, oname) ->
+            when (oname == name && ot < size) $
+              touchPlaylist ot
+          withJust new $ \(nt, nname) ->
+            when (nname == name && nt < size) $
+              touchPlaylist nt
+        monCT new
+  forkIO $ monCT Nothing
 
   return ?context
 

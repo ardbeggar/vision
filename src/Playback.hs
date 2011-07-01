@@ -21,9 +21,7 @@
 
 module Playback
   ( initPlayback
-  , onPlaybackStatus
-  , onPlaybackStatusAdd
-  , onCurrentTrack
+  , currentTrack
   , getPlaybackStatus
   , playbackStatus
   , getCurrentTrack
@@ -55,21 +53,11 @@ instance ContextClass Playback c => PlaybackCC c
 
 data Playback
   = Playback { pPlaybackStatus   :: TVar (Maybe PlaybackStatus)
-             , pOnPlaybackStatus :: HandlerMVar (Maybe PlaybackStatus)
              , pCurrentTrack     :: TVar (Maybe (Int, String))
-             , pOnCurrentTrack   :: HandlerMVar (Maybe (Int, String))
              }
 
 playbackStatus = pPlaybackStatus context
 currentTrack   = pCurrentTrack context
-
-onPlaybackStatus = onHandler (pOnPlaybackStatus context)
-onPlaybackStatusAdd f = do
-  id <- onPlaybackStatus . add $ f
-  f =<< getPlaybackStatus
-  return id
-
-onCurrentTrack = onHandler (pOnCurrentTrack context)
 
 getPlaybackStatus =
   atomically $ readTVar playbackStatus
@@ -101,25 +89,18 @@ initPlayback = do
 
 initContext = do
   playbackStatus   <- atomically $ newTVar Nothing
-  onPlaybackStatus <- makeHandlerMVar
   currentTrack     <- atomically $ newTVar Nothing
-  onCurrentTrack   <- makeHandlerMVar
   return $ augmentContext
     Playback { pPlaybackStatus   = playbackStatus
-             , pOnPlaybackStatus = onPlaybackStatus
              , pCurrentTrack     = currentTrack
-             , pOnCurrentTrack   = onCurrentTrack
              }
 
-resetState = do
-  atomically $ do
-    writeTVar playbackStatus Nothing
-    writeTVar currentTrack Nothing
-  invokeOnPlaybackStatus
+resetState = atomically $ do
+  writeTVar playbackStatus Nothing
+  writeTVar currentTrack Nothing
 
-setStatus s = do
-  atomically $ writeTVar playbackStatus s
-  invokeOnPlaybackStatus
+setStatus s = atomically $
+  writeTVar playbackStatus s
 
 requestStatus =
   XC.playbackStatus xmms >>* do
@@ -129,12 +110,7 @@ requestStatus =
 requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
     new <- catchResult Nothing (Just . first fromIntegral)
-    liftIO $ do
-      old <- atomically $ do
-        old <- readTVar currentTrack
-        writeTVar currentTrack new
-        return old
-      onCurrentTrack $ invoke old
+    liftIO $ atomically $ writeTVar currentTrack new
 
 startPlayback False = do
   playbackStart xmms
@@ -169,9 +145,6 @@ prevTrack = do
   playlistSetNextRel xmms (-1)
   playbackTickle xmms
   return ()
-
-invokeOnPlaybackStatus =
-  onPlaybackStatus . invoke =<< getPlaybackStatus
 
 restartPlayback = do
   playbackTickle xmms

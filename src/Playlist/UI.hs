@@ -26,6 +26,7 @@ module Playlist.UI
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.W
+import Control.Monad.ToIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -37,7 +38,7 @@ import Network.URL
 
 import Graphics.UI.Gtk hiding (add, remove)
 
-import XMMS2.Client hiding (Data)
+import XMMS2.Client hiding (Data, playbackStatus)
 
 import UI
 import XMMS
@@ -137,8 +138,7 @@ setupActions builder = do
   editp  <- liftIO $ action builder "edit-properties"
   export <- liftIO $ action builder "export-properties"
 
-  let setupPPS = do
-        ps <- getPlaybackStatus
+  let setupPPS ps = do
         let (ePlay, ePause, eStop) = case ps of
               Just StatusPlay  -> (False, True, True)
               Just StatusPause -> (True, False, True)
@@ -167,19 +167,31 @@ setupActions builder = do
         en <- editCheckClipboard
         liftIO $ mapM_ (`actionSetSensitive` en) [paste, append]
 
-  withW (runIn clipboardEnv) $ \run -> do
-    liftIO $ onPlaybackStatus   . add . ever . const $ setupPPS
-    liftIO $ onCurrentTrack     . add . ever . const $ setupPN
-    liftIO $ onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
-    onClipboardTargets . add . ever . const $ run setupPA
-    liftIO $ playlistSel `onSelectionChanged` setupSel
-    liftIO $ flip timeoutAdd 0 $ do
-      setupPPS
-      setupPN
-      run setupPA
+  liftIO $ do
+    psW <- atomically $ newEmptyTWatch playbackStatus
+    forkIO $ forever $ do
+      ps <- atomically $ watch psW
+      postGUISync $ setupPPS ps
+
+    ctW <- atomically $ newEmptyTWatch currentTrack
+    forkIO $ forever $ do
+      void $ atomically $ watch ctW
+      postGUISync setupPN
+
+    onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
+    playlistSel `onSelectionChanged` setupSel
+    flip timeoutAdd 0 $ do
       setupSel
       updateWindowTitle
       return False
+
+  ct <- clipboardTargets
+  runIn clipboardEnv $> do
+    io $ \run -> do
+      ctW <- atomically $ newEmptyTWatch ct
+      forkIO $ forever $ do
+        void $ atomically $ watch ctW
+        postGUISync $ run setupPA
 
   return ()
 

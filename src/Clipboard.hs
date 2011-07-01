@@ -23,14 +23,13 @@ module Clipboard
   ( initClipboard
   , clipboardEnv
   , clipboard
-  , onClipboardTargets
+  , clipboardTargets
   , getClipboardTargets
   , copyIds
   , ClipboardM
   ) where
 
-import Control.Concurrent.MVar
-import Control.Monad
+import Control.Concurrent.STM
 import Control.Monad.Trans
 import Control.Monad.Index
 import Control.Monad.ReaderX
@@ -44,41 +43,30 @@ import Graphics.UI.Gtk
 import XMMS2.Client (MediaId)
 
 import Context
-import Handler
-import Utils
 import Atoms (xmms2MlibIdTarget)
 
 
 class    (EnvM Ix Env m, MonadIO m) => ClipboardM m
 instance (EnvM Ix Env m, MonadIO m) => ClipboardM m
 
-data State
-  = State { sTargets :: [TargetTag] }
-
-makeState =
-  State { sTargets = [] }
 
 data Ix = Ix deriving (Typeable)
 instance Index Ix where getVal = Ix
 
 data Env
-  = Env { cState              :: MVar State
+  = Env { cTargets            :: TVar [TargetTag]
         , cClipboard          :: Clipboard
-        , cOnClipboardTargets :: HandlerMVar ()
         }
     deriving (Typeable)
 
 clipboardEnv :: (Ix, Env)
 clipboardEnv = undefined
 
-clipboard = asksx Ix cClipboard
+clipboard        = asksx Ix cClipboard
+clipboardTargets = asksx Ix cTargets
 
-onClipboardTargets f = do
-  handler <- asksx Ix cOnClipboardTargets
-  liftIO $ onHandler handler f
-
-getClipboardTargets = asksx Ix cState >>= \state ->
-  liftIO $ withMVar state $ return . sTargets
+getClipboardTargets =
+  clipboardTargets >>= liftIO . readTVarIO
 
 copyIds :: ClipboardM m => [MediaId] -> m ()
 copyIds ids = do
@@ -90,11 +78,9 @@ copyIds ids = do
       (return ())
     return ()
 
-updateClipboardTargets targets = do
-  state <- asksx Ix cState
-  let targets' = fromMaybe [] targets
-  liftIO $ modifyMVar state $ \state ->
-    return (state { sTargets = targets' }, sTargets state /= targets')
+updateClipboardTargets ts = do
+  targets <- clipboardTargets
+  liftIO $ atomically $ writeTVar targets $ fromMaybe [] ts
 
 
 initClipboard = do
@@ -105,20 +91,17 @@ initClipboard = do
   return ()
 
 makeEnv = liftIO $ do
-  state              <- newMVar makeState
+  targets            <- newTVarIO []
   clipboard          <- clipboardGet selectionClipboard
-  onClipboardTargets <- makeHandlerMVar
-  return Env { cState              = state
+  return Env { cTargets            = targets
              , cClipboard          = clipboard
-             , cOnClipboardTargets = onClipboardTargets
              }
 
 checkClipboard = do
-  clipboard <- asksx Ix cClipboard
+  cb <- clipboard
   io $ \run ->
-    clipboardRequestTargets clipboard $ \targets -> run $ do
-      changed <- updateClipboardTargets targets
-      when changed $ onClipboardTargets $ invoke ()
+    clipboardRequestTargets cb $ \targets -> run $ do
+      updateClipboardTargets targets
       liftIO $ timeoutAdd (run checkClipboard) 250
       return ()
   return False

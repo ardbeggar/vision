@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 
 module Control.Concurrent.STM.Watch
   ( Watch (..)
@@ -26,6 +26,6 @@ module Control.Concurrent.STM.Watch
 import Control.Concurrent.STM
 
 
-class Watch a w where
+class Watch a w | w -> a where
   watch :: w -> STM a
 

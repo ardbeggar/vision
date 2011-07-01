@@ -223,9 +223,10 @@ dispatch = do
 
 handlePT pt = do
   s <- get
-  put s { sPt = pt }
-  unless (sTd s == 0 || sPs s == StatusStop) $
-    withoutSeek $ adjustmentSetValue adj $ fromIntegral pt
+  unless (sPs s == StatusStop) $ do
+    put s { sPt = pt }
+    unless (sTd s == 0) $
+      withoutSeek $ adjustmentSetValue adj $ fromIntegral pt
 
 handleCI id = do
   modify $ \s ->
