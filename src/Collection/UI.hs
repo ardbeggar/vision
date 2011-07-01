@@ -22,7 +22,12 @@ module Collection.UI
   ) where
 
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans
+
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
 
 import Data.Maybe
 
@@ -32,7 +37,6 @@ import Graphics.UI.Gtk hiding (add)
 
 import UI
 import XMMS
-import Handler
 import Utils
 import Properties
   ( showPropertyImport
@@ -144,8 +148,9 @@ setupActions builder browse = do
 
 setupConnection builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
-
-  onServerConnectionAdd . ever $ \conn -> do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
     actionGroupSetSensitive ag conn
     collFilter `set` [ secondaryIconSensitive := conn ]
 
