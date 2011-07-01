@@ -180,7 +180,6 @@ setupActions builder = do
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
     setupSel
-    updateWindowTitle
     return False
 
   return ()
@@ -212,12 +211,6 @@ setupPlaybar builder = do
   toolbarInsert playbar volumeItem (-1)
 
   return ()
-
-updateWindowTitle = do
-  maybeName <- getPlaylistName
-  setWindowTitle $ case maybeName of
-    Nothing   -> "Vision playlist"
-    Just name -> name ++ " - Vision playlist"
 
 
 data URLEntry =
