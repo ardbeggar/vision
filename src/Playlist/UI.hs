@@ -159,18 +159,18 @@ setupActions builder = do
   psW <- atomically $ newEmptyTWatch playbackStatus
   forkIO $ forever $ do
     ps <- atomically $ watch psW
-    postGUISync $ setupPPS ps
+    setupPPS ps
 
   ctW <- atomically $ newEmptyTWatch currentTrack
   psW <- atomically $ newEmptyTWatch playlistSize
   forkIO $ forever $ do
     atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
-    postGUISync setupPN
+    setupPN
 
   ctW <- atomically $ newEmptyTWatch clipboardTargets
   forkIO $ forever $ do
     void $ atomically $ watch ctW
-    postGUISync setupPA
+    setupPA
 
   pnW <- atomically $ newEmptyTWatch playlistName
   forkIO $ forever $ do
