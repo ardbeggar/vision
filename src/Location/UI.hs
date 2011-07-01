@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 28 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -24,6 +24,10 @@ module Location.UI
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -149,8 +153,9 @@ setupLocationView builder = do
 
 setupConnection builder = do
   ag <- builderGetObject builder castToActionGroup "server-actions"
-
-  onServerConnectionAdd . ever $ \conn -> do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
     actionGroupSetSensitive ag conn
     locationEntry `set` [secondaryIconSensitive := conn]
 

@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -25,13 +25,16 @@ module Collection.List.Model
 import Control.Monad
 import Control.Monad.Trans
 
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
 import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
 
 import Context
 import XMMS
-import Handler
 
 
 data Model
@@ -44,9 +47,11 @@ initListModel = do
   context <- initContext
   let ?context = context
 
-  onServerConnection . add . ever $ \conn ->
-    if conn
-    then do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    postGUISync $ listStoreClear listStore
+    when conn $ do
       broadcastCollectionChanged xmms >>* do
         change <- result
         when (namespace change == "Collections") $
@@ -54,8 +59,6 @@ initListModel = do
           liftIO listCollections
         persist
       listCollections
-    else
-      listStoreClear listStore
 
   return ?context
 
