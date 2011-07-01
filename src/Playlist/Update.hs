@@ -37,6 +37,7 @@ import XMMS2.Client hiding (playbackStatus)
 import XMMS
 import Handler
 import Playback
+import Utils
 import Playlist.Model
 import Playlist.Index
 
@@ -68,20 +69,20 @@ initUpdate = do
         _ ->
           return ()
 
-  onCurrentTrack . add . ever $ \old -> do
-    name <- fromMaybe "" <$> getPlaylistName
-    size <- getPlaylistSize
-    case old of
-      Just (ot, oname) | oname == name && ot < size ->
-        touchPlaylist ot
-      _ ->
-        return ()
-    new <- getCurrentTrack
-    case new of
-      Just (nt, nname) | nname == name && nt < size ->
-        touchPlaylist nt
-      _ ->
-        return ()
+  ctW <- atomically $ newEmptyTWatch currentTrack
+  let monCT old = do
+        new <- atomically $ watch ctW
+        postGUISync $ do
+          name <- fromMaybe "" <$> getPlaylistName
+          size <- getPlaylistSize
+          withJust old $ \(ot, oname) ->
+            when (oname == name && ot < size) $
+              touchPlaylist ot
+          withJust new $ \(nt, nname) ->
+            when (nname == name && nt < size) $
+              touchPlaylist nt
+        monCT new
+  forkIO $ monCT Nothing
 
   return ?context
 

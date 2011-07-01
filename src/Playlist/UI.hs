@@ -161,12 +161,15 @@ setupActions builder = do
     ps <- atomically $ watch psW
     postGUISync $ setupPPS ps
 
-  onCurrentTrack     . add . ever . const $ setupPN
+  ctW <- atomically $ newEmptyTWatch currentTrack
+  forkIO $ forever $ do
+    void $ atomically $ watch ctW
+    postGUISync setupPN
+
   onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
   onClipboardTargets . add . ever . const $ setupPA
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
-    setupPN
     setupPA
     setupSel
     updateWindowTitle
