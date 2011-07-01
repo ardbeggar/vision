@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 22 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -22,7 +22,12 @@ module Volume
   , makeVolumeControl
   ) where
 
+import Control.Monad
 import Control.Monad.Trans
+
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
 
 import qualified Data.Map as Map
 
@@ -31,45 +36,41 @@ import Graphics.UI.Gtk hiding (add, remove)
 import XMMS2.Client
 
 import XMMS
-import Handler
 import Utils
 import Context
 
 
 data Volume
-  = Volume { vAdj :: Adjustment
-           , vCid :: ConnectId Adjustment }
+  = Volume { vAdj :: Adjustment }
 
 adj = vAdj context
-cId = vCid context
 
 initVolume = do
   context <- initContext
   let ?context = context
 
-  onServerConnectionAdd . ever $ \conn ->
+  cId <- adj `onValueChanged` do
+    vol <- adjustmentGetValue adj
+    setVolume $ round vol
+
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
     if conn
-    then do
+      then do
       playbackVolumeGet xmms >>* do
-        handleVolume
+        handleVolume cId
         liftIO $ broadcastPlaybackVolumeChanged xmms >>* do
-          handleVolume
+          handleVolume cId
           persist
-      signalUnblock cId
-    else do
-      signalBlock cId
-      withoutVolumeChange $ adjustmentSetValue adj 0
+      else withoutVolumeChange cId $ adjustmentSetValue adj 0
 
   return ?context
 
 
 initContext = do
   adj <- adjustmentNew 0 0 100 5 5 0
-  cId <- adj `onValueChanged` do
-    vol <- adjustmentGetValue adj
-    setVolume $ round vol
-  return $ augmentContext
-    Volume { vAdj = adj, vCid = cId }
+  return $ augmentContext Volume { vAdj = adj }
 
 
 makeVolumeControl = do
@@ -78,15 +79,18 @@ makeVolumeControl = do
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False
 
-  id <- onServerConnectionAdd . ever $ widgetSetSensitive view
-  view `onDestroy` onServerConnection (remove id)
+  xcW <- atomically $ newTGWatch connectedV
+  tid <- forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    widgetSetSensitive view conn
+  view `onDestroy` killThread tid
 
   return view
 
 
-handleVolume = do
+handleVolume cId = do
   vol <- catchResult 0 (maximum . Map.elems)
-  liftIO $ withoutVolumeChange $
+  liftIO $ withoutVolumeChange cId $
     adjustmentSetValue adj $ fromIntegral vol
 
 setVolume vol =
@@ -94,5 +98,5 @@ setVolume vol =
     vols <- catchResult Map.empty id
     liftIO $ mapM_ (flip (playbackVolumeSet xmms) vol) $ Map.keys vols
 
-withoutVolumeChange =
+withoutVolumeChange cId =
   bracket_ (signalBlock cId) (signalUnblock cId)
