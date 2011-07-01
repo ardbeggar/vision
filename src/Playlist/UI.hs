@@ -141,15 +141,16 @@ setupPlaybackActions builder = liftIO $ do
   psW   <- atomically $ newEmptyTWatch playbackStatus
   forkIO $ forever $ do
     ps <- atomically $ watch psW
-    let (ePlay, ePause, eStop) = case ps of
-          Just StatusPlay  -> (False, True, True)
-          Just StatusPause -> (True, False, True)
-          _                -> (True, False, False)
-    actionSetSensitive play ePlay
-    actionSetVisible play ePlay
-    actionSetSensitive pause ePause
-    actionSetVisible pause ePause
-    actionSetSensitive stop eStop
+    postGUISync $ do
+      let (ePlay, ePause, eStop) = case ps of
+            Just StatusPlay  -> (False, True, True)
+            Just StatusPause -> (True, False, True)
+            _                -> (True, False, False)
+      actionSetSensitive play ePlay
+      actionSetVisible play ePlay
+      actionSetSensitive pause ePause
+      actionSetVisible pause ePause
+      actionSetSensitive stop eStop
 
 setupTrackActions builder = liftIO $ do
   prev <- action builder "prev"
