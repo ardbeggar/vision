@@ -167,31 +167,33 @@ setupActions builder = do
         en <- editCheckClipboard
         liftIO $ mapM_ (`actionSetSensitive` en) [paste, append]
 
-  liftIO $ do
-    psW <- atomically $ newEmptyTWatch playbackStatus
-    forkIO $ forever $ do
-      ps <- atomically $ watch psW
-      postGUISync $ setupPPS ps
-
-    ctW <- atomically $ newEmptyTWatch currentTrack
-    forkIO $ forever $ do
-      void $ atomically $ watch ctW
-      postGUISync setupPN
-
-    onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
-    playlistSel `onSelectionChanged` setupSel
-    flip timeoutAdd 0 $ do
-      setupSel
-      updateWindowTitle
-      return False
-
   ct <- clipboardTargets
   runIn clipboardEnv $> do
     io $ \run -> do
       ctW <- atomically $ newEmptyTWatch ct
       forkIO $ forever $ do
         void $ atomically $ watch ctW
-        postGUISync $ run setupPA
+        run setupPA
+
+  liftIO $ do
+    psW <- atomically $ newEmptyTWatch playbackStatus
+    forkIO $ forever $ do
+      ps <- atomically $ watch psW
+      setupPPS ps
+
+    ctW <- atomically $ newEmptyTWatch currentTrack
+    psW <- atomically $ newEmptyTWatch playlistSize
+    forkIO $ forever $ do
+      atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
+      setupPN
+
+    pnW <- atomically $ newEmptyTWatch playlistName
+    forkIO $ forever $ do
+      name <- atomically $ watch pnW
+      setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
+
+    playlistSel `onSelectionChanged` setupSel
+    postGUIAsync setupSel
 
   return ()
 
@@ -225,12 +227,6 @@ setupPlaybar builder = do
     toolbarInsert playbar volumeItem (-1)
 
   return ()
-
-updateWindowTitle = do
-  maybeName <- getPlaylistName
-  setWindowTitle $ case maybeName of
-    Nothing   -> "Vision playlist"
-    Just name -> name ++ " - Vision playlist"
 
 
 data URLEntry =
