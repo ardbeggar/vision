@@ -31,6 +31,7 @@ import Control.Monad.ToIO
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TWatch
+import Control.Concurrent.STM.TGVar
 
 import System.IO.Unsafe
 
@@ -42,7 +43,6 @@ import XMMS2.Client hiding (Data, playbackStatus)
 
 import UI
 import XMMS
-import Handler
 import Playback
 import Playtime
 import Volume
@@ -97,9 +97,6 @@ setupActions builder = do
         "Sort playlist" ++ maybe "" (": " ++) name
     outerw `onDestroy` (killThread tid)
 
-  ag <- liftIO $ builderGetObject builder castToActionGroup "server-actions"
-  liftIO $ onServerConnectionAdd . ever $ actionGroupSetSensitive ag
-
   withW (runIn clipboardEnv) $ \runC ->
     liftIO $ bindActions builder
     [ ("play",               startPlayback False)
@@ -127,12 +124,20 @@ setupActions builder = do
     , ("manage-properties",  showPropertyManager)
     ]
 
+  setupServerActionGroup builder
   setupPlaybackActions builder
   setupTrackActions builder
   setupSelectionActions builder
   setupClipboardActions builder
 
   return ()
+
+setupServerActionGroup builder = liftIO $ do
+  ag <- builderGetObject builder castToActionGroup "server-actions"
+  cW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    c <- atomically $ watch cW
+    actionGroupSetSensitive ag c
 
 setupPlaybackActions builder = liftIO $ do
   play  <- action builder "play"
