@@ -26,9 +26,13 @@ import Control.Monad
 import Control.Monad.Trans
 import Data.Maybe
 
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TWatch
+
 import Graphics.UI.Gtk hiding (add)
 
-import XMMS2.Client
+import XMMS2.Client hiding (playbackStatus)
 
 import XMMS
 import Handler
@@ -51,15 +55,18 @@ initUpdate = do
       setPlaylistName Nothing
       clearModel
 
-  onPlaybackStatus . add . ever . const $ do
-    maybeCT <- getCurrentTrack
-    name    <- fromMaybe "" <$> getPlaylistName
-    size    <- getPlaylistSize
-    case maybeCT of
-      Just (ct, cname) | cname == name && ct < size ->
-        touchPlaylist ct
-      _ ->
-        return ()
+  psW <- atomically $ newTWatch playbackStatus Nothing
+  forkIO $ forever $ do
+    void $ atomically $ watch psW
+    postGUISync $ do
+      maybeCT <- getCurrentTrack
+      name    <- fromMaybe "" <$> getPlaylistName
+      size    <- getPlaylistSize
+      case maybeCT of
+        Just (ct, cname) | cname == name && ct < size ->
+          touchPlaylist ct
+        _ ->
+          return ()
 
   onCurrentTrack . add . ever $ \old -> do
     name <- fromMaybe "" <$> getPlaylistName

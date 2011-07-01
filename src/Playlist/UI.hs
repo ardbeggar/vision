@@ -35,7 +35,7 @@ import Network.URL
 
 import Graphics.UI.Gtk hiding (add, remove)
 
-import XMMS2.Client hiding (Data)
+import XMMS2.Client hiding (Data, playbackStatus)
 
 import UI
 import XMMS
@@ -127,8 +127,7 @@ setupActions builder = do
   editp  <- action builder "edit-properties"
   export <- action builder "export-properties"
 
-  let setupPPS = do
-        ps <- getPlaybackStatus
+  let setupPPS ps = do
         let (ePlay, ePause, eStop) = case ps of
               Just StatusPlay  -> (False, True, True)
               Just StatusPause -> (True, False, True)
@@ -157,13 +156,16 @@ setupActions builder = do
         en <- editCheckClipboard
         mapM_ (`actionSetSensitive` en) [paste, append]
 
-  onPlaybackStatus   . add . ever . const $ setupPPS
+  psW <- atomically $ newEmptyTWatch playbackStatus
+  forkIO $ forever $ do
+    ps <- atomically $ watch psW
+    postGUISync $ setupPPS ps
+
   onCurrentTrack     . add . ever . const $ setupPN
   onPlaylistUpdated  . add . ever . const $ (setupPN >> updateWindowTitle)
   onClipboardTargets . add . ever . const $ setupPA
   playlistSel `onSelectionChanged` setupSel
   flip timeoutAdd 0 $ do
-    setupPPS
     setupPN
     setupPA
     setupSel
