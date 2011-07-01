@@ -46,6 +46,7 @@ import XMMS2.Client.Bindings (propdictToDict)
 import Context
 import XMMS
 import Handler
+import Utils
 
 
 type Stamp = Int
@@ -75,7 +76,7 @@ emptyCache =
 
 
 data MLib
-  = MLib { mCache         :: TVar Cache
+  = MLib { mCache         :: TVar (Maybe Cache)
          , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
          , mReq           :: TVar (PSQ MediaId RequestPriority)
          }
@@ -95,37 +96,43 @@ initMedialib = do
 setupConn = do
   onServerConnectionAdd . ever $ \conn ->
     if conn
-    then broadcastMedialibEntryChanged xmms >>* do
+    then do
+      atomically $ writeTVar cache $ Just emptyCache
+      broadcastMedialibEntryChanged xmms >>* do
       id <- result
       let id' = fromIntegral id
       liftIO $ atomically $ do
         cc <- readTVar cache
-        when (IntMap.member id' $ cEntries cc) $ do
-          r <- readTVar (mReq context)
-          writeTVar (mReq context) $ PSQ.insert id Changed r
+        withJust cc $ \cc ->
+          when (IntMap.member id' $ cEntries cc) $ do
+            r <- readTVar (mReq context)
+            writeTVar (mReq context) $ PSQ.insert id Changed r
       persist
-    else atomically $ writeTVar cache emptyCache
+    else atomically $ do
+      writeTVar (mReq context) PSQ.empty
+      writeTVar cache Nothing
 
 requestInfo prio id = atomically $ do
   cc <- readTVar cache
-  let id'     = fromIntegral id
-      entries = cEntries cc
-  case IntMap.lookup id' entries of
-    Nothing -> do
-      r <- readTVar (mReq context)
-      writeTVar (mReq context) $ PSQ.insert id prio r
-      writeTVar cache $ cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
-    Just (CERetrieving old) | old > prio -> do
-      r <- readTVar (mReq context)
-      writeTVar (mReq context) $ PSQ.update (const $ Just prio) id r
-      writeTVar cache $ cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
-    Just (CEReady s i) -> do
-      writeTChan mediaInfoChan (id, s, i)
-      void $ readTChan mediaInfoChan
-    _ -> return ()
+  withJust cc $ \cc ->
+    let id'     = fromIntegral id
+        entries = cEntries cc
+    in case IntMap.lookup id' entries of
+      Nothing -> do
+        r <- readTVar (mReq context)
+        writeTVar (mReq context) $ PSQ.insert id prio r
+        writeTVar cache $ Just cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
+      Just (CERetrieving old) | old > prio -> do
+        r <- readTVar (mReq context)
+        writeTVar (mReq context) $ PSQ.update (const $ Just prio) id r
+        writeTVar cache $ Just cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
+      Just (CEReady s i) -> do
+        writeTChan mediaInfoChan (id, s, i)
+        void $ readTChan mediaInfoChan
+      _ -> return ()
 
 initContext = do
-  cache         <- newTVarIO emptyCache
+  cache         <- newTVarIO Nothing
   mediaInfoChan <- newTChanIO
   req           <- newTVarIO PSQ.empty
   return $ augmentContext
@@ -184,14 +191,17 @@ infoReqJob = do
           c <- readTVar tv
           writeTVar tv $ c - 1
           cc <- readTVar cache
-          let stamp   = cNextStamp cc
-              entries = cEntries cc
-              entry   = CEReady stamp info
-          writeTVar cache $
-            Cache { cEntries   = IntMap.insert (fromIntegral id) entry entries
-                  , cNextStamp = succ stamp
-                  }
-          return stamp
-        atomically $ do
+          case cc of
+            Just cc -> do
+              let stamp   = cNextStamp cc
+                  entries = cEntries cc
+                  entry   = CEReady stamp info
+              writeTVar cache $ Just
+                Cache { cEntries   = IntMap.insert (fromIntegral id) entry entries
+                      , cNextStamp = succ stamp
+                      }
+              return $ Just stamp
+            Nothing -> return Nothing
+        withJust stamp $ \stamp -> atomically $ do
           writeTChan mediaInfoChan (id, stamp, info)
           void $ readTChan mediaInfoChan
