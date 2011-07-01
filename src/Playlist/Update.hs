@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -29,13 +29,13 @@ import Data.Maybe
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TWatch
+import Control.Concurrent.STM.TGVar
 
 import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client hiding (playbackStatus)
 
 import XMMS
-import Handler
 import Playback
 import Utils
 import Playlist.Model
@@ -43,18 +43,18 @@ import Playlist.Index
 
 
 initUpdate = do
-  onServerConnectionAdd . ever $ \conn ->
-    if conn
-    then do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    setPlaylistName Nothing
+    postGUISync clearModel
+    when conn $ do
       playlistCurrentActive xmms >>* do
         setupPlaylist
         liftIO $ broadcastPlaylistChanged xmms >>* handleChange
       broadcastPlaylistLoaded xmms >>* do
         setupPlaylist
         persist
-    else do
-      setPlaylistName Nothing
-      clearModel
 
   psW <- atomically $ newTWatch playbackStatus Nothing
   forkIO $ forever $ do
