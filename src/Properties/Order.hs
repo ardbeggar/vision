@@ -18,6 +18,7 @@
 --
 
 {-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Order
   ( OrderDialog
