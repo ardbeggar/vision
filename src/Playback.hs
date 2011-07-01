@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -32,15 +32,18 @@ module Playback
   , requestCurrentTrack
   ) where
 
-import Control.Arrow
+import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
+import Control.Arrow
+import Control.Monad
 import Control.Monad.Trans
 
 import XMMS2.Client hiding (playbackStatus)
 import qualified XMMS2.Client as XC
 
 import XMMS
-import Handler
 import Context
 import Utils
 
@@ -64,9 +67,11 @@ initPlayback = do
   context <- initContext
   let ?context = context
 
-  onServerConnectionAdd . ever $ \conn ->
-    if conn
-    then do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    resetState
+    when conn $ do
       broadcastPlaybackStatus xmms >>* do
         liftIO requestStatus
         persist
@@ -75,8 +80,6 @@ initPlayback = do
         liftIO requestCurrentTrack
         persist
       requestCurrentTrack
-    else
-      resetState
 
   return ?context
 
