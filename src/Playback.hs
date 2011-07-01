@@ -19,7 +19,7 @@
 
 module Playback
   ( initPlayback
-  , onCurrentTrack
+  , currentTrack
   , getPlaybackStatus
   , playbackStatus
   , getCurrentTrack
@@ -48,13 +48,10 @@ import Utils
 data Playback
   = Playback { pPlaybackStatus   :: TVar (Maybe PlaybackStatus)
              , pCurrentTrack     :: TVar (Maybe (Int, String))
-             , pOnCurrentTrack   :: HandlerMVar (Maybe (Int, String))
              }
 
 playbackStatus = pPlaybackStatus context
 currentTrack   = pCurrentTrack context
-
-onCurrentTrack = onHandler (pOnCurrentTrack context)
 
 getPlaybackStatus =
   atomically $ readTVar playbackStatus
@@ -87,11 +84,9 @@ initPlayback = do
 initContext = do
   playbackStatus   <- atomically $ newTVar Nothing
   currentTrack     <- atomically $ newTVar Nothing
-  onCurrentTrack   <- makeHandlerMVar
   return $ augmentContext
     Playback { pPlaybackStatus   = playbackStatus
              , pCurrentTrack     = currentTrack
-             , pOnCurrentTrack   = onCurrentTrack
              }
 
 resetState = atomically $ do
@@ -109,12 +104,7 @@ requestStatus =
 requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
     new <- catchResult Nothing (Just . first fromIntegral)
-    liftIO $ do
-      old <- atomically $ do
-        old <- readTVar currentTrack
-        writeTVar currentTrack new
-        return old
-      onCurrentTrack $ invoke old
+    liftIO $ atomically $ writeTVar currentTrack new
 
 startPlayback False = do
   playbackStart xmms
