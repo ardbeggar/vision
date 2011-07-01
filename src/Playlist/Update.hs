@@ -97,11 +97,12 @@ requestPlaylist name =
 
 handlePlaylist = do
   ids <- result
+  len <- resultLength
   liftIO $ do
     clearModel
     mapM_ addToPlaylist ids
+    atomically $ modPlaylistSize $ const $ fromIntegral len
     requestCurrentTrack
-    onPlaylistUpdated $ invoke ()
 
 addToPlaylist id = do
   n <- listStoreAppend playlistStore id
@@ -115,23 +116,22 @@ handleChange = do
       case change of
         PlaylistRemove { position = p } -> do
           listStoreRemove playlistStore p
-          onPlaylistUpdated $ invoke ()
+          atomically $ modPlaylistSize pred
         PlaylistAdd { mlibId = id } -> do
           n <- listStoreAppend playlistStore id
           addToIndex id n
-          onPlaylistUpdated $ invoke ()
+          atomically $ modPlaylistSize succ
         PlaylistInsert { mlibId = id, position = n } -> do
           listStoreInsert playlistStore n id
           addToIndex id n
-          onPlaylistUpdated $ invoke ()
+          atomically $ modPlaylistSize succ
         PlaylistMove { mlibId = id, position = o, newPosition = n } -> do
           listStoreRemove playlistStore o
           listStoreInsert playlistStore n id
           addToIndex id n
-          onPlaylistUpdated $ invoke ()
         PlaylistClear {} -> do
           clearModel
-          onPlaylistUpdated $ invoke ()
+          atomically $ modPlaylistSize $ const 0
         _ ->
           requestPlaylist name
   persist

@@ -24,9 +24,10 @@ module Playlist.Model
   , playlistName
   , getPlaylistName
   , setPlaylistName
+  , playlistSize
+  , modPlaylistSize
   , getPlaylistSize
   , touchPlaylist
-  , onPlaylistUpdated
   , playlistGetIds
   ) where
 
@@ -37,23 +38,25 @@ import Data.Int
 import Graphics.UI.Gtk
 
 import Context
-import Utils
 
 
 data Model
   = Model { mStore               :: ListStore Int32
-          , mOnPlaylistUpdated   :: HandlerMVar ()
           , mPlaylistName        :: TVar (Maybe String)
+          , mPlaylistSize        :: TVar Int
           }
 
 playlistStore = mStore context
-onPlaylistUpdated = onHandler (mOnPlaylistUpdated context)
-playlistName = mPlaylistName context
+playlistName  = mPlaylistName context
+playlistSize  = mPlaylistSize context
 
 getPlaylistName = readTVarIO playlistName
 setPlaylistName = atomically . writeTVar playlistName
 
 getPlaylistSize = listStoreGetSize playlistStore
+modPlaylistSize op = do
+  sz <- readTVar playlistSize
+  writeTVar playlistSize $ op sz
 
 touchPlaylist n = do
   Just iter <- treeModelGetIter playlistStore [n]
@@ -75,10 +78,10 @@ clearModel =
 
 initContext = do
   store               <- listStoreNewDND [] Nothing Nothing
-  onPlaylistUpdated   <- makeHandlerMVar
   playlistName        <- newTVarIO Nothing
+  playlistSize        <- newTVarIO 0
   return $ augmentContext
     Model { mStore               = store
-          , mOnPlaylistUpdated   = onPlaylistUpdated
           , mPlaylistName        = playlistName
+          , mPlaylistSize        = playlistSize
           }
