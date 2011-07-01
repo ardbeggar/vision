@@ -20,12 +20,11 @@
 module Clipboard
   ( initClipboard
   , clipboard
-  , onClipboardTargets
+  , clipboardTargets
   , getClipboardTargets
   ) where
 
-import Control.Concurrent.MVar
-import Control.Monad
+import Control.Concurrent.STM
 
 import Data.Maybe
 
@@ -33,34 +32,20 @@ import Graphics.UI.Gtk hiding (Clipboard)
 import qualified Graphics.UI.Gtk as G
 
 import Context
-import Handler
-import Utils
 
-
-data State
-  = State { sTargets :: [TargetTag] }
-
-makeState =
-  State { sTargets = [] }
 
 data Clipboard
-  = Clipboard { cState              :: MVar State
+  = Clipboard { cTargets            :: TVar [TargetTag]
               , cClipboard          :: G.Clipboard
-              , cOnClipboardTargets :: HandlerMVar ()
               }
 
-state = cState context
+clipboard        = cClipboard context
+clipboardTargets = cTargets context
 
-clipboard = cClipboard context
+getClipboardTargets = readTVarIO clipboardTargets
 
-onClipboardTargets = onHandler $ cOnClipboardTargets context
-
-getClipboardTargets = withMVar state $ return . sTargets
-
-updateClipboardTargets targets = do
-  let targets' = fromMaybe [] targets
-  modifyMVar state $ \state ->
-    return (state { sTargets = targets' }, sTargets state /= targets')
+updateClipboardTargets =
+  atomically . writeTVar clipboardTargets . fromMaybe []
 
 
 initClipboard = do
@@ -73,20 +58,17 @@ initClipboard = do
 
 
 initContext = do
-  state              <- newMVar makeState
+  targets            <- newTVarIO []
   clipboard          <- clipboardGet selectionClipboard
-  onClipboardTargets <- makeHandlerMVar
   return $ augmentContext
-    Clipboard { cState              = state
+    Clipboard { cTargets            = targets
               , cClipboard          = clipboard
-              , cOnClipboardTargets = onClipboardTargets
               }
 
 checkClipboard = do
   clipboard <- clipboardGet selectionClipboard
   clipboardRequestTargets clipboard $ \targets -> do
-    changed <- updateClipboardTargets targets
-    when changed $ onClipboardTargets $ invoke ()
+    updateClipboardTargets targets
     timeoutAdd checkClipboard 250
     return ()
   return False
