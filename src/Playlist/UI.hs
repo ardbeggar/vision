@@ -62,6 +62,8 @@ import Playlist.Control
 
 
 setupUI builder = do
+  setupWindowTitle
+
   Just env <- getEnv playtimeEnv
   runEnvT env $ runIn playtimeEnv $>
     setupPlaybar builder
@@ -125,78 +127,72 @@ setupActions builder = do
     , ("manage-properties",  showPropertyManager)
     ]
 
-  play   <- liftIO $ action builder "play"
-  pause  <- liftIO $ action builder "pause"
-  stop   <- liftIO $ action builder "stop"
-  prev   <- liftIO $ action builder "prev"
-  next   <- liftIO $ action builder "next"
-  cut    <- liftIO $ action builder "cut"
-  copy   <- liftIO $ action builder "copy"
-  paste  <- liftIO $ action builder "paste"
-  append <- liftIO $ action builder "append"
-  delete <- liftIO $ action builder "delete"
-  editp  <- liftIO $ action builder "edit-properties"
-  export <- liftIO $ action builder "export-properties"
-
-  let setupPPS ps = do
-        let (ePlay, ePause, eStop) = case ps of
-              Just StatusPlay  -> (False, True, True)
-              Just StatusPause -> (True, False, True)
-              _                -> (True, False, False)
-        actionSetSensitive play ePlay
-        actionSetVisible play ePlay
-        actionSetSensitive pause ePause
-        actionSetVisible pause ePause
-        actionSetSensitive stop eStop
-      setupPN = do
-        size <- getPlaylistSize
-        name <- getPlaylistName
-        cpos <- getCurrentTrack
-        let (ep, en) = case (name, cpos) of
-              (Just n, Just (ct, cn)) ->
-                (n == cn && ct > 0, n == cn && ct < size - 1)
-              _ ->
-                (False, False)
-        actionSetSensitive prev ep
-        actionSetSensitive next en
-      setupSel = do
-        n <- treeSelectionCountSelectedRows playlistSel
-        mapM_ (`actionSetSensitive` (n /= 0))
-          [cut, copy, delete, editp, export]
-      setupPA = do
-        en <- editCheckClipboard
-        liftIO $ mapM_ (`actionSetSensitive` en) [paste, append]
-
-  ct <- clipboardTargets
-  runIn clipboardEnv $> do
-    io $ \run -> do
-      ctW <- atomically $ newEmptyTWatch ct
-      forkIO $ forever $ do
-        void $ atomically $ watch ctW
-        run setupPA
-
-  liftIO $ do
-    psW <- atomically $ newEmptyTWatch playbackStatus
-    forkIO $ forever $ do
-      ps <- atomically $ watch psW
-      setupPPS ps
-
-    ctW <- atomically $ newEmptyTWatch currentTrack
-    psW <- atomically $ newEmptyTWatch playlistSize
-    forkIO $ forever $ do
-      atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
-      setupPN
-
-    pnW <- atomically $ newEmptyTWatch playlistName
-    forkIO $ forever $ do
-      name <- atomically $ watch pnW
-      setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
-
-    playlistSel `onSelectionChanged` setupSel
-    postGUIAsync setupSel
+  setupPlaybackActions builder
+  setupTrackActions builder
+  setupSelectionActions builder
+  setupClipboardActions builder
 
   return ()
 
+setupPlaybackActions builder = liftIO $ do
+  play  <- action builder "play"
+  pause <- action builder "pause"
+  stop  <- action builder "stop"
+  psW   <- atomically $ newEmptyTWatch playbackStatus
+  forkIO $ forever $ do
+    ps <- atomically $ watch psW
+    let (ePlay, ePause, eStop) = case ps of
+          Just StatusPlay  -> (False, True, True)
+          Just StatusPause -> (True, False, True)
+          _                -> (True, False, False)
+    actionSetSensitive play ePlay
+    actionSetVisible play ePlay
+    actionSetSensitive pause ePause
+    actionSetVisible pause ePause
+    actionSetSensitive stop eStop
+
+setupTrackActions builder = liftIO $ do
+  prev <- action builder "prev"
+  next <- action builder "next"
+  ctW  <- atomically $ newEmptyTWatch currentTrack
+  psW  <- atomically $ newEmptyTWatch playlistSize
+  forkIO $ forever $ do
+    atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
+    size <- getPlaylistSize
+    name <- getPlaylistName
+    cpos <- getCurrentTrack
+    let (ep, en) = case (name, cpos) of
+          (Just n, Just (ct, cn)) ->
+            (n == cn && ct > 0, n == cn && ct < size - 1)
+          _ ->
+            (False, False)
+    actionSetSensitive prev ep
+    actionSetSensitive next en
+
+setupSelectionActions builder = liftIO $ do
+  acts <- mapM (action builder) ["cut", "copy", "delete", "edit-properties", "export-properties"]
+  playlistSel `onSelectionChanged` setup acts
+  postGUIAsync $ setup acts
+  where setup acts = do
+          n <- treeSelectionCountSelectedRows playlistSel
+          mapM_ (`actionSetSensitive` (n /= 0)) acts
+
+setupClipboardActions builder =
+  runIn clipboardEnv $> do
+    ts <- clipboardTargets
+    io $ \run -> do
+      acts <- mapM (action builder) ["paste", "append"]
+      ctW <- atomically $ newEmptyTWatch ts
+      forkIO $ forever $ do
+        void $ atomically $ watch ctW
+        en <- run editCheckClipboard
+        mapM_ (`actionSetSensitive` en) acts
+
+setupWindowTitle = liftIO $ do
+  pnW <- atomically $ newEmptyTWatch playlistName
+  forkIO $ forever $ do
+    name <- atomically $ watch pnW
+    setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
 
 setupPlaybar builder = do
   seekView <- makeSeekControl
