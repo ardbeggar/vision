@@ -162,8 +162,9 @@ setupActions builder = do
     postGUISync $ setupPPS ps
 
   ctW <- atomically $ newEmptyTWatch currentTrack
+  psW <- atomically $ newEmptyTWatch playlistSize
   forkIO $ forever $ do
-    void $ atomically $ watch ctW
+    atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
     postGUISync setupPN
 
   ctW <- atomically $ newEmptyTWatch clipboardTargets
@@ -176,11 +177,8 @@ setupActions builder = do
     name <- atomically $ watch pnW
     setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
 
-  onPlaylistUpdated  . add . ever . const $ setupPN
   playlistSel `onSelectionChanged` setupSel
-  flip timeoutAdd 0 $ do
-    setupSel
-    return False
+  postGUIAsync setupSel
 
   return ()
 
