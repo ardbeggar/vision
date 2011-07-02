@@ -33,7 +33,11 @@ module Properties.Editor.Model
 
 import Prelude hiding (lookup)
 
-import Control.Concurrent.MVar
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
+import Control.Monad
 import Control.Monad.State hiding (State, withState, state)
 import Control.Applicative
 import Control.Arrow
@@ -114,8 +118,10 @@ initEditorModel = do
   onProperties . add . ever . const $
     withSignalBlocked cid updateProperties
 
-  onServerConnection . add . ever $ \conn ->
-    unless conn $ do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    void $ atomically $ watch xcW
+    postGUISync $ do
       resetModel
       touchAll
 
