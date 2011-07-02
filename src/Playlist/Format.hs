@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 22 Feb. 2010
 --
---  Copyright (C) 2009-2010 Oleg Belozeorov
+--  Copyright (C) 2009-2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -28,10 +28,12 @@ module Playlist.Format
   , trackInfoAttrs
   , trackInfoText
   , trackInfoDuration
-  , onFormatsChanged
+  , formatsGeneration
   ) where
 
 import Prelude hiding (lookup)
+
+import Control.Concurrent.STM
 
 import Control.Applicative
 import Control.Monad
@@ -74,7 +76,7 @@ data Format
            , fFormatDefsRef    :: IORef [String]
            , fLookupDuration   :: MediaInfo -> String
            , fLookupURL        :: MediaInfo -> String
-           , fOnFormatsChanged :: HandlerMVar ()
+           , fGeneration       :: TVar Integer
            }
 
 getMakeInfo = readIORef (fMakeInfoRef context)
@@ -90,7 +92,7 @@ putFormatDefs defs = do
 lookupDuration = fLookupDuration context
 lookupURL      = fLookupURL context
 
-onFormatsChanged = onHandler $ fOnFormatsChanged context
+formatsGeneration = fGeneration context
 
 
 initFormat = do
@@ -108,13 +110,13 @@ initContext = do
   makeInfoRef      <- newIORef $ const $ return ([], "")
   duration         <- fromJust <$> property "Duration"
   url              <- fromJust <$> property "URL"
-  onFormatsChanged <- makeHandlerMVar
+  generation       <- newTVarIO 0
   return $ augmentContext
     Format { fMakeInfoRef      = makeInfoRef
            , fFormatDefsRef    = formatDefsRef
            , fLookupDuration   = maybe "" escapeMarkup . lookup duration
            , fLookupURL        = maybe "" escapeMarkup . lookup url
-           , fOnFormatsChanged = onFormatsChanged
+           , fGeneration       = generation
            }
 
 
@@ -149,7 +151,9 @@ getFormats = (rights . map parseFormat) <$> getFormatDefs
 
 updateFormats notify = do
   putMakeInfo =<< makeMakeInfo =<< getFormats
-  when notify $ onFormatsChanged $ invoke ()
+  when notify $ atomically $ do
+    g <- readTVar formatsGeneration
+    writeTVar formatsGeneration $ g + 1
 
 makeTrackInfo info = do
   makeInfo      <- getMakeInfo
