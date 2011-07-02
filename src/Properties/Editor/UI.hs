@@ -24,7 +24,10 @@ module Properties.Editor.UI
   , showPropertyEditor
   ) where
 
-import Control.Concurrent.MVar
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
 import Control.Monad
 
 import Data.IORef
@@ -33,7 +36,6 @@ import Graphics.UI.Gtk hiding (add, remove)
 
 import Context
 import Utils
-import Handler
 import UI
 import XMMS
 import Medialib
@@ -137,8 +139,10 @@ initEditorUI = do
         cancelRetrieval
         hideEditor
 
-  onServerConnection . add . ever $ \conn ->
-    unless conn $ do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    void $ atomically $ watch xcW
+    postGUISync $ do
       cancelRetrieval
       widgetSetSensitive prevB False
       widgetSetSensitive nextB False
