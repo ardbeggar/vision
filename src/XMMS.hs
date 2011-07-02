@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 18 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -22,36 +22,29 @@ module XMMS
   , initXMMS
   , connected
   , connectedV
-  , onServerConnection
-  , onServerConnectionAdd
   ) where
 
-import Prelude hiding (init)
+import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
-import Graphics.UI.Gtk hiding (add)
+import Graphics.UI.Gtk
 
 import XMMS2.Client
 import XMMS2.Client.Glib
 
 import Environment
-import Handler
-import Utils
 import Context
 
 
 data XMMS
-  = XMMS { xXMMS               :: Connection
-         , xOnServerConnection :: HandlerMVar Bool
-         , xConnected          :: TGVar Bool
+  = XMMS { xXMMS      :: Connection
+         , xConnected :: TGVar Bool
          }
 
-xmms               = xXMMS context
-onServerConnection = onHandler (xOnServerConnection context)
-connectedV         = xConnected context
-
-connected = readTGVarIO connectedV
+xmms       = xXMMS context
+connectedV = xConnected context
+connected  = readTGVarIO connectedV
 
 initXMMS = do
   context <- initContext
@@ -63,13 +56,11 @@ initXMMS = do
 
 
 initContext = do
-  xmms               <- init "Vision"
-  onServerConnection <- makeHandlerMVar
-  connected          <- atomically $ newTGVar False
+  xmms      <- XMMS2.Client.init "Vision"
+  connected <- atomically $ newTGVar False
   return $ augmentContext
-    XMMS { xXMMS               = xmms
-         , xOnServerConnection = onServerConnection
-         , xConnected          = connected
+    XMMS { xXMMS      = xmms
+         , xConnected = connected
          }
 
 scheduleTryConnect = timeoutAdd tryConnect
@@ -81,7 +72,7 @@ tryConnect = do
     disconnectCallbackSet xmms disconnectCallback
     mainLoopGMainInit xmms
     setConnected True
-    onServerConnection $ invoke True
+    yield
     return False
     else do
     scheduleTryConnect 1000
@@ -89,13 +80,8 @@ tryConnect = do
 
 disconnectCallback = do
   setConnected False
-  onServerConnection $ invoke False
+  yield
   scheduleTryConnect 1000
   return ()
-
-onServerConnectionAdd f = do
-  id <- onServerConnection . add $ f
-  f =<< connected
-  return id
 
 setConnected = atomically . writeTGVar connectedV
