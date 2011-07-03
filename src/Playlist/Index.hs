@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 21 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -27,6 +27,8 @@ module Playlist.Index
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.STM.TWatch
+
 import Control.Applicative
 import Control.Monad
 
@@ -37,7 +39,6 @@ import Graphics.UI.Gtk hiding (add)
 
 import Medialib
 import Context
-import Handler
 import Playlist.Model
 import Playlist.Format
 
@@ -58,7 +59,10 @@ initIndex = do
   let ?context = context
 
   (atomically $ dupTChan mediaInfoChan) >>= forkIO . handleInfo
-  onFormatsChanged . add . ever . const $ handleFormats
+  fW <- atomically $ newTWatch formatsGeneration 0
+  forkIO $ forever $ do
+    void $ atomically $ watch fW
+    postGUISync handleFormats
 
   return ?context
 
