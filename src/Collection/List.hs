@@ -19,13 +19,9 @@
 
 module Collection.List
   ( initList
-  , listStore
-  , initListView
-  , listView
   ) where
 
 import Collection.List.Model
-import Collection.List.View
 
 
-initList = initListModel
+initList = initModel

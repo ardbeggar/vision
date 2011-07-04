@@ -73,8 +73,7 @@ main = do
     context <- liftIO $ initLocation
     let ?context = context
 
-    context <- liftIO $ initCollection
-    let ?context = context
+    initCollection
 
     context <- liftIO $ initPlaylist
     let ?context = context

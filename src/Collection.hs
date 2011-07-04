@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 14 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -25,43 +25,15 @@ module Collection
 import Graphics.UI.Gtk
 
 import UI
-import Collection.Common
+
 import Collection.List
-import Collection.Model
-import Collection.View
-import Collection.Control
-import Collection.DnD
-import Collection.UI
 
 
-initCollection = do
-  context <- initCommon
-  let ?context = context
+initCollection =
+  initList
 
-  context <- initList
-  let ?context = context
-
-  return ?context
-
-
-browseCollection maybeName = do
+browseCollection _maybeName = do
   builder <- makeBuilder "collection-browser"
-
-  let f = browseCollection
-
-  context <- initModel
-  let ?context = context
-
-  context <- initView builder
-  let ?context = context
-
   context <- initUI builder
   let ?context = context
-
-  setupUI builder f
-  setupDnD
-
   widgetShowAll window
-  case maybeName of
-    Just name -> loadNamed name
-    Nothing   -> widgetGrabFocus collFilter
