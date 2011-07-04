@@ -27,7 +27,7 @@ module Properties
   , property
   , showPropertyManager
   , showPropertyEditor
-  , onProperties
+  , propertiesGeneration
   , showPropertyExport
   , showPropertyImport
   , module Properties.View
