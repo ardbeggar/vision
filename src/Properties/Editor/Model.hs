@@ -35,6 +35,7 @@ import Prelude hiding (lookup)
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.STM.TWatch
 import Control.Concurrent.STM.TGVar
 
 import Control.Monad
@@ -56,7 +57,6 @@ import XMMS
 import Context
 import Config
 import Utils
-import Handler
 import Medialib
 import Properties.Property
 import Properties.Model
@@ -115,8 +115,11 @@ initEditorModel = do
   let ?context = context
 
   cid <- store `on` rowDeleted $ const saveConfig
-  onProperties . add . ever . const $
-    withSignalBlocked cid updateProperties
+
+  prW <- atomically $ newEmptyTWatch propertiesGeneration
+  forkIO $ forever $ do
+    void $ atomically $ watch prW
+    postGUISync $ withSignalBlocked cid updateProperties
 
   xcW <- atomically $ newTGWatch connectedV
   forkIO $ forever $ do

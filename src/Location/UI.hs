@@ -33,7 +33,6 @@ import Graphics.UI.Gtk hiding (add)
 
 import UI
 import XMMS
-import Handler
 import Utils
 import Location.Model
 import Location.View
@@ -90,13 +89,15 @@ setupActions builder browse = do
         actionSetSensitive up eu
         actionSetSensitive refresh er
 
+  lW <- atomically $ newTGWatch location
+  forkIO $ forever $ do
+    void $ atomically $ watch lW
+    postGUISync $ do
+      updateN
+      updateWindowTitle
+
   locationSel `onSelectionChanged` updateB
-  onLocation . add . ever . const $ updateN
-  flip timeoutAdd 0 $ do
-    updateB
-    updateN
-    updateWindowTitle
-    return False
+  postGUIAsync updateB
 
   return ()
 
@@ -190,3 +191,9 @@ browseInNewWindow browse = do
 newWindow browse = do
   order <- getSortOrder
   browse order Nothing
+
+updateWindowTitle = do
+  loc <- getCurrentLocation
+  setWindowTitle $ case loc of
+    [] -> "Vision location browser"
+    _  -> loc ++ " - Vision location browser"

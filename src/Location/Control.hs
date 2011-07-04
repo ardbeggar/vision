@@ -22,7 +22,6 @@ module Location.Control
   , makeURL
   , addToPlaylist
   , replacePlaylist
-  , updateWindowTitle
   , openLocation
   ) where
 
@@ -52,7 +51,6 @@ loadLocation location = do
   case maybeURL of
     Just url -> do
       addToHistory url
-      updateWindowTitle
       clearPathComp locationComp
       entrySetText locationEntry url
       xformMediaBrowse xmms url >>* handleBrowse url
@@ -104,12 +102,6 @@ addOne p = do
              liftIO $ playlistAddURL xmms Nothing path
              return ()))
       return ()
-
-updateWindowTitle = do
-  loc <- getCurrentLocation
-  setWindowTitle $ case loc of
-    [] -> "Vision location browser"
-    _  -> loc ++ " - Vision location browser"
 
 openLocation = do
   widgetGrabFocus locationEntry

@@ -26,7 +26,7 @@ module Location.Model
   , locationStore
   , sortModel
   , getCurrentLocation
-  , onLocation
+  , location
   , LocationChange (..)
   , updateLocation
   , canGo
@@ -37,6 +37,10 @@ module Location.Model
   ) where
 
 import Control.Concurrent.MVar
+
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
 import Control.Applicative
 
 import Data.List
@@ -48,7 +52,6 @@ import XMMS2.Client
 
 import Context
 import Utils
-import Handler
 
 
 data Location
@@ -103,14 +106,10 @@ changeLocation Up l =
 
 
 data State
-  = State { sLocation :: Location
-          , sOrder    :: SortType
-          }
+  = State { sOrder :: SortType }
 
 makeState order =
-  State { sLocation = makeLocation
-        , sOrder    = order
-        }
+  State { sOrder = order }
 
 data Item
   = Item { iName  :: String
@@ -137,36 +136,34 @@ compareItems SortAscending a b
 
 
 data Model
-  = Model { mState      :: MVar State
-          , mStore      :: ListStore Item
-          , mSort       :: TypedTreeModelSort Item
-          , mOnLocation :: HandlerMVar ()
+  = Model { mState    :: MVar State
+          , mStore    :: ListStore Item
+          , mSort     :: TypedTreeModelSort Item
+          , mLocation :: TGVar Location
           }
 
 locationStore = mStore context
 sortModel = mSort context
-onLocation = onHandler $ mOnLocation context
+location = mLocation context
 state = mState context
 
-getCurrentLocation =
-  withMVar state $ return . lCurrent . sLocation
+getCurrentLocation = lCurrent <$> readTGVarIO location
 
-updateLocation change = do
-  r <- modifyMVar state $ \s -> do
-    let (l, u) = changeLocation change $ sLocation s
-    return (s { sLocation = l }, u)
-  onLocation $ invoke ()
-  return r
+updateLocation change = atomically $ do
+  old <- readTGVar location
+  let (new, u) = changeLocation change old
+  writeTGVar location new
+  return u
 
-canGo = withMVar state $ \s ->
-  let Location { lCurrent = c
-               , lBack    = b
-               , lForward = f
-               } = sLocation s
-  in return (not $ null b,
-             not $ null f,
-             not $ null c || isSuffixOf "//" c,
-             not $ null c)
+canGo = atomically $ do
+  Location { lCurrent = c
+           , lBack    = b
+           , lForward = f
+           } <- readTGVar location
+  return (not $ null b,
+          not $ null f,
+          not $ null c || isSuffixOf "//" c,
+          not $ null c)
 
 
 initModel order = do
@@ -179,15 +176,15 @@ initModel order = do
 
 
 initContext order = do
-  state      <- newMVar $ makeState order
-  store      <- listStoreNewDND [] Nothing Nothing
-  sort       <- treeModelSortNewWithModel store
-  onLocation <- makeHandlerMVar
+  state    <- newMVar $ makeState order
+  store    <- listStoreNewDND [] Nothing Nothing
+  sort     <- treeModelSortNewWithModel store
+  location <- atomically $ newTGVar makeLocation
   return $ augmentContext
-    Model { mState      = state
-          , mStore      = store
-          , mSort       = sort
-          , mOnLocation = onLocation
+    Model { mState    = state
+          , mStore    = store
+          , mSort     = sort
+          , mLocation = location
           }
 
 split [] =  []

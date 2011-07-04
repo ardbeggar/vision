@@ -18,10 +18,7 @@
 --
 
 module Utils
-  ( HandlerMVar
-  , makeHandlerMVar
-  , onHandler
-  , encodeURL
+  ( encodeURL
   , decodeURL
   , trd
   , trim
@@ -56,14 +53,6 @@ import System.Glib.Properties
 
 import XMMS2.Client
 
-import Handler
-
-
-type HandlerMVar a = MVar (Handler IO a)
-
-makeHandlerMVar = newMVar make
-
-onHandler = modifyMVar
 
 encodeURL = encodeURL' . encodeString
 encodeURL' [] = []

@@ -25,11 +25,12 @@ module Properties.Model
   , propertyStore
   , getProperties
   , setProperties
-  , onProperties
+  , propertiesGeneration
   ) where
 
 import Prelude hiding (lookup)
 
+import Control.Concurrent.STM
 import Control.Concurrent.MVar
 
 import Data.Map (Map)
@@ -39,20 +40,18 @@ import Graphics.UI.Gtk
 
 import Context
 import Config
-import Handler
-import Utils
 import Properties.Property
 
 
 data Model
-  = Model { mMap          :: MVar (Map String Property)
-          , mStore        :: ListStore Property
-          , mOnProperties :: HandlerMVar ()
+  = Model { mMap        :: MVar (Map String Property)
+          , mStore      :: ListStore Property
+          , mGeneration :: TVar Integer
           }
 
-propertyMap   = mMap context
-propertyStore = mStore context
-onProperties  = onHandler $ mOnProperties context
+propertyMap          = mMap context
+propertyStore        = mStore context
+propertiesGeneration = mGeneration context
 
 
 initModel = do
@@ -64,14 +63,13 @@ initModel = do
   return ?context
 
 initContext = do
-  npmap   <- newMVar $ mkMap builtinProperties
-  -- The store will be populated in loadProperties.
-  store   <- listStoreNewDND [] Nothing Nothing
-  onprops <- makeHandlerMVar
+  npmap      <- newMVar $ mkMap builtinProperties
+  store      <- listStoreNewDND [] Nothing Nothing
+  generation <- newTVarIO 0
   return $ augmentContext
-    Model { mMap          = npmap
-          , mStore        = store
-          , mOnProperties = onprops
+    Model { mMap        = npmap
+          , mStore      = store
+          , mGeneration = generation
           }
 
 property name =
@@ -96,7 +94,9 @@ setProperties props = do
      let m = mkMap props in
      return (m, Map.elems m))
   writeConfig "properties.conf" props
-  onProperties $ invoke ()
+  atomically $ do
+    g <- readTVar propertiesGeneration
+    writeTVar propertiesGeneration $ g + 1
 
 
 mkMap = Map.fromList . map (\p -> (propName p, p))

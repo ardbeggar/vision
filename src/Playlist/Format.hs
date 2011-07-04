@@ -33,7 +33,9 @@ module Playlist.Format
 
 import Prelude hiding (lookup)
 
+import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Concurrent.STM.TWatch
 
 import Control.Applicative
 import Control.Monad
@@ -51,7 +53,6 @@ import Properties
 import Config
 import Utils
 import Context
-import Handler
 import Playlist.Format.Format
 import Playlist.Format.Parser
 
@@ -100,8 +101,11 @@ initFormat = do
   let ?context = context
 
   loadFormatDefs
-  onProperties . add . ever . const $
-    updateFormats True
+
+  prW <- atomically $ newEmptyTWatch propertiesGeneration
+  forkIO $ forever $ do
+    void $ atomically $ watch prW
+    postGUISync $ updateFormats True
 
   return ?context
 
