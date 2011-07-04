@@ -17,17 +17,24 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Collection.List.Model
-  ( initListModel
-  , listStore
+  ( initModel
+  , store
+  , modelEnv
   ) where
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.ReaderX
+import Control.Monad.ToIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
+
+import Data.Typeable
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -38,39 +45,50 @@ import XMMS
 
 
 data Model
-  = Model { mStore :: ListStore (Maybe String) }
+  = Model { store :: ListStore (Maybe String) }
+    deriving (Typeable)
 
-listStore = mStore context
+data Ix = Ix deriving (Typeable)
+instance Index Ix where getVal = Ix
 
+modelEnv :: (Ix, Model)
+modelEnv = undefined
 
-initListModel = do
-  context <- initContext
-  let ?context = context
+initModel = do
+  model <- mkModel
+  runEnvT (Ix, model) $ runIn modelEnv $> setupModel
+  addEnv Ix model
 
+mkModel = liftIO $ do
+  store <- listStoreNewDND [] Nothing Nothing
+  return Model { store = store }
+
+setupModel = io $ \run -> do
   xcW <- atomically $ newTGWatch connectedV
   forkIO $ forever $ do
     conn <- atomically $ watch xcW
-    postGUISync $ listStoreClear listStore
+    postGUISync $ run clearStore
     when conn $ do
       broadcastCollectionChanged xmms >>* do
         change <- result
         when (namespace change == "Collections") $
-          -- TODO: use the change info instead of repopulating the model.
-          liftIO listCollections
+          liftIO $ run listCollections
         persist
-      listCollections
+      run listCollections
 
-  return ?context
-
-initContext = do
-  store <- listStoreNewDND [] Nothing Nothing
-  return $ augmentContext
-    Model { mStore = store }
-
-listCollections =
+listCollections = io $ \run ->
   collList xmms "Collections" >>* do
     colls <- result
-    liftIO $ do
-      listStoreClear listStore
-      listStoreAppend listStore Nothing
-      mapM_ (listStoreAppend listStore . Just) colls
+    liftIO $ run $ do
+      clearStore
+      fillStore colls
+
+clearStore = do
+  store <- asksx Ix store
+  liftIO $ listStoreClear store
+
+fillStore colls = do
+  store <- asksx Ix store
+  liftIO $ do
+    listStoreAppend store Nothing
+    mapM_ (listStoreAppend store . Just) colls
