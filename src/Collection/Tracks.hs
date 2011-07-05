@@ -18,25 +18,144 @@
 --
 
 module Collection.Tracks
-  ( makeTracksView
+  ( TrackView (..)
+  , makeTrackView
   ) where
+
+import Prelude hiding (lookup)
+
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
+import Control.Applicative
+import Control.Monad
+import Control.Monad.Trans
+
+import Data.Char
+import Data.List hiding (lookup)
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client
 
-makeTracksView = do
-  store <- listStoreNewDND cont Nothing Nothing
-  view <- treeViewNewWithModel store
-  column <- treeViewColumnNew
-  treeViewAppendColumn view column
-  cell <- cellRendererTextNew
-  treeViewColumnPackStart column cell True
-  cellLayoutSetAttributes column cell store $ \n ->
-    [ cellText := n ]
+import XMMS
+import Properties
+import Config
+import Index hiding (getInfo)
+import qualified Index
+import Medialib
 
+
+data TrackView
+  = TV { tStore  :: ListStore MediaId
+       , tIndex  :: Index MediaInfo
+       , tView   :: TreeView
+       , tScroll :: ScrolledWindow
+       }
+
+
+makeTrackView = do
+  store  <- listStoreNewDND [] Nothing Nothing
+  index  <- makeIndex store return
+  view   <- treeViewNewWithModel store
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
-  return scroll
+  let tv = TV { tStore  = store
+              , tIndex  = index
+              , tView   = view
+              , tScroll = scroll
+              }
+  setupView tv
+  setupXMMS tv
+  return tv
 
-  where cont = replicate 1000 $ replicate 100 'a'
+setupView tv = do
+  treeViewSetRulesHint (tView tv) True
+  setColumns tv False =<< loadConfig
+
+setupXMMS tv = do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    resetModel tv
+    when conn $ do
+      uni <- collUniverse
+      collQueryIds xmms uni [] 0 0 >>* do
+        ids <- result
+        liftIO $ populateModel tv ids
+
+setColumns tv save props = do
+  let view = tView tv
+  mapM_ (treeViewRemoveColumn view) =<< treeViewGetColumns view
+  mapM_ (addColumn tv) props
+  setupSearch tv props
+  when save $ saveConfig props
+
+addColumn tv prop = do
+  let view  = tView tv
+      store = tStore tv
+  column <- treeViewColumnNew
+  treeViewAppendColumn view column
+  treeViewColumnSetTitle column $ propName prop
+  treeViewColumnSetResizable column True
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributeFunc column cell store $ \iter -> do
+    maybeInfo <- getInfoIfNeeded tv iter
+    let text = case maybeInfo of
+          Just info -> fromMaybe "" $ lookup prop info
+          Nothing   -> ""
+    cell `set` [ cellText := text ]
+
+getInfoIfNeeded tv iter = do
+  let n = listStoreIterToIndex iter
+  mid <- listStoreGetValue (tStore tv) n
+  rng <- treeViewGetVisibleRange $ tView tv
+  getInfo tv mid $ case rng of
+    ([f], [t]) | n >= f && t >= n -> Visible
+    _                             -> Background
+
+loadConfig =
+  catMaybes <$> (mapM property =<< config configFile defaultConfig)
+
+saveConfig props = do
+  writeConfig configFile $ map propName props
+  return ()
+
+configFile =
+  "collection-view.conf"
+
+defaultConfig =
+  ["Artist", "Album", "Track", "Title"]
+
+setupSearch tv props = do
+  let store = tStore tv
+      view  = tView tv
+  treeViewSetEnableSearch view True
+  treeViewSetSearchEqualFunc view $ Just $ \str iter -> do
+    mid <- listStoreGetValue store $ listStoreIterToIndex iter
+    search (map toLower str) props <$> getInfo tv mid Search
+
+search _ _ Nothing = False
+search _ [] _ = False
+search str (prop:props) (Just info) =
+  let ptext = map toLower $ fromMaybe "" $ lookup prop info in
+  str `isInfixOf` ptext || search str props (Just info)
+
+getInfo tv = Index.getInfo (tIndex tv)
+
+populateModel tv ids = do
+  mapM_ addOne ids
+  where addOne id = do
+          n <- listStoreAppend store id
+          addToIndex index id n
+        store = tStore tv
+        index = tIndex tv
+
+resetModel tv = do
+  clearIndex $ tIndex tv
+  listStoreClear $ tStore tv
+

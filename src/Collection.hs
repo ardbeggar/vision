@@ -22,7 +22,6 @@ module Collection
   , browseCollection
   ) where
 
-import Control.Monad
 import Control.Monad.Trans
 
 import Graphics.UI.Gtk
@@ -55,8 +54,8 @@ browseCollection _maybeName = do
       scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
       scrollBoxAdd sbox scroll
       containerAdd scroll view
-      test <- makeTracksView
-      scrollBoxAdd sbox test
+      tv <- makeTrackView
+      scrollBoxAdd sbox $ tScroll tv
     return ()
 
   liftIO $ widgetShowAll window
