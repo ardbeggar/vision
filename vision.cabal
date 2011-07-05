@@ -75,6 +75,7 @@ executable vision
                     Collection.List,
                     Collection.List.Model,
                     Collection.List.View,
+                    Collection.ScrollBox,
                     Collection.Common,
                     Collection.Model,
                     Collection.View,
