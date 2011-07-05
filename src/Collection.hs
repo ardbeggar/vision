@@ -43,21 +43,22 @@ browseCollection _maybeName = do
 
   withListView $ do
     view <- listView
-    tv   <- liftIO $ do
+    sbox <- liftIO $ mkScrollBox
+    liftIO $ do
       box    <- builderGetObject builder castToVBox "views"
       scroll <- scrolledWindowNew Nothing Nothing
       scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
       boxPackStartDefaults box scroll
-      sbox <- mkScrollBox
       containerAdd scroll $ sViewport sbox
       scroll <- scrolledWindowNew Nothing Nothing
       scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
       scrollBoxAdd sbox scroll
       containerAdd scroll view
+    onListSelected $ \cs -> do
       tv <- makeTrackView
       scrollBoxAdd sbox $ tScroll tv
-      return tv
-    onListSelected $ showTracks tv
+      widgetShowAll $ tScroll tv
+      showTracks tv cs
     return ()
 
   liftIO $ widgetShowAll window
