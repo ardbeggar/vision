@@ -22,6 +22,7 @@ module Collection
   , browseCollection
   ) where
 
+import Control.Monad
 import Control.Monad.Trans
 
 import Graphics.UI.Gtk
@@ -29,6 +30,7 @@ import Graphics.UI.Gtk
 import UI
 
 import Collection.List
+import Collection.ScrollBox
 
 
 initCollection =
@@ -46,7 +48,16 @@ browseCollection _maybeName = do
       scroll <- scrolledWindowNew Nothing Nothing
       scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
       boxPackStartDefaults box scroll
+      sbox <- mkScrollBox
+      containerAdd scroll $ sViewport sbox
+      scroll <- scrolledWindowNew Nothing Nothing
+      scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
+      scrollBoxAdd sbox scroll
       containerAdd scroll view
+      postGUIAsync $ forM_ [0 .. 10] $ const $ do
+        b <- buttonNewWithLabel $ take 50 ['a', 'a' .. ]
+        widgetShowAll b
+        scrollBoxAdd sbox b
     return ()
 
   liftIO $ widgetShowAll window
