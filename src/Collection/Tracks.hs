@@ -17,9 +17,13 @@
 --  General Public License for more details.
 --
 
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
+
 module Collection.Tracks
   ( TrackView (..)
   , makeTrackView
+  , loadTracks
+  , showTracks
   ) where
 
 import Prelude hiding (lookup)
@@ -79,13 +83,13 @@ setupView tv = do
 setupXMMS tv = do
   xcW <- atomically $ newTGWatch connectedV
   forkIO $ forever $ do
-    conn <- atomically $ watch xcW
-    resetModel tv
-    when conn $ do
-      uni <- collUniverse
-      collQueryIds xmms uni [] 0 0 >>* do
-        ids <- result
-        liftIO $ populateModel tv ids
+    void $ atomically $ watch xcW
+    postGUISync $ resetModel tv
+
+loadTracks tv coll =
+  collQueryIds xmms coll [] 0 0 >>* do
+    ids <- result
+    liftIO $ populateModel tv ids
 
 setColumns tv save props = do
   let view = tView tv
@@ -159,3 +163,20 @@ resetModel tv = do
   clearIndex $ tIndex tv
   listStoreClear $ tStore tv
 
+showTracks tv list = do
+  resetModel tv
+  if Nothing `elem` list
+    then do
+    coll <- collUniverse
+    loadTracks tv coll
+    else do
+    uni <- collNew TypeUnion
+    loadUni tv uni list
+
+loadUni tv uni [] = loadTracks tv uni
+loadUni tv uni ((Just name) : names) =
+  collGet xmms name "Collections" >>* do
+    coll <- result
+    liftIO $ do
+      collAddOperand uni coll
+      loadUni tv uni names

@@ -21,6 +21,7 @@
 module Collection.List.View
   ( withListView
   , listView
+  , onListSelected
   ) where
 
 import Control.Applicative
@@ -60,8 +61,6 @@ withListView m = do
 
 makeView store = liftIO $ do
   view <- treeViewNewWithModel store
-  sel  <- treeViewGetSelection view
-
   treeViewSetHeadersVisible view False
 
   column <- treeViewColumnNew
@@ -80,77 +79,28 @@ makeView store = liftIO $ do
     maybe False (isInfixOf (map toLower str) . map toLower) <$>
       (listStoreGetValue store $ listStoreIterToIndex iter)
 
+  sel <- treeViewGetSelection view
+  treeSelectionSetMode sel SelectionMultiple
+
   return View { vView = view, vSel = sel }
 
-{-
-initListView builder = do
-  context <- initContext builder
-  let ?context = context
-
-  treeSelectionSetMode listSel SelectionBrowse
-
-  treeViewSetModel listView listStore
-
-  treeViewSetHeadersVisible listView False
-  widgetSetSizeRequest listView 200 (-1)
-
-  column <- treeViewColumnNew
-  treeViewAppendColumn listView column
-  cell <- cellRendererTextNew
-  treeViewColumnPackStart column cell True
-  cellLayoutSetAttributes column cell listStore $ \n ->
-    case n of
-      Nothing ->
-        [ cellText := "All Media", cellTextWeight := 800 ]
-      Just cn ->
-        [ cellText := cn, cellTextWeightSet := False ]
-
-  treeViewSetEnableSearch listView True
-  treeViewSetSearchEqualFunc listView . Just $ \str iter ->
-    maybe False (isInfixOf (map toLower str) . map toLower) <$>
-      (listStoreGetValue listStore . head
-       =<< treeModelGetPath listStore iter)
-
-  return ?context
-
-resetListView =
-  treeViewSetCursor listView [0] Nothing
-
-
-initContext builder = do
-  view <- builderGetObject builder castToTreeView "list-view"
-  sel  <- treeViewGetSelection view
-  return $ augmentContext
-    View { vView = view
-         , vSel  = sel
-         }
-
-onCollectionActivated =
-  onRowActivated listView . const . const
-
-onCollectionSelectionChanged =
-  onSelectionChanged listSel
-
-onCollectionListMidClick f =
-  listView `on` buttonPressEvent $ tryEvent $ do
-    MiddleButton <- eventButton
-    SingleClick  <- eventClick
-    (x, y)       <- eventCoordinates
-    liftIO $ do
-      Just (p, _, _) <- treeViewGetPathAtPos listView (round x, round y)
-      treeViewSetCursor listView p Nothing
-      f
-
-onCollectionListCR f =
-  listView `on` keyPressEvent $ tryEvent $ do
-    [Control] <- eventModifier
-    "Return"  <- eventKeyName
-    liftIO f
-
-getSelectedCollection = do
-  path <- fst <$> treeViewGetCursor listView
-  case path of
-    [n] -> listStoreGetValue listStore n
-    _   -> return Nothing
-
--}
+onListSelected f = do
+  sel   <- asksx Ix vSel
+  view  <- asksx Ix vView
+  store <- store
+  liftIO $ do
+    let doit = do
+          rows  <- treeSelectionGetSelectedRows sel
+          names <- mapM (listStoreGetValue store . head) rows
+          f names
+    view `on` keyPressEvent $ tryEvent $ do
+      "Return" <- eventKeyName
+      liftIO doit
+    view `on` buttonPressEvent $ tryEvent $ do
+      LeftButton  <- eventButton
+      DoubleClick <- eventClick
+      (x, y)      <- eventCoordinates
+      liftIO $ do
+        Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
+        treeSelectionSelectPath sel p
+        doit

@@ -21,6 +21,7 @@ module Collection.List
   ( initList
   , withListView
   , listView
+  , onListSelected
   ) where
 
 import Collection.List.Model
