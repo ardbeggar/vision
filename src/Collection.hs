@@ -31,6 +31,7 @@ import UI
 
 import Collection.List
 import Collection.ScrollBox
+import Collection.Tracks
 
 
 initCollection =
@@ -46,7 +47,7 @@ browseCollection _maybeName = do
     liftIO $ do
       box    <- builderGetObject builder castToVBox "views"
       scroll <- scrolledWindowNew Nothing Nothing
-      scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+      scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
       boxPackStartDefaults box scroll
       sbox <- mkScrollBox
       containerAdd scroll $ sViewport sbox
@@ -54,10 +55,8 @@ browseCollection _maybeName = do
       scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
       scrollBoxAdd sbox scroll
       containerAdd scroll view
-      postGUIAsync $ forM_ [0 .. 10] $ const $ do
-        b <- buttonNewWithLabel $ take 50 ['a', 'a' .. ]
-        widgetShowAll b
-        scrollBoxAdd sbox b
+      test <- makeTracksView
+      scrollBoxAdd sbox test
     return ()
 
   liftIO $ widgetShowAll window
