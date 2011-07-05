@@ -45,7 +45,7 @@ import XMMS
 
 
 data Model
-  = Model { store :: ListStore (Maybe String) }
+  = Model { mStore :: ListStore (Maybe String) }
     deriving (Typeable)
 
 data Ix = Ix deriving (Typeable)
@@ -61,7 +61,7 @@ initModel = do
 
 mkModel = liftIO $ do
   store <- listStoreNewDND [] Nothing Nothing
-  return Model { store = store }
+  return Model { mStore = store }
 
 setupModel = io $ \run -> do
   xcW <- atomically $ newTGWatch connectedV
@@ -83,12 +83,14 @@ listCollections = io $ \run ->
       clearStore
       fillStore colls
 
+store = asksx Ix mStore
+
 clearStore = do
-  store <- asksx Ix store
+  store <- store
   liftIO $ listStoreClear store
 
 fillStore colls = do
-  store <- asksx Ix store
+  store <- store
   liftIO $ do
     listStoreAppend store Nothing
     mapM_ (listStoreAppend store . Just) colls

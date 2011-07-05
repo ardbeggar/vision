@@ -69,7 +69,7 @@ setupUI builder = do
     setupPlaybar builder
 
   Just env <- getEnv clipboardEnv
-  runEnvT env $ runIn clipboardEnv $>
+  runEnvT env $ runIn clipboardEnv &> registryEnv $>
     setupActions builder
 
   liftIO $ do
@@ -97,7 +97,8 @@ setupActions builder = do
         "Sort playlist" ++ maybe "" (": " ++) name
     outerw `onDestroy` (killThread tid)
 
-  withW (runIn clipboardEnv) $ \runC ->
+  withW (runIn registryEnv) $ \runR ->
+    withW (runIn clipboardEnv) $ \runC ->
     liftIO $ bindActions builder
     [ ("play",               startPlayback False)
     , ("pause",              pausePlayback)
@@ -113,7 +114,7 @@ setupActions builder = do
     , ("select-all",         editSelectAll)
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
-    , ("browse-collection",  browseCollection Nothing)
+    , ("browse-collection",  runR $ browseCollection Nothing)
     , ("add-media",          runURLEntryDialog urlEntryDialog)
     , ("clear-playlist",     clearPlaylist)
     , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)

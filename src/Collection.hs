@@ -22,6 +22,8 @@ module Collection
   , browseCollection
   ) where
 
+import Control.Monad.Trans
+
 import Graphics.UI.Gtk
 
 import UI
@@ -33,7 +35,18 @@ initCollection =
   initList
 
 browseCollection _maybeName = do
-  builder <- makeBuilder "collection-browser"
-  context <- initUI builder
+  builder <- liftIO $ makeBuilder "collection-browser"
+  context <- liftIO $ initUI builder
   let ?context = context
-  widgetShowAll window
+
+  withListView $ do
+    view <- listView
+    liftIO $ do
+      box    <- builderGetObject builder castToVBox "views"
+      scroll <- scrolledWindowNew Nothing Nothing
+      scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
+      boxPackStartDefaults box scroll
+      containerAdd scroll view
+    return ()
+
+  liftIO $ widgetShowAll window

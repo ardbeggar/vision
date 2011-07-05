@@ -16,22 +16,20 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Collection.List.View
-  ( initListView
+  ( withListView
   , listView
-  , resetListView
-  , onCollectionActivated
-  , onCollectionSelectionChanged
-  , onCollectionListMidClick
-  , onCollectionListCR
-  , getSelectedCollection
   ) where
 
 import Control.Applicative
 import Control.Monad.Trans
+import Control.Monad.ReaderX
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
+import Data.Typeable
 
 import Graphics.UI.Gtk
 
@@ -39,15 +37,52 @@ import Context
 import Collection.List.Model
 
 
+data Ix = Ix deriving (Typeable)
+instance Index Ix where getVal = Ix
+
 data View
   = View { vView :: TreeView
          , vSel  :: TreeSelection
          }
+  deriving (Typeable)
 
-listView = vView context
-listSel  = vSel  context
+--viewEnv :: (Ix, View)
+--viewEnv = undefined
 
+listView = asksx Ix vView
 
+withListView m = do
+  Just env <- getEnv modelEnv
+  runEnvT env $ do
+    store <- store
+    view  <- makeView store
+    runEnvT (Ix, view) m
+
+makeView store = liftIO $ do
+  view <- treeViewNewWithModel store
+  sel  <- treeViewGetSelection view
+
+  treeViewSetHeadersVisible view False
+
+  column <- treeViewColumnNew
+  treeViewAppendColumn view column
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributes column cell store $ \n ->
+    case n of
+      Nothing ->
+        [ cellText := "All Media", cellTextWeight := 800 ]
+      Just cn ->
+        [ cellText := cn, cellTextWeightSet := False ]
+
+  treeViewSetEnableSearch view True
+  treeViewSetSearchEqualFunc view . Just $ \str iter ->
+    maybe False (isInfixOf (map toLower str) . map toLower) <$>
+      (listStoreGetValue store $ listStoreIterToIndex iter)
+
+  return View { vView = view, vSel = sel }
+
+{-
 initListView builder = do
   context <- initContext builder
   let ?context = context
@@ -118,3 +153,4 @@ getSelectedCollection = do
     [n] -> listStoreGetValue listStore n
     _   -> return Nothing
 
+-}
