@@ -28,9 +28,11 @@ import Graphics.UI.Gtk
 
 import UI
 
+import Properties
 import Collection.List
 import Collection.ScrollBox
 import Collection.Tracks
+import Collection.PropFlt
 
 
 initCollection =
@@ -55,10 +57,9 @@ browseCollection _maybeName = do
       scrollBoxAdd sbox scroll
       containerAdd scroll view
     onListSelected $ \coll -> do
-      tv <- makeTrackView
-      scrollBoxAdd sbox $ tScroll tv
-      widgetShowAll $ tScroll tv
-      showTracks tv coll
+      Just prop <- property "Title"
+      pf <- mkPropFlt prop coll
+      scrollBoxAdd sbox $ pScroll pf
     return ()
 
   liftIO $ widgetShowAll window
