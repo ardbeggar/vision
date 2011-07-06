@@ -17,6 +17,7 @@
 --
 
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Collection.List.View
   ( withListView
@@ -34,7 +35,10 @@ import Data.Typeable
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client
+
 import Context
+import XMMS
 import Collection.List.Model
 
 
@@ -92,7 +96,7 @@ onListSelected f = do
     let doit = do
           rows  <- treeSelectionGetSelectedRows sel
           names <- mapM (listStoreGetValue store . head) rows
-          f names
+          withColl f names
     view `on` keyPressEvent $ tryEvent $ do
       "Return" <- eventKeyName
       liftIO doit
@@ -104,3 +108,20 @@ onListSelected f = do
         Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
         treeSelectionSelectPath sel p
         doit
+
+withColl f list = do
+  if Nothing `elem` list
+    then do
+    coll <- collUniverse
+    f coll
+    else do
+    uni <- collNew TypeUnion
+    withUni f uni list
+
+withUni f uni [] = f uni
+withUni f uni ((Just name) : names) =
+  collGet xmms name "Collections" >>* do
+    coll <- result
+    liftIO $ do
+      collAddOperand uni coll
+      withUni f uni names

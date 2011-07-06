@@ -54,11 +54,11 @@ browseCollection _maybeName = do
       scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
       scrollBoxAdd sbox scroll
       containerAdd scroll view
-    onListSelected $ \cs -> do
+    onListSelected $ \coll -> do
       tv <- makeTrackView
       scrollBoxAdd sbox $ tScroll tv
       widgetShowAll $ tScroll tv
-      showTracks tv cs
+      showTracks tv coll
     return ()
 
   liftIO $ widgetShowAll window

@@ -17,8 +17,6 @@
 --  General Public License for more details.
 --
 
-{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
-
 module Collection.Tracks
   ( TrackView (..)
   , makeTrackView
@@ -163,20 +161,6 @@ resetModel tv = do
   clearIndex $ tIndex tv
   listStoreClear $ tStore tv
 
-showTracks tv list = do
+showTracks tv coll = do
   resetModel tv
-  if Nothing `elem` list
-    then do
-    coll <- collUniverse
-    loadTracks tv coll
-    else do
-    uni <- collNew TypeUnion
-    loadUni tv uni list
-
-loadUni tv uni [] = loadTracks tv uni
-loadUni tv uni ((Just name) : names) =
-  collGet xmms name "Collections" >>* do
-    coll <- result
-    liftIO $ do
-      collAddOperand uni coll
-      loadUni tv uni names
+  loadTracks tv coll
