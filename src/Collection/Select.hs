@@ -68,6 +68,7 @@ mkSelect sbox cmod coll = do
           boxPackStartDefaults box $ tScroll tv
           widgetShowAll $ tScroll tv
           loadTracks tv coll
+          widgetGrabFocus $ tView tv
         Just pr -> do
           pf <- mkPropFlt pr coll
           writeIORef killS $ Just $ widgetDestroy $ pScroll pf
@@ -77,7 +78,9 @@ mkSelect sbox cmod coll = do
             sel <- mkSelect sbox cmod coll
             writeIORef kill $ Just $ killSelect sel
             scrollBoxAdd sbox $ sBox sel
+            widgetGrabFocus $ sCombo sel
           boxPackStartDefaults box $ pScroll pf
+          widgetGrabFocus $ pView pf
 
   widgetShowAll box
   return S { sCombo = combo

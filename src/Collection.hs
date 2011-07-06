@@ -68,6 +68,7 @@ browseCollection _maybeName = do
       s <- S.mkSelect sbox cmod coll
       writeIORef kill $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
+      widgetGrabFocus $ S.sCombo s
     return ()
 
   liftIO $ widgetShowAll window
