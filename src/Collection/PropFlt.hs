@@ -110,9 +110,7 @@ onPropsSelected pf f = do
           vals <- mapM (listStoreGetValue store . head) rows
           int  <- collNew TypeIntersection
           collAddOperand int $ pColl pf
-          let text = mkFilterText (pProp pf) vals
-          print text
-          flt <- collParse text
+          flt <- collParse $ mkFilterText (pProp pf) vals
           collAddOperand int flt
           f int
   view `on` keyPressEvent $ tryEvent $ do
@@ -132,8 +130,9 @@ cond' ('\'' : t) = '\\' : '\'' : cond' t
 cond' ('\\' : t) = '\\' : '\\' : cond' t
 cond' (h : t) = h : cond' t
 
-cond prop val =
-  propKey prop ++ ":\'" ++ cond' val
+cond prop val
+  | propKey prop == "url" = "url:'" ++ encodeURL val ++ "'"
+  | otherwise             = propKey prop ++ ":\'" ++ cond' val
 
 mkFilterText prop vals =
   intercalate " OR " $ map (cond prop) vals
