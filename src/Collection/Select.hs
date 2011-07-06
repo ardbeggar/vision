@@ -72,6 +72,8 @@ mkSelect sbox cmod coll = do
           pf <- mkPropFlt pr coll
           writeIORef killS $ Just $ widgetDestroy $ pScroll pf
           onPropsSelected pf $ \coll -> do
+            maybeKill <- readIORef kill
+            withJust maybeKill id
             sel <- mkSelect sbox cmod coll
             writeIORef kill $ Just $ killSelect sel
             scrollBoxAdd sbox $ sBox sel
