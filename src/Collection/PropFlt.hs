@@ -2,7 +2,7 @@
 --  Vision (for the Voice): an XMMS2 client.
 --
 --  Author:  Oleg Belozeorov
---  Created: 5 Jul. 2011
+--  Created: 6 Jul. 2011
 --
 --  Copyright (C) 2011 Oleg Belozeorov
 --
