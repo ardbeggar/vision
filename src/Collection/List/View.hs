@@ -99,12 +99,13 @@ onListSelected f = do
   store <- store
   liftIO $ do
     let doit = do
-          maybeKill <- readIORef kill
-          withJust maybeKill $ \kill -> kill
-          writeIORef kill Nothing
-          rows  <- treeSelectionGetSelectedRows sel
-          names <- mapM (listStoreGetValue store . head) rows
-          withColl f names
+          rows <- treeSelectionGetSelectedRows sel
+          unless (null rows) $ do
+            maybeKill <- readIORef kill
+            withJust maybeKill $ \kill -> kill
+            writeIORef kill Nothing
+            names <- mapM (listStoreGetValue store . head) rows
+            withColl f names
     view `on` keyPressEvent $ tryEvent $ do
       "Return" <- eventKeyName
       liftIO doit

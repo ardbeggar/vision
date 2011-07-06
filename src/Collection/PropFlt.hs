@@ -106,14 +106,15 @@ onPropsSelected pf f = do
   sel <- treeViewGetSelection view
   let doit = do
         rows <- treeSelectionGetSelectedRows sel
-        vals <- mapM (listStoreGetValue store . head) rows
-        int  <- collNew TypeIntersection
-        collAddOperand int $ pColl pf
-        let text = mkFilterText (pProp pf) vals
-        print text
-        flt <- collParse text
-        collAddOperand int flt
-        f int
+        unless (null rows) $ do
+          vals <- mapM (listStoreGetValue store . head) rows
+          int  <- collNew TypeIntersection
+          collAddOperand int $ pColl pf
+          let text = mkFilterText (pProp pf) vals
+          print text
+          flt <- collParse text
+          collAddOperand int flt
+          f int
   view `on` keyPressEvent $ tryEvent $ do
     "Return" <- eventKeyName
     liftIO doit
