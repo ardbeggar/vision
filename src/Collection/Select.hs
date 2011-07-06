@@ -31,6 +31,7 @@ import Utils
 import Collection.Tracks
 import Collection.PropFlt
 import Collection.Combo
+import Collection.ScrollBox hiding (sBox)
 
 
 data Select
@@ -39,7 +40,7 @@ data Select
       , sBox   :: VBox
       }
 
-mkSelect cmod coll = do
+mkSelect sbox cmod coll = do
   box   <- vBoxNew False 5
   combo <- mkCombo cmod
   boxPackStart box combo PackNatural 0
@@ -56,6 +57,9 @@ mkSelect cmod coll = do
           loadTracks tv coll
         Just pr -> do
           pf <- mkPropFlt pr coll
+          onPropsSelected pf $ \coll -> do
+            sel <- mkSelect sbox cmod coll
+            scrollBoxAdd sbox $ sBox sel
           boxPackStartDefaults box $ pScroll pf
 
   widgetShowAll box

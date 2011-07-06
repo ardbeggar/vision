@@ -57,7 +57,7 @@ browseCollection _maybeName = do
       scrollBoxAdd sbox scroll
       containerAdd scroll view
     onListSelected $ \coll -> do
-      s <- S.mkSelect cmod coll
+      s <- S.mkSelect sbox cmod coll
       scrollBoxAdd sbox $ S.sBox s
     return ()
 

@@ -20,6 +20,7 @@
 module Collection.PropFlt
   ( PropFlt (..)
   , mkPropFlt
+  , onPropsSelected
   ) where
 
 import Prelude hiding (lookup)
@@ -33,6 +34,7 @@ import Control.Monad.Trans
 import Data.IORef
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.List (intercalate)
 
 import Graphics.UI.Gtk
 
@@ -57,6 +59,9 @@ mkPropFlt prop coll = do
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
+
+  sel <- treeViewGetSelection view
+  treeSelectionSetMode sel SelectionMultiple
 
   column <- treeViewColumnNew
   treeViewAppendColumn view column
@@ -94,3 +99,29 @@ mkPropFlt prop coll = do
             , pColl   = coll
             , pProp   = prop
             }
+
+onPropsSelected pf f = do
+  let store = pStore pf
+      view  = pView pf
+  sel <- treeViewGetSelection view
+  let doit = do
+        rows <- treeSelectionGetSelectedRows sel
+        vals <- mapM (listStoreGetValue store . head) rows
+        int  <- collNew TypeIntersection
+        collAddOperand int $ pColl pf
+        let text = intercalate " OR " $ map ((propKey (pProp pf) ++ ":") ++) vals
+        print text
+        flt <- collParse text
+        collAddOperand int flt
+        f int
+  view `on` keyPressEvent $ tryEvent $ do
+    "Return" <- eventKeyName
+    liftIO doit
+  view `on` buttonPressEvent $ tryEvent $ do
+    LeftButton  <- eventButton
+    DoubleClick <- eventClick
+    (x, y)      <- eventCoordinates
+    liftIO $ do
+      Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
+      treeSelectionSelectPath sel p
+      doit
