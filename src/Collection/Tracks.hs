@@ -80,6 +80,7 @@ setupView tv = do
 
 setupXMMS tv = do
   xcW <- atomically $ newTGWatch connectedV
+  void $ atomically $ watch xcW -- sync with current state
   forkIO $ forever $ do
     void $ atomically $ watch xcW
     postGUISync $ resetModel tv

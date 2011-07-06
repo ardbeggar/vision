@@ -28,11 +28,10 @@ import Graphics.UI.Gtk
 
 import UI
 
-import Properties
 import Collection.List
 import Collection.ScrollBox
-import Collection.Tracks
-import Collection.PropFlt
+import Collection.Combo
+import qualified Collection.Select as S
 
 
 initCollection =
@@ -46,6 +45,7 @@ browseCollection _maybeName = do
   withListView $ do
     view <- listView
     sbox <- liftIO $ mkScrollBox
+    cmod <- liftIO $ mkModel
     liftIO $ do
       box    <- builderGetObject builder castToVBox "views"
       scroll <- scrolledWindowNew Nothing Nothing
@@ -57,9 +57,8 @@ browseCollection _maybeName = do
       scrollBoxAdd sbox scroll
       containerAdd scroll view
     onListSelected $ \coll -> do
-      Just prop <- property "Title"
-      pf <- mkPropFlt prop coll
-      scrollBoxAdd sbox $ pScroll pf
+      s <- S.mkSelect cmod coll
+      scrollBoxAdd sbox $ S.sBox s
     return ()
 
   liftIO $ widgetShowAll window
