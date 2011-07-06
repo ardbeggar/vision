@@ -38,9 +38,10 @@ mkCombo cmod = do
   cell <- cellRendererTextNew
   cellLayoutPackStart combo cell True
   cellLayoutSetAttributes combo cell cmod $ \p ->
-    [ cellText := case p of
-         Nothing -> "Tracks"
-         Just sp -> propName sp
-    ]
+    case p of
+      Nothing ->
+        [ cellText := "Tracks", cellTextWeight := 800 ]
+      Just sp ->
+        [ cellText := propName sp, cellTextWeightSet := False ]
 
   return combo
