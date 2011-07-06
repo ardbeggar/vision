@@ -22,6 +22,7 @@
 module Collection.List.View
   ( withListView
   , listView
+  , getKill
   , onListSelected
   ) where
 
@@ -32,6 +33,7 @@ import Control.Monad.ReaderX
 import Data.Char (toLower)
 import Data.List (isInfixOf)
 import Data.Typeable
+import Data.IORef
 
 import Graphics.UI.Gtk
 
@@ -39,6 +41,8 @@ import XMMS2.Client
 
 import Context
 import XMMS
+import Utils
+
 import Collection.List.Model
 
 
@@ -48,11 +52,9 @@ instance Index Ix where getVal = Ix
 data View
   = View { vView :: TreeView
          , vSel  :: TreeSelection
+         , vKill :: IORef (Maybe (IO ()))
          }
   deriving (Typeable)
-
---viewEnv :: (Ix, View)
---viewEnv = undefined
 
 listView = asksx Ix vView
 
@@ -86,14 +88,20 @@ makeView store = liftIO $ do
   sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
 
-  return View { vView = view, vSel = sel }
+  kill <- newIORef Nothing
+
+  return View { vView = view, vSel = sel, vKill = kill }
 
 onListSelected f = do
   sel   <- asksx Ix vSel
   view  <- asksx Ix vView
+  kill  <- asksx Ix vKill
   store <- store
   liftIO $ do
     let doit = do
+          maybeKill <- readIORef kill
+          withJust maybeKill $ \kill -> kill
+          writeIORef kill Nothing
           rows  <- treeSelectionGetSelectedRows sel
           names <- mapM (listStoreGetValue store . head) rows
           withColl f names
@@ -125,3 +133,5 @@ withUni f uni ((Just name) : names) =
     liftIO $ do
       collAddOperand uni coll
       withUni f uni names
+
+getKill = asksx Ix vKill

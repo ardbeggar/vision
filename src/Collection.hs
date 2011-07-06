@@ -24,6 +24,8 @@ module Collection
 
 import Control.Monad.Trans
 
+import Data.IORef
+
 import Graphics.UI.Gtk
 
 import UI
@@ -46,6 +48,7 @@ browseCollection _maybeName = do
     view <- listView
     sbox <- liftIO $ mkScrollBox
     cmod <- liftIO $ mkModel
+    kill <- getKill
     liftIO $ do
       box    <- builderGetObject builder castToVBox "views"
       scroll <- scrolledWindowNew Nothing Nothing
@@ -58,6 +61,7 @@ browseCollection _maybeName = do
       containerAdd scroll view
     onListSelected $ \coll -> do
       s <- S.mkSelect sbox cmod coll
+      writeIORef kill $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
     return ()
 

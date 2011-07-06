@@ -21,6 +21,7 @@ module Collection.List
   ( initList
   , withListView
   , listView
+  , getKill
   , onListSelected
   ) where
 

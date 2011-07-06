@@ -20,7 +20,10 @@
 module Collection.Select
   ( Select (..)
   , mkSelect
+  , killSelect
   ) where
+
+import Data.IORef
 
 import Graphics.UI.Gtk
 
@@ -38,9 +41,13 @@ data Select
   = S { sCombo :: ComboBox
       , sColl  :: Coll
       , sBox   :: VBox
+      , sKill  :: IORef (Maybe (IO ()))
+      , sKillS :: IORef (Maybe (IO ()))
       }
 
 mkSelect sbox cmod coll = do
+  kill  <- newIORef Nothing
+  killS <- newIORef Nothing
   box   <- vBoxNew False 5
   combo <- mkCombo cmod
   boxPackStart box combo PackNatural 0
@@ -48,17 +55,25 @@ mkSelect sbox cmod coll = do
   combo `on` changed $ do
     iter <- comboBoxGetActiveIter combo
     withJust iter $ \iter -> do
+      maybeKillS <- readIORef killS
+      withJust maybeKillS id
+      maybeKill <- readIORef kill
+      withJust maybeKill id
+      writeIORef kill Nothing
       sel <- listStoreGetValue cmod $ listStoreIterToIndex iter
       case sel of
         Nothing -> do
           tv <- makeTrackView
+          writeIORef killS $ Just $ widgetDestroy $ tScroll tv
           boxPackStartDefaults box $ tScroll tv
           widgetShowAll $ tScroll tv
           loadTracks tv coll
         Just pr -> do
           pf <- mkPropFlt pr coll
+          writeIORef killS $ Just $ widgetDestroy $ pScroll pf
           onPropsSelected pf $ \coll -> do
             sel <- mkSelect sbox cmod coll
+            writeIORef kill $ Just $ killSelect sel
             scrollBoxAdd sbox $ sBox sel
           boxPackStartDefaults box $ pScroll pf
 
@@ -66,4 +81,11 @@ mkSelect sbox cmod coll = do
   return S { sCombo = combo
            , sBox   = box
            , sColl  = coll
+           , sKill  = kill
+           , sKillS = killS
            }
+
+killSelect sel = do
+  maybeKill <- readIORef $ sKill sel
+  withJust maybeKill id
+  widgetDestroy $ sBox sel
