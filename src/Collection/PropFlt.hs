@@ -109,7 +109,7 @@ onPropsSelected pf f = do
         vals <- mapM (listStoreGetValue store . head) rows
         int  <- collNew TypeIntersection
         collAddOperand int $ pColl pf
-        let text = intercalate " OR " $ map ((propKey (pProp pf) ++ ":") ++) vals
+        let text = mkFilterText (pProp pf) vals
         print text
         flt <- collParse text
         collAddOperand int flt
@@ -125,3 +125,14 @@ onPropsSelected pf f = do
       Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
       treeSelectionSelectPath sel p
       doit
+
+cond' [] = "'"
+cond' ('\'' : t) = '\\' : '\'' : cond' t
+cond' ('\\' : t) = '\\' : '\\' : cond' t
+cond' (h : t) = h : cond' t
+
+cond prop val =
+  propKey prop ++ ":\'" ++ cond' val
+
+mkFilterText prop vals =
+  intercalate " OR " $ map (cond prop) vals
