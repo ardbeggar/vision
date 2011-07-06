@@ -55,6 +55,11 @@ browseCollection _maybeName = do
       scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
       boxPackStartDefaults box scroll
       containerAdd scroll $ sViewport sbox
+      adj <- scrolledWindowGetHAdjustment scroll
+      adj `afterAdjChanged` do
+        max <- adjustmentGetUpper adj
+        pgs <- adjustmentGetPageSize adj
+        adjustmentSetValue adj $ max - pgs
       scroll <- scrolledWindowNew Nothing Nothing
       scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
       scrollBoxAdd sbox scroll
