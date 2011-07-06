@@ -34,6 +34,7 @@ import Collection.List
 import Collection.ScrollBox
 import Collection.Combo
 import qualified Collection.Select as S
+import Collection.Actions
 
 
 initCollection =
@@ -43,6 +44,15 @@ browseCollection _maybeName = do
   builder <- liftIO $ makeBuilder "collection-browser"
   context <- liftIO $ initUI builder
   let ?context = context
+
+  abRef <- liftIO $ newIORef emptyAB
+  let abFunc f = do
+        ab <- readIORef abRef
+        f ab
+  liftIO $ bindActions builder $
+    [ ("add-to-playlist", abFunc aAdd)
+    , ("replace-playlist", abFunc aReplace)
+    ]
 
   withListView $ do
     view <- listView
@@ -65,7 +75,7 @@ browseCollection _maybeName = do
       scrollBoxAdd sbox scroll
       containerAdd scroll view
     onListSelected $ \coll -> do
-      s <- S.mkSelect sbox cmod coll
+      s <- S.mkSelect abRef sbox cmod coll
       writeIORef kill $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
       widgetGrabFocus $ S.sCombo s

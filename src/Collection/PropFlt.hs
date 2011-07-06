@@ -45,6 +45,8 @@ import Medialib
 import XMMS
 import Utils
 
+import Collection.Actions
+
 
 data PropFlt
   = PF { pStore  :: ListStore String
@@ -55,7 +57,7 @@ data PropFlt
        , pProp   :: Property
        }
 
-mkPropFlt prop coll = do
+mkPropFlt abRef prop coll = do
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
@@ -77,7 +79,12 @@ mkPropFlt prop coll = do
 
   setRef <- newIORef Set.empty
 
-  collQueryIds xmms coll [] 0 0 >>* do
+  fcoll <- collNew TypeIntersection
+  collAddOperand fcoll coll
+  flt <- collParse $ "NOT " ++ propKey prop ++ ":''"
+  collAddOperand fcoll flt
+
+  collQueryIds xmms fcoll [] 0 0 >>* do
     ids <- result
     liftIO $ do
       let idSet = Set.fromList ids
@@ -92,13 +99,28 @@ mkPropFlt prop coll = do
               postGUIAsync $ void $ listStoreAppend store str
       forkIO $ mapM_ (requestInfo Background) ids
 
-  return PF { pStore  = store
-            , pView   = view
-            , pScroll = scroll
-            , pSetRef = setRef
-            , pColl   = coll
-            , pProp   = prop
-            }
+  let pf = PF { pStore  = store
+              , pView   = view
+              , pScroll = scroll
+              , pSetRef = setRef
+              , pColl   = fcoll
+              , pProp   = prop
+              }
+  let doAdd replace = do
+        rows <- treeSelectionGetSelectedRows sel
+        unless (null rows) $ do
+          vals <- mapM (listStoreGetValue store . head) rows
+          int  <- collNew TypeIntersection
+          collAddOperand int $ pColl pf
+          flt <- collParse $ mkFilterText (pProp pf) vals
+          collAddOperand int flt
+          addToPlaylist replace int
+
+  view `on` focusInEvent $ liftIO $ do
+    writeIORef abRef AB { aAdd = doAdd False, aReplace = doAdd True }
+    return False
+
+  return pf
 
 onPropsSelected pf f = do
   let store = pStore pf
@@ -136,3 +158,8 @@ cond prop val
 
 mkFilterText prop vals =
   intercalate " OR " $ map (cond prop) vals
+
+addToPlaylist replace coll = do
+  when replace $ playlistClear xmms Nothing >> return ()
+  playlistAddCollection xmms Nothing coll []
+  return ()

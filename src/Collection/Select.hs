@@ -45,7 +45,7 @@ data Select
       , sKillS :: IORef (Maybe (IO ()))
       }
 
-mkSelect sbox cmod coll = do
+mkSelect abRef sbox cmod coll = do
   kill  <- newIORef Nothing
   killS <- newIORef Nothing
   box   <- vBoxNew False 5
@@ -70,12 +70,12 @@ mkSelect sbox cmod coll = do
           loadTracks tv coll
           widgetGrabFocus $ tView tv
         Just pr -> do
-          pf <- mkPropFlt pr coll
+          pf <- mkPropFlt abRef pr coll
           writeIORef killS $ Just $ widgetDestroy $ pScroll pf
           onPropsSelected pf $ \coll -> do
             maybeKill <- readIORef kill
             withJust maybeKill id
-            sel <- mkSelect sbox cmod coll
+            sel <- mkSelect abRef sbox cmod coll
             writeIORef kill $ Just $ killSelect sel
             scrollBoxAdd sbox $ sBox sel
             widgetGrabFocus $ sCombo sel
