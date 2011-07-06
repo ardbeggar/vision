@@ -137,6 +137,7 @@ onPropsSelected pf f = do
           f int
   view `on` keyPressEvent $ tryEvent $ do
     "Return" <- eventKeyName
+    []       <- eventModifier
     liftIO doit
   view `on` buttonPressEvent $ tryEvent $ do
     LeftButton  <- eventButton

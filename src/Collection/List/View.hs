@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 10 Mar. 2010
 --
---  Copyright (C) 2009-2010 Oleg Belozeorov
+--  Copyright (C) 2009-2011 Oleg Belozeorov
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
 --  published by the Free Software Foundation; either version 3 of
@@ -108,6 +108,7 @@ onListSelected f = do
             withColl f names
     view `on` keyPressEvent $ tryEvent $ do
       "Return" <- eventKeyName
+      []       <- eventModifier
       liftIO doit
     view `on` buttonPressEvent $ tryEvent $ do
       LeftButton  <- eventButton
