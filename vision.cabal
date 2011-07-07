@@ -108,8 +108,8 @@ executable vision
                     Control.Monad.ToIO,
                     Control.Monad.W
   hs-source-dirs:   src
-  build-depends:    base >= 4 && < 5, xmms2-client >= 0.0.5.0,
-                    xmms2-client-glib >= 0.0.5.0,
+  build-depends:    base >= 4 && < 5, xmms2-client >= 0.0.7.0,
+                    xmms2-client-glib >= 0.0.7.0,
                     gtk, containers, mtl, utf8-string,
                     filepath, directory, glib, array,
                     MonadCatchIO-transformers, json, parsec >= 3.0.1,
