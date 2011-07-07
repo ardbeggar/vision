@@ -28,6 +28,9 @@ import Graphics.UI.Gtk
 import Properties.Model
 import Properties.Property
 
+import Collection.Utils
+import Collection.Actions
+
 
 data ComboItem
   = CIProp Property
@@ -44,7 +47,7 @@ mkModel = do
   listStoreAppend store CITracks
   return store
 
-mkCombo cmod = do
+mkCombo abRef cmod = do
   combo <- comboBoxNewWithModel cmod
   comboBoxSetRowSeparatorSource combo $ Just (cmod, separator)
 
@@ -55,5 +58,7 @@ mkCombo cmod = do
       CITracks    -> [ cellText := "Tracks" ]
       CIProp p    -> [ cellText := propName p ]
       CISeparator -> []
+
+  setupViewFocus abRef combo emptyAB
 
   return combo

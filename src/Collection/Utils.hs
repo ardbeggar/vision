@@ -35,8 +35,6 @@ import XMMS2.Client
 
 import XMMS
 
-import Collection.Actions
-
 
 selectAll =
   treeSelectionSelectAll
@@ -49,9 +47,6 @@ invertSelection sel = do
 setupViewFocus abRef view ab = do
   view `on` focusInEvent $ liftIO $ do
     writeIORef abRef ab
-    return False
-  view `on` focusOutEvent $ liftIO $ do
-    writeIORef abRef emptyAB
     return False
 
 addToPlaylist replace coll = do

@@ -49,7 +49,7 @@ mkSelect abRef popup sbox cmod coll = do
   kill  <- newIORef Nothing
   killS <- newIORef Nothing
   box   <- vBoxNew False 5
-  combo <- mkCombo cmod
+  combo <- mkCombo abRef cmod
   boxPackStart box combo PackNatural 0
 
   combo `on` changed $ do
