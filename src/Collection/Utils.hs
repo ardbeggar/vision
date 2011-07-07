@@ -21,13 +21,19 @@ module Collection.Utils
   ( selectAll
   , invertSelection
   , setupViewFocus
+  , addToPlaylist
   ) where
 
+import Control.Monad
 import Control.Monad.Trans
 
 import Data.IORef
 
 import Graphics.UI.Gtk hiding (selectAll)
+
+import XMMS2.Client
+
+import XMMS
 
 import Collection.Actions
 
@@ -47,3 +53,8 @@ setupViewFocus abRef view ab = do
   view `on` focusOutEvent $ liftIO $ do
     writeIORef abRef emptyAB
     return False
+
+addToPlaylist replace coll = do
+  when replace $ playlistClear xmms Nothing >> return ()
+  playlistAddCollection xmms Nothing coll []
+  return ()

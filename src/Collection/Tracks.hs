@@ -193,11 +193,6 @@ showTracks tv coll = do
   resetModel tv
   loadTracks tv coll
 
-addToPlaylist replace coll = do
-  when replace $ playlistClear xmms Nothing >> return ()
-  playlistAddCollection xmms Nothing coll []
-  return ()
-
 onTracksSelected tv f = do
   let store = tStore tv
       view  = tView tv

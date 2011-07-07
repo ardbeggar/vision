@@ -154,8 +154,3 @@ withUni f uni ((Just name) : names) =
       withUni f uni names
 
 getKill = asksx Ix vKill
-
-addToPlaylist replace coll = do
-  when replace $ playlistClear xmms Nothing >> return ()
-  playlistAddCollection xmms Nothing coll []
-  return ()

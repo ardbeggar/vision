@@ -169,8 +169,3 @@ cond prop (PropInt32 i)   = propKey prop ++ ":" ++ show i
 
 mkFilterText prop vals =
   intercalate " OR " $ map (cond prop) vals
-
-addToPlaylist replace coll = do
-  when replace $ playlistClear xmms Nothing >> return ()
-  playlistAddCollection xmms Nothing coll []
-  return ()
