@@ -124,6 +124,7 @@ mkPropFlt abRef popup prop coll = do
           f int
   setupViewFocus abRef view
     AB { aWithColl  = wc
+       , aWithNames = const $ return ()
        , aSelection = Just sel
        }
 

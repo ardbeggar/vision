@@ -69,6 +69,9 @@ browseCollection _maybeName = do
           withSel f = do
             ab <- readIORef abRef
             withJust (aSelection ab) f
+          withNames f = do
+            ab <- readIORef abRef
+            aWithNames ab f
       in bindActions builder $
         [ ("add-to-playlist", withColl $ addToPlaylist False)
         , ("replace-playlist", withColl $ addToPlaylist True)
@@ -80,11 +83,12 @@ browseCollection _maybeName = do
         , ("import-properties", showPropertyImport)
         , ("manage-properties", showPropertyManager)
         , ("save-collection", withColl $ saveCollection)
+        , ("rename-collection", withNames $ renameCollection)
         ]
 
-  popup <- liftIO $ getWidget castToMenu "ui/view-popup"
-
-  withListView abRef popup $ do
+  lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
+  vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
+  withListView abRef lpopup $ do
     view <- listView
     sbox <- liftIO $ mkScrollBox
     cmod <- liftIO $ mkModel
@@ -107,7 +111,7 @@ browseCollection _maybeName = do
       scrollBoxAdd sbox scroll
       containerAdd scroll view
     onListSelected $ \coll -> do
-      s <- S.mkSelect abRef popup sbox cmod coll
+      s <- S.mkSelect abRef vpopup sbox cmod coll
       writeIORef kill $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
       widgetGrabFocus $ S.sCombo s

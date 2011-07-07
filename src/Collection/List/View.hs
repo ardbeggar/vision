@@ -34,6 +34,7 @@ import Data.Char (toLower)
 import Data.List (isInfixOf)
 import Data.Typeable
 import Data.IORef
+import Data.Maybe
 
 import Graphics.UI.Gtk
 
@@ -93,13 +94,19 @@ makeView abRef popup store = liftIO $ do
   treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
-  let wc f = do
+  let wn f = do
+        rows <- treeSelectionGetSelectedRows sel
+        unless (null rows) $ do
+          names <- mapM (listStoreGetValue store . head) rows
+          f $ map fromJust $ filter isJust names
+      wc f = do
         rows <- treeSelectionGetSelectedRows sel
         unless (null rows) $ do
           names <- mapM (listStoreGetValue store . head) rows
           withColl f names
   setupViewFocus abRef view
-    AB { aWithColl = wc
+    AB { aWithColl  = wc
+       , aWithNames = wn
        , aSelection = Just sel
        }
 

@@ -23,6 +23,7 @@ module Collection.Utils
   , setupViewFocus
   , addToPlaylist
   , saveCollection
+  , renameCollection
   ) where
 
 import Control.Applicative
@@ -63,6 +64,13 @@ saveCollection coll = do
   withJust res $ \name -> do
     collSave xmms coll name "Collections"
     return ()
+
+renameCollection [old] = do
+  res <- runDlg "Rename collection" False (/= old) old
+  withJust res $ \new -> do
+    collRename xmms old new "Collections"
+    return ()
+renameCollection _ = return ()
 
 runDlg title enable isOk init = do
   dialog <- dialogNew

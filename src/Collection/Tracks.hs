@@ -98,6 +98,7 @@ setupView abRef popup tv = do
           f sel
   setupViewFocus abRef view
     AB { aWithColl  = wc
+       , aWithNames = const $ return ()
        , aSelection = Just sel
        }
 

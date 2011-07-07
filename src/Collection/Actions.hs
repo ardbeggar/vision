@@ -29,10 +29,12 @@ import XMMS2.Client
 
 data ActionBackend
   = AB { aWithColl  :: (Coll -> IO ()) -> IO ()
+       , aWithNames :: ([String] -> IO ()) -> IO ()
        , aSelection :: Maybe TreeSelection
        }
 
 emptyAB =
   AB { aWithColl  = const $ return ()
+     , aWithNames = const $ return ()
      , aSelection = Nothing
      }
