@@ -65,10 +65,17 @@ mkSelect abRef sbox cmod coll = do
         Nothing -> do
           tv <- makeTrackView abRef
           writeIORef killS $ Just $ widgetDestroy $ tScroll tv
+          onTracksSelected tv $ \coll -> do
+            maybeKill <- readIORef kill
+            withJust maybeKill id
+            sel <- mkSelect abRef sbox cmod coll
+            writeIORef kill $ Just $ killSelect sel
+            scrollBoxAdd sbox $ sBox sel
+            widgetGrabFocus $ sCombo sel
           boxPackStartDefaults box $ tScroll tv
           widgetShowAll $ tScroll tv
-          loadTracks tv coll
           widgetGrabFocus $ tView tv
+          loadTracks tv coll
         Just pr -> do
           pf <- mkPropFlt abRef pr coll
           writeIORef killS $ Just $ widgetDestroy $ pScroll pf

@@ -22,6 +22,7 @@ module Collection.Tracks
   , makeTrackView
   , loadTracks
   , showTracks
+  , onTracksSelected
   ) where
 
 import Prelude hiding (lookup)
@@ -191,3 +192,26 @@ addToPlaylist replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()
   playlistAddCollection xmms Nothing coll []
   return ()
+
+onTracksSelected tv f = do
+  let store = tStore tv
+      view  = tView tv
+  sel <- treeViewGetSelection view
+  let doit = do
+        rows <- treeSelectionGetSelectedRows sel
+        unless (null rows) $ do
+          ids <- mapM (listStoreGetValue store . head) rows
+          sel <- collNewIdlist ids
+          f sel
+  view `on` keyPressEvent $ tryEvent $ do
+    "Return" <- eventKeyName
+    []       <- eventModifier
+    liftIO doit
+  view `on` buttonPressEvent $ tryEvent $ do
+    LeftButton  <- eventButton
+    DoubleClick <- eventClick
+    (x, y)      <- eventCoordinates
+    liftIO $ do
+      Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
+      treeSelectionSelectPath sel p
+      doit
