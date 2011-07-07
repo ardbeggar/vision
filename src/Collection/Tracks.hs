@@ -37,6 +37,7 @@ import Control.Monad.Trans
 import Data.Char
 import Data.List hiding (lookup)
 import Data.Maybe
+import Data.IORef
 
 import Graphics.UI.Gtk
 
@@ -49,6 +50,8 @@ import Index hiding (getInfo)
 import qualified Index
 import Medialib
 
+import Collection.Actions
+
 
 data TrackView
   = TV { tStore  :: ListStore MediaId
@@ -58,7 +61,7 @@ data TrackView
        }
 
 
-makeTrackView = do
+makeTrackView abRef = do
   store  <- listStoreNewDND [] Nothing Nothing
   index  <- makeIndex store return
   view   <- treeViewNewWithModel store
@@ -70,12 +73,30 @@ makeTrackView = do
               , tView   = view
               , tScroll = scroll
               }
-  setupView tv
+  setupView abRef tv
   setupXMMS tv
   return tv
 
-setupView tv = do
-  treeViewSetRulesHint (tView tv) True
+setupView abRef tv = do
+  let view  = tView tv
+      store = tStore tv
+
+  treeViewSetRulesHint view True
+
+  sel <- treeViewGetSelection view
+  treeSelectionSetMode sel SelectionMultiple
+
+  let doAdd replace = do
+        rows <- treeSelectionGetSelectedRows sel
+        unless (null rows) $ do
+          ids <- mapM (listStoreGetValue store . head) rows
+          sel <- collNewIdlist ids
+          addToPlaylist replace sel
+
+  view `on` focusInEvent $ liftIO $ do
+    writeIORef abRef AB { aAdd = doAdd False, aReplace = doAdd True }
+    return False
+
   setColumns tv False =<< loadConfig
 
 setupXMMS tv = do
@@ -165,3 +186,8 @@ resetModel tv = do
 showTracks tv coll = do
   resetModel tv
   loadTracks tv coll
+
+addToPlaylist replace coll = do
+  when replace $ playlistClear xmms Nothing >> return ()
+  playlistAddCollection xmms Nothing coll []
+  return ()

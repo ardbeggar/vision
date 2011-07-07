@@ -63,7 +63,7 @@ mkSelect abRef sbox cmod coll = do
       sel <- listStoreGetValue cmod $ listStoreIterToIndex iter
       case sel of
         Nothing -> do
-          tv <- makeTrackView
+          tv <- makeTrackView abRef
           writeIORef killS $ Just $ widgetDestroy $ tScroll tv
           boxPackStartDefaults box $ tScroll tv
           widgetShowAll $ tScroll tv
