@@ -22,6 +22,11 @@ module Collection
   , browseCollection
   ) where
 
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
+import Control.Monad
 import Control.Monad.ToIO
 import Control.Monad.Trans
 
@@ -101,6 +106,14 @@ browseCollection _maybeName = do
               , aEnableRen = actionSetSensitive renAct
               , aEnableDel = actionSetSensitive delAct
               }
+
+  liftIO $ do
+    ag  <- builderGetObject builder castToActionGroup "server-actions"
+    xcW <- atomically $ newTGWatch connectedV
+    tid <- forkIO $ forever $ do
+      conn <- atomically $ watch xcW
+      postGUISync $ actionGroupSetSensitive ag conn
+    window `onDestroy` (killThread tid)
 
   lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
   vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"

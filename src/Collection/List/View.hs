@@ -26,6 +26,10 @@ module Collection.List.View
   , onListSelected
   ) where
 
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
+
 import Control.Applicative
 import Control.Monad.Trans
 import Control.Monad.ReaderX
@@ -121,6 +125,15 @@ makeView abRef ae popup store = liftIO $ do
   sel `on` treeSelectionSelectionChanged $ aef
 
   kill <- newIORef Nothing
+
+  xcW <- atomically $ newTGWatch connectedV
+  tid <- forkIO $ forever $ do
+    void $ atomically $ watch xcW
+    postGUISync $ do
+      maybeKill <- readIORef kill
+      withJust maybeKill id
+      writeIORef kill Nothing
+  view `onDestroy` (killThread tid)
 
   return View { vView = view, vSel = sel, vKill = kill }
 
