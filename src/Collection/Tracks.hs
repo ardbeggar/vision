@@ -45,6 +45,7 @@ import Graphics.UI.Gtk
 import XMMS2.Client
 
 import XMMS
+import Utils
 import Properties
 import Config
 import Index hiding (getInfo)
@@ -62,7 +63,7 @@ data TrackView
        }
 
 
-makeTrackView abRef = do
+makeTrackView abRef popup = do
   store  <- listStoreNewDND [] Nothing Nothing
   index  <- makeIndex store return
   view   <- treeViewNewWithModel store
@@ -74,18 +75,19 @@ makeTrackView abRef = do
               , tView   = view
               , tScroll = scroll
               }
-  setupView abRef tv
+  setupView abRef popup tv
   setupXMMS tv
   return tv
 
-setupView abRef tv = do
+setupView abRef popup tv = do
   let view  = tView tv
       store = tStore tv
 
-  treeViewSetRulesHint view True
-
   sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
+
+  treeViewSetRulesHint view True
+  setupTreeViewPopup view popup
 
   let doAdd replace = do
         rows <- treeSelectionGetSelectedRows sel

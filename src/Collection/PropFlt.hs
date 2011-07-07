@@ -41,6 +41,7 @@ import qualified XMMS2.Client as X
 
 import Properties hiding (lookup)
 import XMMS
+import Utils
 
 import Collection.Actions
 
@@ -53,13 +54,15 @@ data PropFlt
        , pProp   :: Property
        }
 
-mkPropFlt abRef prop coll = do
+mkPropFlt abRef popup prop coll = do
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
 
   sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
+
+  setupTreeViewPopup view popup
 
   column <- treeViewColumnNew
   treeViewAppendColumn view column

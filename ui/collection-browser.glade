@@ -201,25 +201,12 @@
           </menu>
         </placeholder>
       </menubar>
-      <popup action="collection-popup">
-        <menuitem action="coll-add-to-playlist"/>
-        <menuitem action="coll-replace-playlist"/>
-        <separator/>
-        <menuitem action="copy"/>
+      <popup action="view-popup">
+        <menuitem action="add-to-playlist"/>
+        <menuitem action="replace-playlist"/>
         <separator/>
         <menuitem action="select-all"/>
         <menuitem action="invert-selection"/>
-        <separator/>
-        <menuitem action="edit-properties"/>
-      </popup>
-      <popup action="list-popup">
-        <menuitem action="list-add-to-playlist"/>
-        <menuitem action="list-replace-playlist"/>
-        <separator/>
-        <menuitem action="rename-collection"/>
-        <menuitem action="delete-collection"/>
-        <separator/>
-        <menuitem action="browse-in-new-window"/>
       </popup>
     </ui>
   </object>

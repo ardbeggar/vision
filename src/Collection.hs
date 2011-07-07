@@ -61,7 +61,9 @@ browseCollection _maybeName = do
     , ("invert-selection", withSel invertSelection)
     ]
 
-  withListView abRef $ do
+  popup <- liftIO $ getWidget castToMenu "ui/view-popup"
+
+  withListView abRef popup $ do
     view <- listView
     sbox <- liftIO $ mkScrollBox
     cmod <- liftIO $ mkModel
@@ -82,7 +84,7 @@ browseCollection _maybeName = do
       scrollBoxAdd sbox scroll
       containerAdd scroll view
     onListSelected $ \coll -> do
-      s <- S.mkSelect abRef sbox cmod coll
+      s <- S.mkSelect abRef popup sbox cmod coll
       writeIORef kill $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
       widgetGrabFocus $ S.sCombo s

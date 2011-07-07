@@ -59,14 +59,14 @@ data View
 
 listView = asksx Ix vView
 
-withListView abRef m = do
+withListView abRef popup m = do
   Just env <- getEnv modelEnv
   runEnvT env $ do
     store <- store
-    view  <- makeView abRef store
+    view  <- makeView abRef popup store
     runEnvT (Ix, view) m
 
-makeView abRef store = liftIO $ do
+makeView abRef popup store = liftIO $ do
   view <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
 
@@ -88,6 +88,8 @@ makeView abRef store = liftIO $ do
 
   sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
+
+  setupTreeViewPopup view popup
 
   let doAdd replace = do
         rows <- treeSelectionGetSelectedRows sel
