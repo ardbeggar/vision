@@ -25,9 +25,6 @@ module Collection.PropFlt
 
 import Prelude hiding (lookup)
 
-import Control.Concurrent
-import Control.Concurrent.STM
-
 import Control.Monad
 import Control.Monad.Trans
 
@@ -41,7 +38,6 @@ import Graphics.UI.Gtk
 import XMMS2.Client hiding (Property)
 
 import Properties
-import Medialib
 import XMMS
 import Utils
 
@@ -84,20 +80,24 @@ mkPropFlt abRef prop coll = do
   flt <- collParse $ "NOT " ++ propKey prop ++ ":''"
   collAddOperand fcoll flt
 
-  collQueryIds xmms fcoll [] 0 0 >>* do
-    ids <- result
-    liftIO $ do
-      let idSet = Set.fromList ids
-      mc <- atomically $ dupTChan mediaInfoChan
-      forkIO $ forever $ do
-        (id, _, info) <- atomically $ readTChan mc
-        when (Set.member id idSet) $
-          withJust (lookup prop info) $ \str -> do
-            vs <- readIORef setRef
-            unless (Set.member str vs) $ do
-              writeIORef setRef (Set.insert str vs)
-              postGUIAsync $ void $ listStoreAppend store str
-      forkIO $ mapM_ (requestInfo Background) ids
+  let key = propKey prop
+      addLine v [] = return v
+      addLine v (p : ps) =
+        case lookup prop p of
+          Just s | v == s    -> addLine v ps
+                 | otherwise -> do
+                   listStoreAppend store s
+                   addLine s ps
+          Nothing -> addLine v ps
+      getInfos s v =
+        collQueryInfos xmms fcoll [key] s 100 [key] [key] >>* do
+          lst <- result
+          len <- resultLength
+          liftIO $ do
+            v' <- addLine v lst
+            when (len == 100) $
+              getInfos (s + 100) v'
+  getInfos 0 ""
 
   let pf = PF { pStore  = store
               , pView   = view
@@ -106,7 +106,7 @@ mkPropFlt abRef prop coll = do
               , pColl   = fcoll
               , pProp   = prop
               }
-  let doAdd replace = do
+      doAdd replace = do
         rows <- treeSelectionGetSelectedRows sel
         unless (null rows) $ do
           vals <- mapM (listStoreGetValue store . head) rows
