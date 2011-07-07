@@ -205,6 +205,8 @@
         <menuitem action="add-to-playlist"/>
         <menuitem action="replace-playlist"/>
         <separator/>
+        <menuitem action="copy"/>
+        <separator/>
         <menuitem action="select-all"/>
         <menuitem action="invert-selection"/>
       </popup>

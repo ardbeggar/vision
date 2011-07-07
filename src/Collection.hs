@@ -22,14 +22,20 @@ module Collection
   , browseCollection
   ) where
 
+import Control.Monad.ToIO
 import Control.Monad.Trans
 
 import Data.IORef
 
 import Graphics.UI.Gtk hiding (selectAll)
 
+import XMMS2.Client
+
 import UI
 import Utils
+import Clipboard
+import Context
+import XMMS
 
 import Collection.List
 import Collection.ScrollBox
@@ -48,18 +54,27 @@ browseCollection _maybeName = do
   let ?context = context
 
   abRef <- liftIO $ newIORef emptyAB
-  let withColl f = do
-        ab <- readIORef abRef
-        aWithColl ab f
-      withSel f = do
-        ab <- readIORef abRef
-        withJust (aSelection ab) f
-  liftIO $ bindActions builder $
-    [ ("add-to-playlist", withColl $ addToPlaylist False)
-    , ("replace-playlist", withColl $ addToPlaylist True)
-    , ("select-all", withSel selectAll)
-    , ("invert-selection", withSel invertSelection)
-    ]
+
+  Just env <- getEnv clipboardEnv
+  runEnvT env $ runIn clipboardEnv $> do
+    io $ \run ->
+      let withColl f = do
+            ab <- readIORef abRef
+            aWithColl ab f
+          withIds f = withColl $ \coll ->
+            collQueryIds xmms coll [] 0 0 >>* do
+              ids <- result
+              liftIO $ f ids
+          withSel f = do
+            ab <- readIORef abRef
+            withJust (aSelection ab) f
+      in bindActions builder $
+        [ ("add-to-playlist", withColl $ addToPlaylist False)
+        , ("replace-playlist", withColl $ addToPlaylist True)
+        , ("select-all", withSel selectAll)
+        , ("invert-selection", withSel invertSelection)
+        , ("copy", withIds (run . copyIds))
+        ]
 
   popup <- liftIO $ getWidget castToMenu "ui/view-popup"
 
