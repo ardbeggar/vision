@@ -19,6 +19,7 @@
 
 module Collection.Actions
   ( ActionBackend (..)
+  , ActionEnabled (..)
   , emptyAB
   ) where
 
@@ -38,3 +39,9 @@ emptyAB =
      , aWithNames = const $ return ()
      , aSelection = Nothing
      }
+
+data ActionEnabled
+  = AE { aEnableSel :: Bool -> IO ()
+       , aEnableRen :: Bool -> IO ()
+       , aEnableDel :: Bool -> IO ()
+       }

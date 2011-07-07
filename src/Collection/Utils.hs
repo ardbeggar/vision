@@ -50,9 +50,10 @@ invertSelection sel = do
   treeSelectionSelectAll sel
   mapM_ (treeSelectionUnselectPath sel) rows
 
-setupViewFocus abRef view ab = do
+setupViewFocus abRef view aef ab = do
   view `on` focusInEvent $ liftIO $ do
     writeIORef abRef ab
+    aef
     return False
 
 addToPlaylist replace coll = do

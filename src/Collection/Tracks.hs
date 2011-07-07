@@ -63,7 +63,7 @@ data TrackView
        }
 
 
-makeTrackView abRef popup = do
+makeTrackView abRef ae popup = do
   store  <- listStoreNewDND [] Nothing Nothing
   index  <- makeIndex store return
   view   <- treeViewNewWithModel store
@@ -76,11 +76,11 @@ makeTrackView abRef popup = do
               , tView   = view
               , tScroll = scroll
               }
-  setupView abRef popup tv
+  setupView abRef ae popup tv
   setupXMMS tv
   return tv
 
-setupView abRef popup tv = do
+setupView abRef ae popup tv = do
   let view  = tView tv
       store = tStore tv
 
@@ -96,11 +96,19 @@ setupView abRef popup tv = do
           ids <- mapM (listStoreGetValue store . head) rows
           sel <- collNewIdlist ids
           f sel
-  setupViewFocus abRef view
+      aef = do
+        foc <- view `get` widgetHasFocus
+        when foc $ do
+          rows <- treeSelectionGetSelectedRows sel
+          aEnableSel ae $ not $ null rows
+          aEnableRen ae False
+          aEnableDel ae False
+  setupViewFocus abRef view aef
     AB { aWithColl  = wc
        , aWithNames = const $ return ()
        , aSelection = Just sel
        }
+  sel `on` treeSelectionSelectionChanged $ aef
 
   setColumns tv False =<< loadConfig
 

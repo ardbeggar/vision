@@ -54,7 +54,7 @@ data PropFlt
        , pProp   :: Property
        }
 
-mkPropFlt abRef popup prop coll = do
+mkPropFlt abRef ae popup prop coll = do
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
@@ -122,11 +122,19 @@ mkPropFlt abRef popup prop coll = do
           flt <- collParse $ mkFilterText (pProp pf) vals
           collAddOperand int flt
           f int
-  setupViewFocus abRef view
+      aef = do
+        foc <- view `get` widgetHasFocus
+        when foc $ do
+          rows <- treeSelectionGetSelectedRows sel
+          aEnableSel ae $ not $ null rows
+          aEnableRen ae False
+          aEnableDel ae False
+  setupViewFocus abRef view aef
     AB { aWithColl  = wc
        , aWithNames = const $ return ()
        , aSelection = Just sel
        }
+  sel `on` treeSelectionSelectionChanged $ aef
 
   return pf
 

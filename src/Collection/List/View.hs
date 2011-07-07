@@ -61,14 +61,14 @@ data View
 
 listView = asksx Ix vView
 
-withListView abRef popup m = do
+withListView abRef ae popup m = do
   Just env <- getEnv modelEnv
   runEnvT env $ do
     store <- store
-    view  <- makeView abRef popup store
+    view  <- makeView abRef ae popup store
     runEnvT (Ix, view) m
 
-makeView abRef popup store = liftIO $ do
+makeView abRef ae popup store = liftIO $ do
   view <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
 
@@ -104,11 +104,21 @@ makeView abRef popup store = liftIO $ do
         unless (null rows) $ do
           names <- mapM (listStoreGetValue store . head) rows
           withColl f names
-  setupViewFocus abRef view
+      aef = do
+        foc <- view `get` widgetHasFocus
+        when foc $ do
+          rows <- treeSelectionGetSelectedRows sel
+          aEnableSel ae $ not $ null rows
+          aEnableDel ae $ not $ null rows
+          aEnableRen ae $ case rows of
+            [_] -> True
+            _   -> False
+  setupViewFocus abRef view aef
     AB { aWithColl  = wc
        , aWithNames = wn
        , aSelection = Just sel
        }
+  sel `on` treeSelectionSelectionChanged $ aef
 
   kill <- newIORef Nothing
 

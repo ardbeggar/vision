@@ -48,7 +48,7 @@ mkModel = do
   listStoreAppend store CITracks
   return store
 
-mkCombo abRef cmod = do
+mkCombo abRef ae cmod = do
   combo <- comboBoxNewWithModel cmod
   comboBoxSetRowSeparatorSource combo $ Just (cmod, separator)
 
@@ -60,7 +60,10 @@ mkCombo abRef cmod = do
       CIProp p    -> [ cellText := propName p ]
       CISeparator -> []
 
-  combo `on` setFocusChild $
-    maybe (return ()) (const $ writeIORef abRef emptyAB)
+  combo `on` setFocusChild $ \fc -> do
+    maybe (return ()) (const $ writeIORef abRef emptyAB) fc
+    aEnableSel ae False
+    aEnableRen ae False
+    aEnableDel ae False
 
   return combo

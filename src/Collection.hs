@@ -87,9 +87,24 @@ browseCollection _maybeName = do
         , ("delete-collections", withNames $ deleteCollections)
         ]
 
+  selActs <- liftIO $ mapM (action builder)
+             [ "add-to-playlist"
+             , "replace-playlist"
+             , "copy"
+             , "edit-properties"
+             , "export-properties"
+             , "save-collection"
+             ]
+  renAct <- liftIO $ action builder "rename-collection"
+  delAct <- liftIO $ action builder "delete-collections"
+  let ae = AE { aEnableSel = \en -> mapM_ (`actionSetSensitive` en) selActs
+              , aEnableRen = actionSetSensitive renAct
+              , aEnableDel = actionSetSensitive delAct
+              }
+
   lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
   vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
-  withListView abRef lpopup $ do
+  withListView abRef ae lpopup $ do
     view <- listView
     sbox <- liftIO $ mkScrollBox
     cmod <- liftIO $ mkModel
@@ -112,7 +127,7 @@ browseCollection _maybeName = do
       scrollBoxAdd sbox scroll
       containerAdd scroll view
     onListSelected $ \coll -> do
-      s <- S.mkSelect abRef vpopup sbox cmod coll
+      s <- S.mkSelect abRef ae vpopup sbox cmod coll
       writeIORef kill $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
       writeIORef abRef emptyAB

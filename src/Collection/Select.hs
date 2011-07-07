@@ -45,11 +45,11 @@ data Select
       , sKillS :: IORef (Maybe (IO ()))
       }
 
-mkSelect abRef popup sbox cmod coll = do
+mkSelect abRef ae popup sbox cmod coll = do
   kill  <- newIORef Nothing
   killS <- newIORef Nothing
   box   <- vBoxNew False 5
-  combo <- mkCombo abRef cmod
+  combo <- mkCombo abRef ae cmod
   boxPackStart box combo PackNatural 0
 
   combo `on` changed $ do
@@ -64,12 +64,12 @@ mkSelect abRef popup sbox cmod coll = do
       case sel of
         CISeparator -> return ()
         CITracks -> do
-          tv <- makeTrackView abRef popup
+          tv <- makeTrackView abRef ae popup
           writeIORef killS $ Just $ widgetDestroy $ tScroll tv
           onTracksSelected tv $ \coll -> do
             maybeKill <- readIORef kill
             withJust maybeKill id
-            sel <- mkSelect abRef popup sbox cmod coll
+            sel <- mkSelect abRef ae popup sbox cmod coll
             writeIORef kill $ Just $ killSelect sel
             scrollBoxAdd sbox $ sBox sel
             widgetGrabFocus $ sCombo sel
@@ -78,12 +78,12 @@ mkSelect abRef popup sbox cmod coll = do
           widgetGrabFocus $ tView tv
           loadTracks tv coll
         CIProp pr -> do
-          pf <- mkPropFlt abRef popup pr coll
+          pf <- mkPropFlt abRef ae popup pr coll
           writeIORef killS $ Just $ widgetDestroy $ pScroll pf
           onPropsSelected pf $ \coll -> do
             maybeKill <- readIORef kill
             withJust maybeKill id
-            sel <- mkSelect abRef popup sbox cmod coll
+            sel <- mkSelect abRef ae popup sbox cmod coll
             writeIORef kill $ Just $ killSelect sel
             scrollBoxAdd sbox $ sBox sel
             widgetGrabFocus $ sCombo sel
