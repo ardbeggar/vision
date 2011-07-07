@@ -89,6 +89,7 @@ makeView abRef popup store = liftIO $ do
   sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
 
+  treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
   let doAdd replace = do

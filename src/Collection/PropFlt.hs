@@ -62,6 +62,7 @@ mkPropFlt abRef popup prop coll = do
   sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
 
+  treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
   column <- treeViewColumnNew
