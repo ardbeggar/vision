@@ -119,6 +119,7 @@ setupTreeViewPopup view popup = do
     SingleClick <- eventClick
     stamp       <- eventTime
     setCursor
+    liftIO $ widgetGrabFocus view
     liftIO $ menuPopup popup $ Just (RightButton, stamp)
 
 dialogAddButtonCR dialog label response = do
