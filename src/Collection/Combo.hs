@@ -23,12 +23,13 @@ module Collection.Combo
   , ComboItem (..)
   ) where
 
+import Data.IORef
+
 import Graphics.UI.Gtk
 
 import Properties.Model
 import Properties.Property
 
-import Collection.Utils
 import Collection.Actions
 
 
@@ -59,6 +60,7 @@ mkCombo abRef cmod = do
       CIProp p    -> [ cellText := propName p ]
       CISeparator -> []
 
-  setupViewFocus abRef combo emptyAB
+  combo `on` setFocusChild $
+    maybe (return ()) (const $ writeIORef abRef emptyAB)
 
   return combo
