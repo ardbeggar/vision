@@ -71,6 +71,7 @@ browseCollection _maybeName = do
     liftIO $ do
       box    <- builderGetObject builder castToVBox "views"
       scroll <- scrolledWindowNew Nothing Nothing
+      scrolledWindowSetShadowType scroll ShadowNone
       scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
       boxPackStartDefaults box scroll
       containerAdd scroll $ sViewport sbox
@@ -80,6 +81,7 @@ browseCollection _maybeName = do
         pgs <- adjustmentGetPageSize adj
         adjustmentSetValue adj $ max - pgs
       scroll <- scrolledWindowNew Nothing Nothing
+      scrolledWindowSetShadowType scroll ShadowIn
       scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
       scrollBoxAdd sbox scroll
       containerAdd scroll view

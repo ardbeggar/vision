@@ -38,6 +38,8 @@ mkScrollBox = do
   hAdj     <- adjustmentNew 0 0 0 0 0 0
   vAdj     <- adjustmentNew 0 0 0 0 0 0
   viewport <- viewportNew hAdj vAdj
+  viewportSetShadowType viewport ShadowNone
+  containerSetBorderWidth box 5
   containerAdd viewport box
   return SB { sBox      = box
             , sViewport = viewport

@@ -68,6 +68,7 @@ makeTrackView abRef popup = do
   index  <- makeIndex store return
   view   <- treeViewNewWithModel store
   scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetShadowType scroll ShadowIn
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
   let tv = TV { tStore  = store

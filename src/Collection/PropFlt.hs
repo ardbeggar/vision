@@ -73,6 +73,7 @@ mkPropFlt abRef popup prop coll = do
     [ cellText := showValue prop p ]
 
   scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetShadowType scroll ShadowIn
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
   widgetShowAll scroll
