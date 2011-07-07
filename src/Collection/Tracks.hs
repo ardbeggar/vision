@@ -19,17 +19,10 @@
 
 module Collection.Tracks
   ( TrackView (..)
-  , makeTrackView
-  , loadTracks
-  , showTracks
-  , onTracksSelected
+  , mkTrackView
   ) where
 
 import Prelude hiding (lookup)
-
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
 import Control.Monad
@@ -59,14 +52,26 @@ data TrackView
   = TV { tStore  :: ListStore MediaId
        , tIndex  :: Index MediaInfo
        , tView   :: TreeView
+       , tSel    :: TreeSelection
        , tScroll :: ScrolledWindow
        }
 
+instance CollBuilder TrackView where
+  withBuiltColl tv f = do
+    let store = tStore tv
+        sel   = tSel tv
+    rows <- treeSelectionGetSelectedRows sel
+    unless (null rows) $ do
+      ids <- mapM (listStoreGetValue store . head) rows
+      ils <- collNewIdlist ids
+      f ils
+  treeViewSel tv = (tView tv, tSel tv)
 
-makeTrackView abRef ae popup = do
+mkTrackView abRef ae popup coll = do
   store  <- listStoreNewDND [] Nothing Nothing
   index  <- makeIndex store return
   view   <- treeViewNewWithModel store
+  sel    <- treeViewGetSelection view
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetShadowType scroll ShadowIn
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
@@ -74,29 +79,22 @@ makeTrackView abRef ae popup = do
   let tv = TV { tStore  = store
               , tIndex  = index
               , tView   = view
+              , tSel    = sel
               , tScroll = scroll
               }
   setupView abRef ae popup tv
-  setupXMMS tv
+  loadTracks tv coll
   return tv
 
 setupView abRef ae popup tv = do
   let view  = tView tv
-      store = tStore tv
+      sel   = tSel tv
 
-  sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
-
   treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
-  let wc f = do
-        rows <- treeSelectionGetSelectedRows sel
-        unless (null rows) $ do
-          ids <- mapM (listStoreGetValue store . head) rows
-          sel <- collNewIdlist ids
-          f sel
-      aef = do
+  let aef = do
         foc <- view `get` widgetHasFocus
         when foc $ do
           rows <- treeSelectionGetSelectedRows sel
@@ -104,20 +102,14 @@ setupView abRef ae popup tv = do
           aEnableRen ae False
           aEnableDel ae False
   setupViewFocus abRef view aef
-    AB { aWithColl  = wc
+    AB { aWithColl  = withBuiltColl tv
        , aWithNames = const $ return ()
        , aSelection = Just sel
        }
   sel `on` treeSelectionSelectionChanged $ aef
 
   setColumns tv False =<< loadConfig
-
-setupXMMS tv = do
-  xcW <- atomically $ newTGWatch connectedV
-  void $ atomically $ watch xcW -- sync with current state
-  forkIO $ forever $ do
-    void $ atomically $ watch xcW
-    postGUISync $ resetModel tv
+  widgetShowAll $ tScroll tv
 
 loadTracks tv coll =
   collQueryIds xmms coll [] 0 0 >>* do
@@ -191,34 +183,3 @@ populateModel tv ids = do
           addToIndex index id n
         store = tStore tv
         index = tIndex tv
-
-resetModel tv = do
-  clearIndex $ tIndex tv
-  listStoreClear $ tStore tv
-
-showTracks tv coll = do
-  resetModel tv
-  loadTracks tv coll
-
-onTracksSelected tv f = do
-  let store = tStore tv
-      view  = tView tv
-  sel <- treeViewGetSelection view
-  let doit = do
-        rows <- treeSelectionGetSelectedRows sel
-        unless (null rows) $ do
-          ids <- mapM (listStoreGetValue store . head) rows
-          sel <- collNewIdlist ids
-          f sel
-  view `on` keyPressEvent $ tryEvent $ do
-    "Return" <- eventKeyName
-    []       <- eventModifier
-    liftIO doit
-  view `on` buttonPressEvent $ tryEvent $ do
-    LeftButton  <- eventButton
-    DoubleClick <- eventClick
-    (x, y)      <- eventCoordinates
-    liftIO $ do
-      Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
-      treeSelectionSelectPath sel p
-      doit

@@ -20,7 +20,6 @@
 module Collection.PropFlt
   ( PropFlt (..)
   , mkPropFlt
-  , onPropsSelected
   ) where
 
 import Prelude hiding (lookup)
@@ -49,6 +48,7 @@ import Collection.Utils
 data PropFlt
   = PF { pStore  :: ListStore X.Property
        , pView   :: TreeView
+       , pSel    :: TreeSelection
        , pScroll :: ScrolledWindow
        , pColl   :: Coll
        , pProp   :: Property
@@ -109,19 +109,11 @@ mkPropFlt abRef ae popup prop coll = do
 
   let pf = PF { pStore  = store
               , pView   = view
+              , pSel    = sel
               , pScroll = scroll
               , pColl   = fcoll
               , pProp   = prop
               }
-      wc f = do
-        rows <- treeSelectionGetSelectedRows sel
-        unless (null rows) $ do
-          vals <- mapM (listStoreGetValue store . head) rows
-          int  <- collNew TypeIntersection
-          collAddOperand int $ pColl pf
-          flt <- collParse $ mkFilterText (pProp pf) vals
-          collAddOperand int flt
-          f int
       aef = do
         foc <- view `get` widgetHasFocus
         when foc $ do
@@ -130,7 +122,7 @@ mkPropFlt abRef ae popup prop coll = do
           aEnableRen ae False
           aEnableDel ae False
   setupViewFocus abRef view aef
-    AB { aWithColl  = wc
+    AB { aWithColl  = withBuiltColl pf
        , aWithNames = const $ return ()
        , aSelection = Just sel
        }
@@ -138,31 +130,20 @@ mkPropFlt abRef ae popup prop coll = do
 
   return pf
 
-onPropsSelected pf f = do
-  let store = pStore pf
-      view  = pView pf
-  sel <- treeViewGetSelection view
-  let doit = do
-        rows <- treeSelectionGetSelectedRows sel
-        unless (null rows) $ do
-          vals <- mapM (listStoreGetValue store . head) rows
-          int  <- collNew TypeIntersection
-          collAddOperand int $ pColl pf
-          flt <- collParse $ mkFilterText (pProp pf) vals
-          collAddOperand int flt
-          f int
-  view `on` keyPressEvent $ tryEvent $ do
-    "Return" <- eventKeyName
-    []       <- eventModifier
-    liftIO doit
-  view `on` buttonPressEvent $ tryEvent $ do
-    LeftButton  <- eventButton
-    DoubleClick <- eventClick
-    (x, y)      <- eventCoordinates
-    liftIO $ do
-      Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
-      treeSelectionSelectPath sel p
-      doit
+instance CollBuilder PropFlt where
+  withBuiltColl pf f = do
+    let store = pStore pf
+        sel   = pSel pf
+    rows <- treeSelectionGetSelectedRows sel
+    unless (null rows) $ do
+      vals <- mapM (listStoreGetValue store . head) rows
+      int  <- collNew TypeIntersection
+      collAddOperand int $ pColl pf
+      flt <- collParse $ mkFilterText (pProp pf) vals
+      collAddOperand int flt
+      f int
+  treeViewSel pf = (pView pf, pSel pf)
+
 
 cond' [] = "'"
 cond' ('\'' : t) = '\\' : '\'' : cond' t

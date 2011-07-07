@@ -25,6 +25,8 @@ module Collection.Utils
   , saveCollection
   , renameCollection
   , deleteCollections
+  , CollBuilder (..)
+  , onCollBuilt
   ) where
 
 import Control.Applicative
@@ -121,3 +123,24 @@ runDlg title enable isOk init = do
   return $ case resp of
     ResponseOk -> Just new
     _          -> Nothing
+
+
+class CollBuilder b where
+  withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
+  treeViewSel   :: b -> (TreeView, TreeSelection)
+
+onCollBuilt b f = do
+  let (view, sel) = treeViewSel b
+  view `on` keyPressEvent $ tryEvent $ do
+    "Return" <- eventKeyName
+    []       <- eventModifier
+    liftIO $ withBuiltColl b f
+  view `on` buttonPressEvent $ tryEvent $ do
+    LeftButton  <- eventButton
+    DoubleClick <- eventClick
+    (x, y)      <- eventCoordinates
+    liftIO $ do
+      Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
+      treeSelectionSelectPath sel p
+      withBuiltColl b f
+

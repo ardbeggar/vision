@@ -34,6 +34,7 @@ import Utils
 import Collection.Tracks
 import Collection.PropFlt
 import Collection.Combo
+import Collection.Utils
 import Collection.ScrollBox hiding (sBox)
 
 
@@ -64,9 +65,9 @@ mkSelect abRef ae popup sbox cmod coll = do
       case sel of
         CISeparator -> return ()
         CITracks -> do
-          tv <- makeTrackView abRef ae popup
+          tv <- mkTrackView abRef ae popup coll
           writeIORef killS $ Just $ widgetDestroy $ tScroll tv
-          onTracksSelected tv $ \coll -> do
+          onCollBuilt tv $ \coll -> do
             maybeKill <- readIORef kill
             withJust maybeKill id
             sel <- mkSelect abRef ae popup sbox cmod coll
@@ -74,13 +75,11 @@ mkSelect abRef ae popup sbox cmod coll = do
             scrollBoxAdd sbox $ sBox sel
             widgetGrabFocus $ sCombo sel
           boxPackStartDefaults box $ tScroll tv
-          widgetShowAll $ tScroll tv
           widgetGrabFocus $ tView tv
-          loadTracks tv coll
         CIProp pr -> do
           pf <- mkPropFlt abRef ae popup pr coll
           writeIORef killS $ Just $ widgetDestroy $ pScroll pf
-          onPropsSelected pf $ \coll -> do
+          onCollBuilt pf $ \coll -> do
             maybeKill <- readIORef kill
             withJust maybeKill id
             sel <- mkSelect abRef ae popup sbox cmod coll
