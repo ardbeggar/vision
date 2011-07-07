@@ -24,6 +24,7 @@ module Collection.Utils
   , addToPlaylist
   , saveCollection
   , renameCollection
+  , deleteCollections
   ) where
 
 import Control.Applicative
@@ -71,6 +72,9 @@ renameCollection [old] = do
     collRename xmms old new "Collections"
     return ()
 renameCollection _ = return ()
+
+deleteCollections =
+  mapM_ (\name -> collRemove xmms name "Collections")
 
 runDlg title enable isOk init = do
   dialog <- dialogNew

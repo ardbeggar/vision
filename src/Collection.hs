@@ -84,6 +84,7 @@ browseCollection _maybeName = do
         , ("manage-properties", showPropertyManager)
         , ("save-collection", withColl $ saveCollection)
         , ("rename-collection", withNames $ renameCollection)
+        , ("delete-collections", withNames $ deleteCollections)
         ]
 
   lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
@@ -114,6 +115,7 @@ browseCollection _maybeName = do
       s <- S.mkSelect abRef vpopup sbox cmod coll
       writeIORef kill $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
+      writeIORef abRef emptyAB
       widgetGrabFocus $ S.sCombo s
     return ()
 

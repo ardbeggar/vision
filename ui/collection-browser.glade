@@ -81,8 +81,8 @@
           </object>
         </child>
         <child>
-          <object class="GtkAction" id="delete-collection">
-            <property name="label">_Delete collection</property>
+          <object class="GtkAction" id="delete-collections">
+            <property name="label">_Delete collections</property>
             <property name="stock_id">gtk-delete</property>
           </object>
         </child>
@@ -169,12 +169,12 @@
       <menubar name="menubar">
         <placeholder name="entries">
           <menu action="collection">
-            <menuitem action="save-collection"/>
-            <menuitem action="rename-collection"/>
-            <menuitem action="delete-collection"/>
-            <separator/>
             <menuitem action="add-to-playlist"/>
             <menuitem action="replace-playlist"/>
+            <separator/>
+            <menuitem action="save-collection"/>
+            <menuitem action="rename-collection"/>
+            <menuitem action="delete-collections"/>
             <separator/>
             <menuitem action="close"/>
             <menuitem action="quit"/>
@@ -214,6 +214,7 @@
         <separator/>
         <menuitem action="save-collection"/>
         <menuitem action="rename-collection"/>
+        <menuitem action="delete-collections"/>
       </popup>
       <popup action="view-popup">
         <menuitem action="add-to-playlist"/>
