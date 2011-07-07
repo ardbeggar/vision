@@ -117,35 +117,32 @@ browseCollection _maybeName = do
 
   lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
   vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
-  withListView abRef ae lpopup $ do
-    view <- listView
-    sbox <- liftIO $ mkScrollBox
-    cmod <- liftIO $ mkModel
-    kill <- getKill
-    liftIO $ do
-      box    <- builderGetObject builder castToVBox "views"
-      scroll <- scrolledWindowNew Nothing Nothing
-      scrolledWindowSetShadowType scroll ShadowNone
-      scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
-      boxPackStartDefaults box scroll
-      containerAdd scroll $ sViewport sbox
-      adj <- scrolledWindowGetHAdjustment scroll
-      adj `afterAdjChanged` do
-        max <- adjustmentGetUpper adj
-        pgs <- adjustmentGetPageSize adj
-        adjustmentSetValue adj $ max - pgs
-      scroll <- scrolledWindowNew Nothing Nothing
-      scrolledWindowSetShadowType scroll ShadowIn
-      scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
-      scrollBoxAdd sbox scroll
-      containerAdd scroll view
-    onListSelected $ \coll -> do
+
+  lv <- mkListView abRef ae lpopup
+  liftIO $ do
+    scroll <- scrolledWindowNew Nothing Nothing
+    scrolledWindowSetShadowType scroll ShadowNone
+    scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
+    adj <- scrolledWindowGetHAdjustment scroll
+    adj `afterAdjChanged` do
+      max <- adjustmentGetUpper adj
+      pgs <- adjustmentGetPageSize adj
+      adjustmentSetValue adj $ max - pgs
+
+    box <- builderGetObject builder castToVBox "views"
+    boxPackStartDefaults box scroll
+
+    sbox <- mkScrollBox
+    containerAdd scroll $ sViewport sbox
+    scrollBoxAdd sbox $ vScroll lv
+
+    cmod <- mkModel
+    onListSelected lv $ \coll -> do
       s <- S.mkSelect abRef ae vpopup sbox cmod coll
-      writeIORef kill $ Just $ S.killSelect s
+      writeIORef (vKill lv) $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
       writeIORef abRef emptyAB
       widgetGrabFocus $ S.sCombo s
-    return ()
 
-  liftIO $ widgetShowAll window
+    widgetShowAll window
 

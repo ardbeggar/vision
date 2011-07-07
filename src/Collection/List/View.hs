@@ -20,9 +20,8 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Collection.List.View
-  ( withListView
-  , listView
-  , getKill
+  ( ListView (..)
+  , mkListView
   , onListSelected
   ) where
 
@@ -36,7 +35,6 @@ import Control.Monad.ReaderX
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
-import Data.Typeable
 import Data.IORef
 import Data.Maybe
 
@@ -53,116 +51,117 @@ import Collection.Actions
 import Collection.Utils
 
 
-data Ix = Ix deriving (Typeable)
-instance Index Ix where getVal = Ix
+data ListView
+  = V { vView   :: TreeView
+      , vSel    :: TreeSelection
+      , vKill   :: IORef (Maybe (IO ()))
+      , vStore  :: ListStore (Maybe String)
+      , vScroll :: ScrolledWindow
+      }
 
-data View
-  = View { vView :: TreeView
-         , vSel  :: TreeSelection
-         , vKill :: IORef (Maybe (IO ()))
-         }
-  deriving (Typeable)
-
-listView = asksx Ix vView
-
-withListView abRef ae popup m = do
+mkListView abRef ae popup = do
   Just env <- getEnv modelEnv
-  runEnvT env $ do
-    store <- store
-    view  <- makeView abRef ae popup store
-    runEnvT (Ix, view) m
+  store    <- runEnvT env store
+  liftIO $ do
+    view <- treeViewNewWithModel store
+    treeViewSetHeadersVisible view False
+    treeViewSetRulesHint view True
 
-makeView abRef ae popup store = liftIO $ do
-  view <- treeViewNewWithModel store
-  treeViewSetHeadersVisible view False
+    sel <- treeViewGetSelection view
+    treeSelectionSetMode sel SelectionMultiple
+    setupTreeViewPopup view popup
 
-  column <- treeViewColumnNew
-  treeViewAppendColumn view column
-  cell <- cellRendererTextNew
-  treeViewColumnPackStart column cell True
-  cellLayoutSetAttributes column cell store $ \n ->
-    case n of
-      Nothing ->
-        [ cellText := "All Media", cellTextWeight := 800 ]
-      Just cn ->
-        [ cellText := cn, cellTextWeightSet := False ]
+    scroll <- scrolledWindowNew Nothing Nothing
+    scrolledWindowSetShadowType scroll ShadowIn
+    scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
+    containerAdd scroll view
 
-  treeViewSetEnableSearch view True
-  treeViewSetSearchEqualFunc view . Just $ \str iter ->
-    maybe False (isInfixOf (map toLower str) . map toLower) <$>
+    column <- treeViewColumnNew
+    treeViewAppendColumn view column
+    cell <- cellRendererTextNew
+    treeViewColumnPackStart column cell True
+    cellLayoutSetAttributes column cell store $ \n ->
+      case n of
+        Nothing ->
+          [ cellText := "All Media", cellTextWeight := 800 ]
+        Just cn ->
+          [ cellText := cn, cellTextWeightSet := False ]
+
+    treeViewSetEnableSearch view True
+    treeViewSetSearchEqualFunc view . Just $ \str iter ->
+      maybe False (isInfixOf (map toLower str) . map toLower) <$>
       (listStoreGetValue store $ listStoreIterToIndex iter)
 
-  sel <- treeViewGetSelection view
-  treeSelectionSetMode sel SelectionMultiple
-
-  treeViewSetRulesHint view True
-  setupTreeViewPopup view popup
-
-  let wn f = do
-        rows <- treeSelectionGetSelectedRows sel
-        unless (null rows) $ do
-          names <- mapM (listStoreGetValue store . head) rows
-          f $ map fromJust $ filter isJust names
-      wc f = do
-        rows <- treeSelectionGetSelectedRows sel
-        unless (null rows) $ do
-          names <- mapM (listStoreGetValue store . head) rows
-          withColl f names
-      aef = do
-        foc <- view `get` widgetHasFocus
-        when foc $ do
-          rows <- treeSelectionGetSelectedRows sel
-          aEnableSel ae $ not $ null rows
-          aEnableDel ae $ not $ null rows
-          aEnableRen ae $ case rows of
-            [_] -> True
-            _   -> False
-  setupViewFocus abRef view aef
-    AB { aWithColl  = wc
-       , aWithNames = wn
-       , aSelection = Just sel
-       }
-  sel `on` treeSelectionSelectionChanged $ aef
-
-  kill <- newIORef Nothing
-
-  xcW <- atomically $ newTGWatch connectedV
-  tid <- forkIO $ forever $ do
-    void $ atomically $ watch xcW
-    postGUISync $ do
-      maybeKill <- readIORef kill
-      withJust maybeKill id
-      writeIORef kill Nothing
-  view `onDestroy` (killThread tid)
-
-  return View { vView = view, vSel = sel, vKill = kill }
-
-onListSelected f = do
-  sel   <- asksx Ix vSel
-  view  <- asksx Ix vView
-  kill  <- asksx Ix vKill
-  store <- store
-  liftIO $ do
-    let doit = do
+    let wn f = do
           rows <- treeSelectionGetSelectedRows sel
           unless (null rows) $ do
-            maybeKill <- readIORef kill
-            withJust maybeKill $ \kill -> kill
-            writeIORef kill Nothing
+            names <- mapM (listStoreGetValue store . head) rows
+            f $ map fromJust $ filter isJust names
+        wc f = do
+          rows <- treeSelectionGetSelectedRows sel
+          unless (null rows) $ do
             names <- mapM (listStoreGetValue store . head) rows
             withColl f names
-    view `on` keyPressEvent $ tryEvent $ do
-      "Return" <- eventKeyName
-      []       <- eventModifier
-      liftIO doit
-    view `on` buttonPressEvent $ tryEvent $ do
-      LeftButton  <- eventButton
-      DoubleClick <- eventClick
-      (x, y)      <- eventCoordinates
-      liftIO $ do
-        Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
-        treeSelectionSelectPath sel p
-        doit
+        aef = do
+          foc <- view `get` widgetHasFocus
+          when foc $ do
+            rows <- treeSelectionGetSelectedRows sel
+            aEnableSel ae $ not $ null rows
+            aEnableDel ae $ not $ null rows
+            aEnableRen ae $ case rows of
+              [_] -> True
+              _   -> False
+    setupViewFocus abRef view aef
+      AB { aWithColl  = wc
+         , aWithNames = wn
+         , aSelection = Just sel
+         }
+    sel `on` treeSelectionSelectionChanged $ aef
+
+    kill <- newIORef Nothing
+
+    xcW <- atomically $ newTGWatch connectedV
+    tid <- forkIO $ forever $ do
+      void $ atomically $ watch xcW
+      postGUISync $ do
+        maybeKill <- readIORef kill
+        withJust maybeKill id
+        writeIORef kill Nothing
+    view `onDestroy` (killThread tid)
+
+    widgetShowAll scroll
+    return V { vView   = view
+             , vSel    = sel
+             , vKill   = kill
+             , vStore  = store
+             , vScroll = scroll
+             }
+
+onListSelected lv f = do
+  let sel   = vSel lv
+      view  = vView lv
+      kill  = vKill lv
+      store = vStore lv
+      doit = do
+        rows <- treeSelectionGetSelectedRows sel
+        unless (null rows) $ do
+          maybeKill <- readIORef kill
+          withJust maybeKill id
+          writeIORef kill Nothing
+          names <- mapM (listStoreGetValue store . head) rows
+          withColl f names
+  view `on` keyPressEvent $ tryEvent $ do
+    "Return" <- eventKeyName
+    []       <- eventModifier
+    liftIO doit
+  view `on` buttonPressEvent $ tryEvent $ do
+    LeftButton  <- eventButton
+    DoubleClick <- eventClick
+    (x, y)      <- eventCoordinates
+    liftIO $ do
+      Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
+      treeSelectionSelectPath sel p
+      doit
 
 withColl f list = do
   if Nothing `elem` list
@@ -180,5 +179,3 @@ withUni f uni ((Just name) : names) =
     liftIO $ do
       collAddOperand uni coll
       withUni f uni names
-
-getKill = asksx Ix vKill
