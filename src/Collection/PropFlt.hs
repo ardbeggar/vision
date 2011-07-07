@@ -29,8 +29,6 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Data.IORef
-import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.List (intercalate)
 
 import Graphics.UI.Gtk
@@ -48,7 +46,6 @@ data PropFlt
   = PF { pStore  :: ListStore String
        , pView   :: TreeView
        , pScroll :: ScrolledWindow
-       , pSetRef :: IORef (Set String)
        , pColl   :: Coll
        , pProp   :: Property
        }
@@ -72,8 +69,6 @@ mkPropFlt abRef prop coll = do
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
   widgetShowAll scroll
-
-  setRef <- newIORef Set.empty
 
   fcoll <- collNew TypeIntersection
   collAddOperand fcoll coll
@@ -102,7 +97,6 @@ mkPropFlt abRef prop coll = do
   let pf = PF { pStore  = store
               , pView   = view
               , pScroll = scroll
-              , pSetRef = setRef
               , pColl   = fcoll
               , pProp   = prop
               }
