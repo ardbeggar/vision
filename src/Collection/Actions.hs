@@ -24,15 +24,15 @@ module Collection.Actions
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client
+
 
 data ActionBackend
-  = AB { aAdd       :: IO ()
-       , aReplace   :: IO ()
+  = AB { aWithColl  :: (Coll -> IO ()) -> IO ()
        , aSelection :: Maybe TreeSelection
        }
 
 emptyAB =
-  AB { aAdd       = return ()
-     , aReplace   = return ()
+  AB { aWithColl  = const $ return ()
      , aSelection = Nothing
      }

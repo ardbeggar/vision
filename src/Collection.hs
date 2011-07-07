@@ -48,15 +48,15 @@ browseCollection _maybeName = do
   let ?context = context
 
   abRef <- liftIO $ newIORef emptyAB
-  let abFunc f = do
+  let withColl f = do
         ab <- readIORef abRef
-        f ab
+        aWithColl ab f
       withSel f = do
         ab <- readIORef abRef
         withJust (aSelection ab) f
   liftIO $ bindActions builder $
-    [ ("add-to-playlist", abFunc aAdd)
-    , ("replace-playlist", abFunc aReplace)
+    [ ("add-to-playlist", withColl $ addToPlaylist False)
+    , ("replace-playlist", withColl $ addToPlaylist True)
     , ("select-all", withSel selectAll)
     , ("invert-selection", withSel invertSelection)
     ]

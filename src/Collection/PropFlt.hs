@@ -113,7 +113,7 @@ mkPropFlt abRef popup prop coll = do
               , pColl   = fcoll
               , pProp   = prop
               }
-      doAdd replace = do
+      wc f = do
         rows <- treeSelectionGetSelectedRows sel
         unless (null rows) $ do
           vals <- mapM (listStoreGetValue store . head) rows
@@ -121,11 +121,9 @@ mkPropFlt abRef popup prop coll = do
           collAddOperand int $ pColl pf
           flt <- collParse $ mkFilterText (pProp pf) vals
           collAddOperand int flt
-          addToPlaylist replace int
-
+          f int
   setupViewFocus abRef view
-    AB { aAdd = doAdd False
-       , aReplace = doAdd True
+    AB { aWithColl  = wc
        , aSelection = Just sel
        }
 

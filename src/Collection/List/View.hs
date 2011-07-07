@@ -93,15 +93,13 @@ makeView abRef popup store = liftIO $ do
   treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
-  let doAdd replace = do
+  let wc f = do
         rows <- treeSelectionGetSelectedRows sel
         unless (null rows) $ do
           names <- mapM (listStoreGetValue store . head) rows
-          withColl (addToPlaylist replace) names
-
+          withColl f names
   setupViewFocus abRef view
-    AB { aAdd       = doAdd False
-       , aReplace   = doAdd True
+    AB { aWithColl = wc
        , aSelection = Just sel
        }
 
