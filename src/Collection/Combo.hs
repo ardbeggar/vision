@@ -20,6 +20,7 @@
 module Collection.Combo
   ( mkModel
   , mkCombo
+  , ComboItem (..)
   ) where
 
 import Graphics.UI.Gtk
@@ -28,20 +29,31 @@ import Properties.Model
 import Properties.Property
 
 
+data ComboItem
+  = CIProp Property
+  | CITracks
+  | CISeparator
+
+separator CISeparator = True
+separator _           = False
+
 mkModel = do
   props <- getProperties
-  listStoreNewDND (Nothing : map Just props) Nothing Nothing
+  store <- listStoreNewDND (map CIProp props) Nothing Nothing
+  listStoreAppend store CISeparator
+  listStoreAppend store CITracks
+  return store
 
 mkCombo cmod = do
   combo <- comboBoxNewWithModel cmod
+  comboBoxSetRowSeparatorSource combo $ Just (cmod, separator)
 
   cell <- cellRendererTextNew
   cellLayoutPackStart combo cell True
   cellLayoutSetAttributes combo cell cmod $ \p ->
     case p of
-      Nothing ->
-        [ cellText := "Tracks", cellTextWeight := 800 ]
-      Just sp ->
-        [ cellText := propName sp, cellTextWeightSet := False ]
+      CITracks    -> [ cellText := "Tracks" ]
+      CIProp p    -> [ cellText := propName p ]
+      CISeparator -> []
 
   return combo

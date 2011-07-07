@@ -62,7 +62,7 @@ mkSelect abRef sbox cmod coll = do
       writeIORef kill Nothing
       sel <- listStoreGetValue cmod $ listStoreIterToIndex iter
       case sel of
-        Nothing -> do
+        CITracks -> do
           tv <- makeTrackView abRef
           writeIORef killS $ Just $ widgetDestroy $ tScroll tv
           onTracksSelected tv $ \coll -> do
@@ -76,7 +76,7 @@ mkSelect abRef sbox cmod coll = do
           widgetShowAll $ tScroll tv
           widgetGrabFocus $ tView tv
           loadTracks tv coll
-        Just pr -> do
+        CIProp pr -> do
           pf <- mkPropFlt abRef pr coll
           writeIORef killS $ Just $ widgetDestroy $ pScroll pf
           onPropsSelected pf $ \coll -> do
