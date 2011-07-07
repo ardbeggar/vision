@@ -16,7 +16,6 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Collection.List.View
