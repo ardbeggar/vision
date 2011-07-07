@@ -40,6 +40,7 @@ import qualified XMMS2.Client as X
 import Properties hiding (lookup)
 import XMMS
 import Utils
+import Compound
 
 import Collection.Actions
 import Collection.Utils
@@ -143,6 +144,14 @@ instance CollBuilder PropFlt where
       collAddOperand int flt
       f int
   treeViewSel pf = (pView pf, pSel pf)
+
+instance CompoundWidget PropFlt where
+  type Outer PropFlt = ScrolledWindow
+  outer = pScroll
+
+instance FocusChild PropFlt where
+  type Focus PropFlt = TreeView
+  focus = pView
 
 
 cond' [] = "'"

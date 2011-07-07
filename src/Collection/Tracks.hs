@@ -43,6 +43,7 @@ import Config
 import Index hiding (getInfo)
 import qualified Index
 import Medialib
+import Compound
 
 import Collection.Actions
 import Collection.Utils
@@ -183,3 +184,11 @@ populateModel tv ids = do
           addToIndex index id n
         store = tStore tv
         index = tIndex tv
+
+instance CompoundWidget TrackView where
+  type Outer TrackView = ScrolledWindow
+  outer = tScroll
+
+instance FocusChild TrackView where
+  type Focus TrackView = TreeView
+  focus = tView

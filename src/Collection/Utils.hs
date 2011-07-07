@@ -27,6 +27,7 @@ module Collection.Utils
   , deleteCollections
   , CollBuilder (..)
   , onCollBuilt
+  , FocusChild (..)
   ) where
 
 import Control.Applicative
@@ -144,3 +145,6 @@ onCollBuilt b f = do
       treeSelectionSelectPath sel p
       withBuiltColl b f
 
+class FocusChild f where
+  type Focus f
+  focus :: f -> Focus f

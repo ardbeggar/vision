@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE NoMonoLocalBinds #-}
+
 module Collection.Select
   ( Select (..)
   , mkSelect
@@ -25,11 +27,12 @@ module Collection.Select
 
 import Data.IORef
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (focus)
 
 import XMMS2.Client
 
 import Utils
+import Compound
 
 import Collection.Tracks
 import Collection.PropFlt
@@ -53,6 +56,18 @@ mkSelect abRef ae popup sbox cmod coll = do
   combo <- mkCombo abRef ae cmod
   boxPackStart box combo PackNatural 0
 
+  let setup w = do
+        writeIORef killS $ Just $ widgetDestroy $ outer w
+        onCollBuilt w $ \coll -> do
+          maybeKill <- readIORef kill
+          withJust maybeKill id
+          sel <- mkSelect abRef ae popup sbox cmod coll
+          writeIORef kill $ Just $ killSelect sel
+          scrollBoxAdd sbox $ sBox sel
+          widgetGrabFocus $ sCombo sel
+        boxPackStartDefaults box $ outer w
+        widgetGrabFocus $ focus w
+
   combo `on` changed $ do
     iter <- comboBoxGetActiveIter combo
     withJust iter $ \iter -> do
@@ -61,33 +76,11 @@ mkSelect abRef ae popup sbox cmod coll = do
       maybeKill <- readIORef kill
       withJust maybeKill id
       writeIORef kill Nothing
-      sel <- listStoreGetValue cmod $ listStoreIterToIndex iter
-      case sel of
+      cur <- listStoreGetValue cmod $ listStoreIterToIndex iter
+      case cur of
+        CITracks    -> setup =<< mkTrackView abRef ae popup coll
+        CIProp pr   -> setup =<< mkPropFlt abRef ae popup pr coll
         CISeparator -> return ()
-        CITracks -> do
-          tv <- mkTrackView abRef ae popup coll
-          writeIORef killS $ Just $ widgetDestroy $ tScroll tv
-          onCollBuilt tv $ \coll -> do
-            maybeKill <- readIORef kill
-            withJust maybeKill id
-            sel <- mkSelect abRef ae popup sbox cmod coll
-            writeIORef kill $ Just $ killSelect sel
-            scrollBoxAdd sbox $ sBox sel
-            widgetGrabFocus $ sCombo sel
-          boxPackStartDefaults box $ tScroll tv
-          widgetGrabFocus $ tView tv
-        CIProp pr -> do
-          pf <- mkPropFlt abRef ae popup pr coll
-          writeIORef killS $ Just $ widgetDestroy $ pScroll pf
-          onCollBuilt pf $ \coll -> do
-            maybeKill <- readIORef kill
-            withJust maybeKill id
-            sel <- mkSelect abRef ae popup sbox cmod coll
-            writeIORef kill $ Just $ killSelect sel
-            scrollBoxAdd sbox $ sBox sel
-            widgetGrabFocus $ sCombo sel
-          boxPackStartDefaults box $ pScroll pf
-          widgetGrabFocus $ pView pf
 
   widgetShowAll box
   return S { sCombo = combo
