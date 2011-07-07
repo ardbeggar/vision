@@ -32,20 +32,21 @@ import Control.Monad.Trans
 import Data.IORef
 import Data.List (intercalate, isInfixOf)
 import Data.Char (toLower)
+import Data.Map (lookup)
 
 import Graphics.UI.Gtk
 
 import XMMS2.Client hiding (Property)
+import qualified XMMS2.Client as X
 
-import Properties
+import Properties hiding (lookup)
 import XMMS
-import Utils
 
 import Collection.Actions
 
 
 data PropFlt
-  = PF { pStore  :: ListStore String
+  = PF { pStore  :: ListStore X.Property
        , pView   :: TreeView
        , pScroll :: ScrolledWindow
        , pColl   :: Coll
@@ -64,8 +65,8 @@ mkPropFlt abRef prop coll = do
   treeViewAppendColumn view column
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
-  cellLayoutSetAttributes column cell store $ \n ->
-    [ cellText := n ]
+  cellLayoutSetAttributes column cell store $ \p ->
+    [ cellText := showValue prop p ]
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
@@ -74,7 +75,7 @@ mkPropFlt abRef prop coll = do
 
   treeViewSetEnableSearch view True
   treeViewSetSearchEqualFunc view . Just $ \str iter ->
-    (isInfixOf (map toLower str) . map toLower) <$>
+    (isInfixOf (map toLower str) . map toLower . showValue prop) <$>
     (listStoreGetValue store $ listStoreIterToIndex iter)
 
   fcoll <- collNew TypeIntersection
@@ -85,7 +86,7 @@ mkPropFlt abRef prop coll = do
   let key = propKey prop
       addLine v [] = return v
       addLine v (p : ps) =
-        case lookup prop p of
+        case lookup key p of
           Just s | v == s    -> addLine v ps
                  | otherwise -> do
                    listStoreAppend store s
@@ -99,7 +100,7 @@ mkPropFlt abRef prop coll = do
             v' <- addLine v lst
             when (len == 100) $
               getInfos (s + 100) v'
-  getInfos 0 ""
+  getInfos 0 (PropString "")
 
   let pf = PF { pStore  = store
               , pView   = view
@@ -158,9 +159,10 @@ cond' ('\'' : t) = '\\' : '\'' : cond' t
 cond' ('\\' : t) = '\\' : '\\' : cond' t
 cond' (h : t) = h : cond' t
 
-cond prop val
-  | propKey prop == "url" = "url:'" ++ encodeURL val ++ "'"
-  | otherwise             = propKey prop ++ ":\'" ++ cond' val
+cond prop (PropString s)
+  | propKey prop == "url" = "url:'" ++ s ++ "'"
+  | otherwise             = propKey prop ++ ":'" ++ cond' s
+cond prop (PropInt32 i)   = propKey prop ++ ":" ++ show i
 
 mkFilterText prop vals =
   intercalate " OR " $ map (cond prop) vals
