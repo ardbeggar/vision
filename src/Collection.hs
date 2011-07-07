@@ -76,6 +76,9 @@ browseCollection _maybeName = do
         , ("invert-selection", withSel invertSelection)
         , ("copy", withIds (run . copyIds))
         , ("edit-properties", withIds showPropertyEditor)
+        , ("export-properties", withIds showPropertyExport)
+        , ("import-properties", showPropertyImport)
+        , ("manage-properties", showPropertyManager)
         ]
 
   popup <- liftIO $ getWidget castToMenu "ui/view-popup"
