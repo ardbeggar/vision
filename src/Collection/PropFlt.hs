@@ -25,11 +25,13 @@ module Collection.PropFlt
 
 import Prelude hiding (lookup)
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
 import Data.IORef
-import Data.List (intercalate)
+import Data.List (intercalate, isInfixOf)
+import Data.Char (toLower)
 
 import Graphics.UI.Gtk
 
@@ -69,6 +71,11 @@ mkPropFlt abRef prop coll = do
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
   widgetShowAll scroll
+
+  treeViewSetEnableSearch view True
+  treeViewSetSearchEqualFunc view . Just $ \str iter ->
+    (isInfixOf (map toLower str) . map toLower) <$>
+    (listStoreGetValue store $ listStoreIterToIndex iter)
 
   fcoll <- collNew TypeIntersection
   collAddOperand fcoll coll
