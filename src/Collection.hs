@@ -54,7 +54,7 @@ browseCollection _maybeName = do
     , ("replace-playlist", abFunc aReplace)
     ]
 
-  withListView $ do
+  withListView abRef $ do
     view <- listView
     sbox <- liftIO $ mkScrollBox
     cmod <- liftIO $ mkModel

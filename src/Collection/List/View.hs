@@ -44,6 +44,7 @@ import XMMS
 import Utils
 
 import Collection.List.Model
+import Collection.Actions
 
 
 data Ix = Ix deriving (Typeable)
@@ -58,14 +59,14 @@ data View
 
 listView = asksx Ix vView
 
-withListView m = do
+withListView abRef m = do
   Just env <- getEnv modelEnv
   runEnvT env $ do
     store <- store
-    view  <- makeView store
+    view  <- makeView abRef store
     runEnvT (Ix, view) m
 
-makeView store = liftIO $ do
+makeView abRef store = liftIO $ do
   view <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
 
@@ -87,6 +88,16 @@ makeView store = liftIO $ do
 
   sel <- treeViewGetSelection view
   treeSelectionSetMode sel SelectionMultiple
+
+  let doAdd replace = do
+        rows <- treeSelectionGetSelectedRows sel
+        unless (null rows) $ do
+          names <- mapM (listStoreGetValue store . head) rows
+          withColl (addToPlaylist replace) names
+
+  view `on` focusInEvent $ liftIO $ do
+    writeIORef abRef AB { aAdd = doAdd False, aReplace = doAdd True }
+    return False
 
   kill <- newIORef Nothing
 
@@ -137,3 +148,8 @@ withUni f uni ((Just name) : names) =
       withUni f uni names
 
 getKill = asksx Ix vKill
+
+addToPlaylist replace coll = do
+  when replace $ playlistClear xmms Nothing >> return ()
+  playlistAddCollection xmms Nothing coll []
+  return ()
