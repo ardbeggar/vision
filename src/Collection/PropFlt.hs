@@ -29,7 +29,6 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
-import Data.IORef
 import Data.List (intercalate, isInfixOf)
 import Data.Char (toLower)
 import Data.Map (lookup)
@@ -44,6 +43,7 @@ import XMMS
 import Utils
 
 import Collection.Actions
+import Collection.Utils
 
 
 data PropFlt
@@ -123,13 +123,11 @@ mkPropFlt abRef popup prop coll = do
           collAddOperand int flt
           addToPlaylist replace int
 
-  view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef
-      AB { aAdd = doAdd False
-         , aReplace = doAdd True
-         , aSelection = Just sel
-         }
-    return False
+  setupViewFocus abRef view
+    AB { aAdd = doAdd False
+       , aReplace = doAdd True
+       , aSelection = Just sel
+       }
 
   return pf
 

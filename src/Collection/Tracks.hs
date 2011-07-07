@@ -38,7 +38,6 @@ import Control.Monad.Trans
 import Data.Char
 import Data.List hiding (lookup)
 import Data.Maybe
-import Data.IORef
 
 import Graphics.UI.Gtk
 
@@ -53,6 +52,7 @@ import qualified Index
 import Medialib
 
 import Collection.Actions
+import Collection.Utils
 
 
 data TrackView
@@ -97,13 +97,11 @@ setupView abRef popup tv = do
           sel <- collNewIdlist ids
           addToPlaylist replace sel
 
-  view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef
-      AB { aAdd       = doAdd False
-         , aReplace   = doAdd True
-         , aSelection = Just sel
-         }
-    return False
+  setupViewFocus abRef view
+    AB { aAdd       = doAdd False
+       , aReplace   = doAdd True
+       , aSelection = Just sel
+       }
 
   setColumns tv False =<< loadConfig
 

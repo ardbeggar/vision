@@ -20,9 +20,16 @@
 module Collection.Utils
   ( selectAll
   , invertSelection
+  , setupViewFocus
   ) where
 
+import Control.Monad.Trans
+
+import Data.IORef
+
 import Graphics.UI.Gtk hiding (selectAll)
+
+import Collection.Actions
 
 
 selectAll =
@@ -33,3 +40,10 @@ invertSelection sel = do
   treeSelectionSelectAll sel
   mapM_ (treeSelectionUnselectPath sel) rows
 
+setupViewFocus abRef view ab = do
+  view `on` focusInEvent $ liftIO $ do
+    writeIORef abRef ab
+    return False
+  view `on` focusOutEvent $ liftIO $ do
+    writeIORef abRef emptyAB
+    return False

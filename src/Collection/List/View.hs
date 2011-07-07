@@ -45,6 +45,7 @@ import Utils
 
 import Collection.List.Model
 import Collection.Actions
+import Collection.Utils
 
 
 data Ix = Ix deriving (Typeable)
@@ -98,13 +99,11 @@ makeView abRef popup store = liftIO $ do
           names <- mapM (listStoreGetValue store . head) rows
           withColl (addToPlaylist replace) names
 
-  view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef
-      AB { aAdd       = doAdd False
-         , aReplace   = doAdd True
-         , aSelection = Just sel
-         }
-    return False
+  setupViewFocus abRef view
+    AB { aAdd       = doAdd False
+       , aReplace   = doAdd True
+       , aSelection = Just sel
+       }
 
   kill <- newIORef Nothing
 
