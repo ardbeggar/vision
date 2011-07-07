@@ -95,7 +95,11 @@ setupView abRef tv = do
           addToPlaylist replace sel
 
   view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef AB { aAdd = doAdd False, aReplace = doAdd True }
+    writeIORef abRef
+      AB { aAdd       = doAdd False
+         , aReplace   = doAdd True
+         , aSelection = Just sel
+         }
     return False
 
   setColumns tv False =<< loadConfig

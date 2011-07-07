@@ -111,7 +111,11 @@ mkPropFlt abRef prop coll = do
           addToPlaylist replace int
 
   view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef AB { aAdd = doAdd False, aReplace = doAdd True }
+    writeIORef abRef
+      AB { aAdd = doAdd False
+         , aReplace = doAdd True
+         , aSelection = Just sel
+         }
     return False
 
   return pf

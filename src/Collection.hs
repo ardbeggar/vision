@@ -26,15 +26,17 @@ import Control.Monad.Trans
 
 import Data.IORef
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (selectAll)
 
 import UI
+import Utils
 
 import Collection.List
 import Collection.ScrollBox
 import Collection.Combo
 import qualified Collection.Select as S
 import Collection.Actions
+import Collection.Utils
 
 
 initCollection =
@@ -49,9 +51,14 @@ browseCollection _maybeName = do
   let abFunc f = do
         ab <- readIORef abRef
         f ab
+      withSel f = do
+        ab <- readIORef abRef
+        withJust (aSelection ab) f
   liftIO $ bindActions builder $
     [ ("add-to-playlist", abFunc aAdd)
     , ("replace-playlist", abFunc aReplace)
+    , ("select-all", withSel selectAll)
+    , ("invert-selection", withSel invertSelection)
     ]
 
   withListView abRef $ do
@@ -82,3 +89,4 @@ browseCollection _maybeName = do
     return ()
 
   liftIO $ widgetShowAll window
+

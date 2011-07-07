@@ -17,22 +17,19 @@
 --  General Public License for more details.
 --
 
-module Collection.Actions
-  ( ActionBackend (..)
-  , emptyAB
+module Collection.Utils
+  ( selectAll
+  , invertSelection
   ) where
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (selectAll)
 
 
-data ActionBackend
-  = AB { aAdd       :: IO ()
-       , aReplace   :: IO ()
-       , aSelection :: Maybe TreeSelection
-       }
+selectAll =
+  treeSelectionSelectAll
 
-emptyAB =
-  AB { aAdd       = return ()
-     , aReplace   = return ()
-     , aSelection = Nothing
-     }
+invertSelection sel = do
+  rows <- treeSelectionGetSelectedRows sel
+  treeSelectionSelectAll sel
+  mapM_ (treeSelectionUnselectPath sel) rows
+

@@ -96,7 +96,11 @@ makeView abRef store = liftIO $ do
           withColl (addToPlaylist replace) names
 
   view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef AB { aAdd = doAdd False, aReplace = doAdd True }
+    writeIORef abRef
+      AB { aAdd       = doAdd False
+         , aReplace   = doAdd True
+         , aSelection = Just sel
+         }
     return False
 
   kill <- newIORef Nothing

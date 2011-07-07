@@ -62,6 +62,7 @@ mkSelect abRef sbox cmod coll = do
       writeIORef kill Nothing
       sel <- listStoreGetValue cmod $ listStoreIterToIndex iter
       case sel of
+        CISeparator -> return ()
         CITracks -> do
           tv <- makeTrackView abRef
           writeIORef killS $ Just $ widgetDestroy $ tScroll tv

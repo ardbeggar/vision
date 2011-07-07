@@ -81,6 +81,7 @@ executable vision
                     Collection.Tracks,
                     Collection.Combo,
                     Collection.Select,
+                    Collection.Utils,
                     Collection.Common,
                     Collection.Model,
                     Collection.View,
