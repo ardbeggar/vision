@@ -36,6 +36,7 @@ import Utils
 import Clipboard
 import Context
 import XMMS
+import Properties
 
 import Collection.List
 import Collection.ScrollBox
@@ -74,6 +75,7 @@ browseCollection _maybeName = do
         , ("select-all", withSel selectAll)
         , ("invert-selection", withSel invertSelection)
         , ("copy", withIds (run . copyIds))
+        , ("edit-properties", withIds showPropertyEditor)
         ]
 
   popup <- liftIO $ getWidget castToMenu "ui/view-popup"
