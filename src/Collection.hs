@@ -79,6 +79,7 @@ browseCollection _maybeName = do
         , ("export-properties", withIds showPropertyExport)
         , ("import-properties", showPropertyImport)
         , ("manage-properties", showPropertyManager)
+        , ("save-collection", withColl $ saveCollection)
         ]
 
   popup <- liftIO $ getWidget castToMenu "ui/view-popup"

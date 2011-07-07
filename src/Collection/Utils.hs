@@ -22,8 +22,10 @@ module Collection.Utils
   , invertSelection
   , setupViewFocus
   , addToPlaylist
+  , saveCollection
   ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
@@ -34,6 +36,8 @@ import Graphics.UI.Gtk hiding (selectAll)
 import XMMS2.Client
 
 import XMMS
+import Utils
+import UI
 
 
 selectAll =
@@ -53,3 +57,54 @@ addToPlaylist replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()
   playlistAddCollection xmms Nothing coll []
   return ()
+
+saveCollection coll = do
+  res  <- runDlg "Save collection" False (const True) ""
+  withJust res $ \name -> do
+    collSave xmms coll name "Collections"
+    return ()
+
+runDlg title enable isOk init = do
+  dialog <- dialogNew
+  windowSetTitle dialog title
+  windowSetTransientFor dialog window
+  windowSetModal dialog True
+  windowGroupAddWindow windowGroup dialog
+
+  dialogSetHasSeparator dialog False
+  dialogAddButton dialog "gtk-cancel" ResponseCancel
+  dialogAddButtonCR dialog "gtk-ok" ResponseOk
+  dialogSetDefaultResponse dialog ResponseOk
+  dialogSetResponseSensitive dialog ResponseOk enable
+
+  box <- vBoxNew False 0
+  containerSetBorderWidth box 7
+  upper <- dialogGetUpper dialog
+  containerAdd upper box
+
+  entry <- entryNew
+  entrySetText entry init
+  editableSelectRegion entry 0 (-1)
+  editableSetPosition entry (-1)
+  boxPackStart box entry PackNatural 0
+
+  let ok = do
+        new <- trim <$> entryGetText entry
+        return $ not (null new) && isOk new
+      check = dialogSetResponseSensitive dialog ResponseOk =<< ok
+      checkInsert str pos = check >> return (length str + pos)
+      checkDelete _ _     = check
+  entry `onEntryActivate` do
+    ok <- ok
+    when ok $ dialogResponse dialog ResponseOk
+  entry `afterInsertText` checkInsert
+  entry `afterDeleteText` checkDelete
+
+  widgetShowAll dialog
+  resp <- dialogRun dialog
+  new  <- trim <$> entryGetText entry
+  widgetDestroy dialog
+
+  return $ case resp of
+    ResponseOk -> Just new
+    _          -> Nothing
