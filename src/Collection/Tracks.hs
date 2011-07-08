@@ -119,6 +119,8 @@ setupView env tv = do
        }
   sel `on` treeSelectionSelectionChanged $ aef
 
+  view `onDestroy` (killIndex $ tIndex tv)
+
   setColumns tv False =<< loadConfig
   widgetShowAll $ tScroll tv
 
