@@ -71,7 +71,6 @@ mkSelect env coll = do
   combo `on` changed $ do
     iter <- comboBoxGetActiveIter combo
     withJust iter $ \iter -> do
-      killNext s
       cur <- listStoreGetValue (eCModel env) $ listStoreIterToIndex iter
       case cur of
         CITracks    -> setup =<< mkTrackView env coll

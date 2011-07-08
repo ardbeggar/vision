@@ -143,7 +143,6 @@ class CollBuilder b where
 onCollBuilt env b f = do
   let (view, sel) = treeViewSel b
       doit = withBuiltColl b $ \c -> do
-        killNext b
         n <- f c
         setNext b n
         addView env n
@@ -188,5 +187,6 @@ killNext vi = do
     _     -> return ()
 
 setNext :: (ViewItem t, ViewItem n, Killable n) => t -> n -> IO ()
-setNext t n =
+setNext t n = do
+  killNext t
   writeIORef (nextVIRef t) $ VI n
