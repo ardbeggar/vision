@@ -64,11 +64,7 @@ mkSelect env coll = do
 
   let setup w = do
         setNext s w
-        onCollBuilt w $ \coll -> do
-          s <- mkSelect env coll
-          killNext w
-          setNext w s
-          addView env s
+        onCollBuilt env w $ mkSelect env
         boxPackStartDefaults box $ outer w
         widgetGrabFocus $ focus w
 

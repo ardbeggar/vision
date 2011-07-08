@@ -29,7 +29,6 @@ module Collection.Utils
   , deleteCollections
   , CollBuilder (..)
   , onCollBuilt
-  , FocusChild (..)
   , ViewItem (..)
   , VI (..)
   , Killable (..)
@@ -52,6 +51,8 @@ import XMMS
 import Utils
 import UI
 import Compound
+
+import Collection.Common
 
 
 selectAll =
@@ -139,9 +140,13 @@ class CollBuilder b where
   withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
 
-onCollBuilt b f = do
+onCollBuilt env b f = do
   let (view, sel) = treeViewSel b
-      doit = withBuiltColl b $ \c -> killNext b >> f c
+      doit = withBuiltColl b $ \c -> do
+        killNext b
+        n <- f c
+        setNext b n
+        addView env n
   view `on` keyPressEvent $ tryEvent $ do
     "Return" <- eventKeyName
     []       <- eventModifier
@@ -154,10 +159,6 @@ onCollBuilt b f = do
       Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
       treeSelectionSelectPath sel p
       doit
-
-class FocusChild f where
-  type Focus f
-  focus :: f -> Focus f
 
 class ViewItem i where
   nextVIRef :: i -> IORef VI

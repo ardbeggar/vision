@@ -25,6 +25,7 @@ module Collection.Common
   , envWithSel
   , envWithNames
   , addView
+  , FocusChild (..)
   ) where
 
 import Control.Monad.Trans
@@ -42,7 +43,6 @@ import Compound
 
 import Collection.Actions
 import Collection.ScrollBox
-import Collection.Utils
 import Collection.ComboModel
 
 
@@ -103,3 +103,8 @@ envWithNames env f = do
 addView env w = do
   scrollBoxAdd (eSBox env) $ outer w
   widgetGrabFocus $ focus w
+
+class FocusChild f where
+  type Focus f
+  focus :: f -> Focus f
+

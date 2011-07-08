@@ -98,10 +98,7 @@ browseCollection _maybeName = do
 
     addView env lv
 
-    onCollBuilt lv $ \coll -> do
-      s <- S.mkSelect env coll
-      setNext lv s
-      addView env s
+    onCollBuilt env lv $ S.mkSelect env
 
     widgetShowAll window
 
