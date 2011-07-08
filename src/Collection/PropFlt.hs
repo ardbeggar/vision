@@ -56,7 +56,7 @@ data PropFlt
        , pProp   :: Property
        }
 
-mkPropFlt env popup prop coll = do
+mkPropFlt env prop coll = do
   let abRef = eABRef env
       ae    = eAE env
 
@@ -68,7 +68,7 @@ mkPropFlt env popup prop coll = do
   treeSelectionSetMode sel SelectionMultiple
 
   treeViewSetRulesHint view True
-  setupTreeViewPopup view popup
+  setupTreeViewPopup view $ eVPopup env
 
   column <- treeViewColumnNew
   treeViewAppendColumn view column

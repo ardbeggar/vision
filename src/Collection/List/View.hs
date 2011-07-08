@@ -44,6 +44,7 @@ import XMMS2.Client
 import Context
 import XMMS
 import Utils
+import Compound
 
 import Collection.Common
 import Collection.List.Model
@@ -59,9 +60,9 @@ data ListView
       , vScroll :: ScrolledWindow
       }
 
-mkListView env popup = do
+mkListView env = do
   Just me <- getEnv modelEnv
-  store    <- runEnvT me store
+  store   <- runEnvT me store
   liftIO $ do
     let abRef = eABRef env
         ae    = eAE env
@@ -71,7 +72,7 @@ mkListView env popup = do
 
     sel <- treeViewGetSelection view
     treeSelectionSetMode sel SelectionMultiple
-    setupTreeViewPopup view popup
+    setupTreeViewPopup view $ eLPopup env
 
     scroll <- scrolledWindowNew Nothing Nothing
     scrolledWindowSetShadowType scroll ShadowIn
@@ -181,3 +182,12 @@ withUni f uni ((Just name) : names) =
     liftIO $ do
       collAddOperand uni coll
       withUni f uni names
+
+instance CompoundWidget ListView where
+  type Outer ListView = ScrolledWindow
+  outer = vScroll
+
+instance FocusChild ListView where
+  type Focus ListView = TreeView
+  focus = vView
+

@@ -24,26 +24,35 @@ module Collection.Common
   , envWithIds
   , envWithSel
   , envWithNames
+  , addView
   ) where
 
 import Control.Monad.Trans
 
 import Data.IORef
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (focus)
 
 import XMMS2.Client
 
 import UI
 import Utils
 import XMMS
+import Compound
 
 import Collection.Actions
+import Collection.ScrollBox
+import Collection.Utils
+import Collection.ComboModel
 
 
 data Env
-  = Env { eABRef :: IORef ActionBackend
-        , eAE    :: ActionEnabler
+  = Env { eABRef  :: IORef ActionBackend
+        , eAE     :: ActionEnabler
+        , eSBox   :: ScrollBox
+        , eLPopup :: Menu
+        , eVPopup :: Menu
+        , eCModel :: ListStore ComboItem
         }
 
 mkEnv builder = do
@@ -62,8 +71,16 @@ mkEnv builder = do
               , aEnableRen = actionSetSensitive renAct
               , aEnableDel = actionSetSensitive delAct
               }
-  return Env { eABRef = abRef
-             , eAE    = ae
+  sbox <- mkScrollBox
+  lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
+  vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
+  cmodel <- mkModel
+  return Env { eABRef  = abRef
+             , eAE     = ae
+             , eSBox   = sbox
+             , eLPopup = lpopup
+             , eVPopup = vpopup
+             , eCModel = cmodel
              }
 
 envWithColl env f = do
@@ -82,3 +99,7 @@ envWithSel env f = do
 envWithNames env f = do
   ab <- readIORef $ eABRef env
   aWithNames ab f
+
+addView env w = do
+  scrollBoxAdd (eSBox env) $ outer w
+  widgetGrabFocus $ focus w

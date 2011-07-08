@@ -25,12 +25,12 @@ module Collection.ScrollBox
 
 import Graphics.UI.Gtk
 
+import Compound
+
 
 data ScrollBox
   = SB { sBox      :: HBox
        , sViewport :: Viewport
-       , sHAdj     :: Adjustment
-       , sVAdj     :: Adjustment
        }
 
 mkScrollBox = do
@@ -43,9 +43,11 @@ mkScrollBox = do
   containerAdd viewport box
   return SB { sBox      = box
             , sViewport = viewport
-            , sHAdj     = hAdj
-            , sVAdj     = vAdj
             }
 
 scrollBoxAdd sb widget =
   boxPackStart (sBox sb) widget PackNatural 0
+
+instance CompoundWidget ScrollBox where
+  type Outer ScrollBox = Viewport
+  outer = sViewport

@@ -39,7 +39,6 @@ import Collection.Tracks
 import Collection.PropFlt
 import Collection.Combo
 import Collection.Utils
-import Collection.ScrollBox hiding (sBox)
 
 
 data Select
@@ -50,13 +49,11 @@ data Select
       , sKillS :: IORef (Maybe (IO ()))
       }
 
-mkSelect env popup sbox cmod coll = do
-  let abRef = eABRef env
-      ae    = eAE env
+mkSelect env coll = do
   kill  <- newIORef Nothing
   killS <- newIORef Nothing
   box   <- vBoxNew False 5
-  combo <- mkCombo abRef ae cmod
+  combo <- mkCombo env
   boxPackStart box combo PackNatural 0
 
   let setup w = do
@@ -64,10 +61,9 @@ mkSelect env popup sbox cmod coll = do
         onCollBuilt w $ \coll -> do
           maybeKill <- readIORef kill
           withJust maybeKill id
-          sel <- mkSelect env popup sbox cmod coll
+          sel <- mkSelect env coll
           writeIORef kill $ Just $ killSelect sel
-          scrollBoxAdd sbox $ sBox sel
-          widgetGrabFocus $ sCombo sel
+          addView env sel
         boxPackStartDefaults box $ outer w
         widgetGrabFocus $ focus w
 
@@ -79,10 +75,10 @@ mkSelect env popup sbox cmod coll = do
       maybeKill <- readIORef kill
       withJust maybeKill id
       writeIORef kill Nothing
-      cur <- listStoreGetValue cmod $ listStoreIterToIndex iter
+      cur <- listStoreGetValue (eCModel env) $ listStoreIterToIndex iter
       case cur of
-        CITracks    -> setup =<< mkTrackView env popup coll
-        CIProp pr   -> setup =<< mkPropFlt env popup pr coll
+        CITracks    -> setup =<< mkTrackView env coll
+        CIProp pr   -> setup =<< mkPropFlt env pr coll
         CISeparator -> return ()
 
   widgetShowAll box
@@ -97,3 +93,11 @@ killSelect sel = do
   maybeKill <- readIORef $ sKill sel
   withJust maybeKill id
   widgetDestroy $ sBox sel
+
+instance CompoundWidget Select where
+  type Outer Select = VBox
+  outer = sBox
+
+instance FocusChild Select where
+  type Focus Select = ComboBox
+  focus = sCombo

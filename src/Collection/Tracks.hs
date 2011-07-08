@@ -69,7 +69,7 @@ instance CollBuilder TrackView where
       f ils
   treeViewSel tv = (tView tv, tSel tv)
 
-mkTrackView env popup coll = do
+mkTrackView env coll = do
   store  <- listStoreNewDND [] Nothing Nothing
   index  <- makeIndex store return
   view   <- treeViewNewWithModel store
@@ -84,11 +84,11 @@ mkTrackView env popup coll = do
               , tSel    = sel
               , tScroll = scroll
               }
-  setupView env popup tv
+  setupView env tv
   loadTracks tv coll
   return tv
 
-setupView env popup tv = do
+setupView env tv = do
   let view  = tView tv
       sel   = tSel tv
       abRef = eABRef env
@@ -96,7 +96,7 @@ setupView env popup tv = do
 
   treeSelectionSetMode sel SelectionMultiple
   treeViewSetRulesHint view True
-  setupTreeViewPopup view popup
+  setupTreeViewPopup view $ eVPopup env
 
   let aef = do
         foc <- view `get` widgetHasFocus

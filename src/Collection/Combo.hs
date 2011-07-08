@@ -18,8 +18,7 @@
 --
 
 module Collection.Combo
-  ( mkModel
-  , mkCombo
+  ( mkCombo
   , ComboItem (..)
   ) where
 
@@ -27,34 +26,24 @@ import Data.IORef
 
 import Graphics.UI.Gtk
 
-import Properties.Model
 import Properties.Property
 
 import Collection.Actions
+import Collection.Common
+import Collection.ComboModel
 
 
-data ComboItem
-  = CIProp Property
-  | CITracks
-  | CISeparator
+mkCombo env = do
+  let abRef  = eABRef env
+      ae     = eAE env
+      cmodel = eCModel env
 
-separator CISeparator = True
-separator _           = False
-
-mkModel = do
-  props <- getProperties
-  store <- listStoreNewDND (map CIProp props) Nothing Nothing
-  listStoreAppend store CISeparator
-  listStoreAppend store CITracks
-  return store
-
-mkCombo abRef ae cmod = do
-  combo <- comboBoxNewWithModel cmod
-  comboBoxSetRowSeparatorSource combo $ Just (cmod, separator)
+  combo <- comboBoxNewWithModel cmodel
+  comboBoxSetRowSeparatorSource combo $ Just (cmodel, separator)
 
   cell <- cellRendererTextNew
   cellLayoutPackStart combo cell True
-  cellLayoutSetAttributes combo cell cmod $ \p ->
+  cellLayoutSetAttributes combo cell cmodel $ \p ->
     case p of
       CITracks    -> [ cellText := "Tracks" ]
       CIProp p    -> [ cellText := propName p ]
@@ -67,3 +56,7 @@ mkCombo abRef ae cmod = do
     aEnableDel ae False
 
   return combo
+
+separator CISeparator = True
+separator _           = False
+

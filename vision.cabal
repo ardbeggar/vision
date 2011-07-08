@@ -79,6 +79,7 @@ executable vision
                     Collection.ScrollBox,
                     Collection.PropFlt,
                     Collection.Tracks,
+                    Collection.ComboModel,
                     Collection.Combo,
                     Collection.Select,
                     Collection.Utils,

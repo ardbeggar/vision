@@ -32,18 +32,17 @@ import Control.Monad.Trans
 
 import Data.IORef
 
-import Graphics.UI.Gtk hiding (selectAll)
+import Graphics.UI.Gtk hiding (selectAll, focus)
 
 import UI
 import Clipboard
 import Context
 import XMMS
 import Properties
+import Compound
 
 import Collection.Common
 import Collection.List
-import Collection.ScrollBox
-import Collection.Combo
 import qualified Collection.Select as S
 import Collection.Utils
 
@@ -83,10 +82,7 @@ browseCollection _maybeName = do
       postGUISync $ actionGroupSetSensitive ag conn
     window `onDestroy` (killThread tid)
 
-  lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
-  vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
-
-  lv <- mkListView env lpopup
+  lv <- mkListView env
   liftIO $ do
     scroll <- scrolledWindowNew Nothing Nothing
     scrolledWindowSetShadowType scroll ShadowNone
@@ -100,16 +96,14 @@ browseCollection _maybeName = do
     box <- builderGetObject builder castToVBox "views"
     boxPackStartDefaults box scroll
 
-    sbox <- mkScrollBox
-    containerAdd scroll $ sViewport sbox
-    scrollBoxAdd sbox $ vScroll lv
+    containerAdd scroll $ outer $ eSBox env
 
-    cmod <- mkModel
+    addView env lv
+
     onListSelected lv $ \coll -> do
-      s <- S.mkSelect env vpopup sbox cmod coll
+      s <- S.mkSelect env coll
       writeIORef (vKill lv) $ Just $ S.killSelect s
-      scrollBoxAdd sbox $ S.sBox s
-      widgetGrabFocus $ S.sCombo s
+      addView env s
 
     widgetShowAll window
 
