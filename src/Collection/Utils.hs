@@ -136,7 +136,7 @@ runDlg title enable isOk init = do
 
 
 class CollBuilder b where
-  withBuiltColl :: (?context :: a, XMMSCC a) => b -> (Coll -> IO ()) -> IO ()
+  withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
 
 onCollBuilt b f = do
