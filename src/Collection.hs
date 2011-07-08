@@ -37,7 +37,6 @@ import Clipboard
 import Context
 import XMMS
 import Properties
-import Compound
 
 import Collection.Common
 import Collection.List
@@ -82,19 +81,8 @@ browseCollection _maybeName = do
 
   lv <- mkListView env
   liftIO $ do
-    scroll <- scrolledWindowNew Nothing Nothing
-    scrolledWindowSetShadowType scroll ShadowNone
-    scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
-    adj <- scrolledWindowGetHAdjustment scroll
-    adj `afterAdjChanged` do
-      max <- adjustmentGetUpper adj
-      pgs <- adjustmentGetPageSize adj
-      adjustmentSetValue adj $ max - pgs
-
     box <- builderGetObject builder castToVBox "views"
-    boxPackStartDefaults box scroll
-
-    containerAdd scroll $ outer $ eSBox env
+    boxPackStartDefaults box $ eScroll env
 
     addView env lv
 

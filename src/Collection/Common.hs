@@ -53,6 +53,8 @@ data Env
         , eLPopup :: Menu
         , eVPopup :: Menu
         , eCModel :: ListStore ComboItem
+        , eScroll :: ScrolledWindow
+        , eSAdj   :: Adjustment
         }
 
 mkEnv builder = do
@@ -75,12 +77,26 @@ mkEnv builder = do
   lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
   vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
   cmodel <- mkModel
+
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetShadowType scroll ShadowNone
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
+  adj <- scrolledWindowGetHAdjustment scroll
+  adj `afterAdjChanged` do
+    max <- adjustmentGetUpper adj
+    pgs <- adjustmentGetPageSize adj
+    adjustmentSetValue adj $ max - pgs
+
+  containerAdd scroll $ outer sbox
+
   return Env { eABRef  = abRef
              , eAE     = ae
              , eSBox   = sbox
              , eLPopup = lpopup
              , eVPopup = vpopup
              , eCModel = cmodel
+             , eScroll = scroll
+             , eSAdj   = adj
              }
 
 envWithColl env f = do
