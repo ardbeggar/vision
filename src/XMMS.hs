@@ -17,11 +17,14 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE UndecidableInstances #-}
+
 module XMMS
   ( xmms
   , initXMMS
   , connected
   , connectedV
+  , XMMSCC
   ) where
 
 import Control.Concurrent
@@ -41,6 +44,9 @@ data XMMS
   = XMMS { xXMMS      :: Connection
          , xConnected :: TGVar Bool
          }
+
+class    ContextClass XMMS c => XMMSCC c
+instance ContextClass XMMS c => XMMSCC c
 
 xmms       = xXMMS context
 connectedV = xConnected context
