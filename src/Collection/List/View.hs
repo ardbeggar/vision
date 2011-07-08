@@ -108,10 +108,14 @@ mkListView env = do
           when foc $ do
             rows <- treeSelectionGetSelectedRows sel
             aEnableSel ae $ not $ null rows
-            aEnableDel ae $ not $ null rows
+            aEnableDel ae $ case rows of
+              []      -> False
+              [0] : _ -> False
+              _       -> True
             aEnableRen ae $ case rows of
-              [_] -> True
-              _   -> False
+              [[0]] -> False
+              [_]   -> True
+              _     -> False
     setupViewFocus abRef view aef
       AB { aWithColl  = withBuiltColl v
          , aWithNames = \f -> withColls v (f . map fst . catMaybes)
