@@ -136,12 +136,12 @@ runDlg title enable isOk init = do
 
 
 class CollBuilder b where
-  withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
+  withBuiltColl :: (?context :: a, XMMSCC a) => b -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
 
 onCollBuilt b f = do
   let (view, sel) = treeViewSel b
-      doit = killNext b >> withBuiltColl b f
+      doit = withBuiltColl b $ \c -> killNext b >> f c
   view `on` keyPressEvent $ tryEvent $ do
     "Return" <- eventKeyName
     []       <- eventModifier

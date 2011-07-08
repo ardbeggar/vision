@@ -21,7 +21,6 @@
 module Collection.List.View
   ( ListView (..)
   , mkListView
-  , onListSelected
   ) where
 
 import Control.Concurrent
@@ -95,17 +94,16 @@ mkListView env = do
       maybe False (isInfixOf (map toLower str) . map toLower) <$>
       (listStoreGetValue store $ listStoreIterToIndex iter)
 
-    let wn f = do
-          rows <- treeSelectionGetSelectedRows sel
-          unless (null rows) $ do
-            names <- mapM (listStoreGetValue store . head) rows
-            f $ map fromJust $ filter isJust names
-        wc f = do
-          rows <- treeSelectionGetSelectedRows sel
-          unless (null rows) $ do
-            names <- mapM (listStoreGetValue store . head) rows
-            withColl f names
-        aef = do
+    nextRef <- newIORef None
+
+    let v = V { vView    = view
+              , vSel     = sel
+              , vNextRef = nextRef
+              , vStore   = store
+              , vScroll  = scroll
+              }
+
+    let aef = do
           foc <- view `get` widgetHasFocus
           when foc $ do
             rows <- treeSelectionGetSelectedRows sel
@@ -115,20 +113,11 @@ mkListView env = do
               [_] -> True
               _   -> False
     setupViewFocus abRef view aef
-      AB { aWithColl  = wc
-         , aWithNames = wn
+      AB { aWithColl  = withBuiltColl v
+         , aWithNames = \f -> withNames v (f . map fromJust . filter isJust)
          , aSelection = Just sel
          }
     sel `on` treeSelectionSelectionChanged $ aef
-
-    nextRef <- newIORef None
-
-    let v = V { vView    = view
-              , vSel     = sel
-              , vNextRef = nextRef
-              , vStore   = store
-              , vScroll  = scroll
-              }
 
     xcW <- atomically $ newTGWatch connectedV
     tid <- forkIO $ forever $ do
@@ -139,28 +128,17 @@ mkListView env = do
     widgetShowAll scroll
     return v
 
-onListSelected lv f = do
-  let sel   = vSel lv
-      view  = vView lv
-      store = vStore lv
-      doit = do
-        rows <- treeSelectionGetSelectedRows sel
-        unless (null rows) $ do
-          killNext lv
-          names <- mapM (listStoreGetValue store . head) rows
-          withColl f names
-  view `on` keyPressEvent $ tryEvent $ do
-    "Return" <- eventKeyName
-    []       <- eventModifier
-    liftIO doit
-  view `on` buttonPressEvent $ tryEvent $ do
-    LeftButton  <- eventButton
-    DoubleClick <- eventClick
-    (x, y)      <- eventCoordinates
-    liftIO $ do
-      Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
-      treeSelectionSelectPath sel p
-      doit
+instance CollBuilder ListView where
+  withBuiltColl lv f = withNames lv $ withColl f
+  treeViewSel lv = (vView lv, vSel lv)
+
+withNames lv f = do
+  let store = vStore lv
+      sel   = vSel lv
+  rows <- treeSelectionGetSelectedRows sel
+  unless (null rows) $ do
+    names <- mapM (listStoreGetValue store . head) rows
+    f names
 
 withColl f list = do
   if Nothing `elem` list

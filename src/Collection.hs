@@ -98,7 +98,7 @@ browseCollection _maybeName = do
 
     addView env lv
 
-    onListSelected lv $ \coll -> do
+    onCollBuilt lv $ \coll -> do
       s <- S.mkSelect env coll
       setNext lv s
       addView env s
