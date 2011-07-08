@@ -22,6 +22,7 @@
 module Index
   ( Index
   , makeIndex
+  , killIndex
   , getInfo
   , addToIndex
   , clearIndex
@@ -51,6 +52,7 @@ data Index i
   = Index { iTable :: MVar (IntMap (IndexEntry i, [TreeRowReference]))
           , iStore :: ListStore MediaId
           , iConv  :: MediaInfo -> IO i
+          , iTid   :: ThreadId
           }
 
 makeIndex store conv = do
@@ -58,11 +60,15 @@ makeIndex store conv = do
   let index = Index { iTable = table
                     , iStore = store
                     , iConv  = conv
+                    , iTid   = undefined
                     }
 
-  (atomically $ dupTChan mediaInfoChan) >>= forkIO . handleInfo index
+  mic <- atomically $ dupTChan mediaInfoChan
+  tid <- forkIO $ handleInfo index mic
 
-  return index
+  return index { iTid = tid }
+
+killIndex = killThread . iTid
 
 handleInfo index chan = forever $ do
   (id, stamp, info) <- atomically $ readTChan chan
