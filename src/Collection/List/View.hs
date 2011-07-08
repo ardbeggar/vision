@@ -45,6 +45,7 @@ import Context
 import XMMS
 import Utils
 
+import Collection.Common
 import Collection.List.Model
 import Collection.Actions
 import Collection.Utils
@@ -58,10 +59,12 @@ data ListView
       , vScroll :: ScrolledWindow
       }
 
-mkListView abRef ae popup = do
-  Just env <- getEnv modelEnv
-  store    <- runEnvT env store
+mkListView env popup = do
+  Just me <- getEnv modelEnv
+  store    <- runEnvT me store
   liftIO $ do
+    let abRef = eABRef env
+        ae    = eAE env
     view <- treeViewNewWithModel store
     treeViewSetHeadersVisible view False
     treeViewSetRulesHint view True

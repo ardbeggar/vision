@@ -34,20 +34,17 @@ import Data.IORef
 
 import Graphics.UI.Gtk hiding (selectAll)
 
-import XMMS2.Client
-
 import UI
-import Utils
 import Clipboard
 import Context
 import XMMS
 import Properties
 
+import Collection.Common
 import Collection.List
 import Collection.ScrollBox
 import Collection.Combo
 import qualified Collection.Select as S
-import Collection.Actions
 import Collection.Utils
 
 
@@ -59,53 +56,24 @@ browseCollection _maybeName = do
   context <- liftIO $ initUI builder
   let ?context = context
 
-  abRef <- liftIO $ newIORef emptyAB
+  env <- liftIO $ mkEnv builder
 
-  Just env <- getEnv clipboardEnv
-  runEnvT env $ runIn clipboardEnv $> do
-    io $ \run ->
-      let withColl f = do
-            ab <- readIORef abRef
-            aWithColl ab f
-          withIds f = withColl $ \coll ->
-            collQueryIds xmms coll [] 0 0 >>* do
-              ids <- result
-              liftIO $ f ids
-          withSel f = do
-            ab <- readIORef abRef
-            withJust (aSelection ab) f
-          withNames f = do
-            ab <- readIORef abRef
-            aWithNames ab f
-      in bindActions builder $
-        [ ("add-to-playlist", withColl $ addToPlaylist False)
-        , ("replace-playlist", withColl $ addToPlaylist True)
-        , ("select-all", withSel selectAll)
-        , ("invert-selection", withSel invertSelection)
-        , ("copy", withIds (run . copyIds))
-        , ("edit-properties", withIds showPropertyEditor)
-        , ("export-properties", withIds showPropertyExport)
-        , ("import-properties", showPropertyImport)
-        , ("manage-properties", showPropertyManager)
-        , ("save-collection", withColl $ saveCollection)
-        , ("rename-collection", withNames $ renameCollection)
-        , ("delete-collections", withNames $ deleteCollections)
-        ]
-
-  selActs <- liftIO $ mapM (action builder)
-             [ "add-to-playlist"
-             , "replace-playlist"
-             , "copy"
-             , "edit-properties"
-             , "export-properties"
-             , "save-collection"
-             ]
-  renAct <- liftIO $ action builder "rename-collection"
-  delAct <- liftIO $ action builder "delete-collections"
-  let ae = AE { aEnableSel = \en -> mapM_ (`actionSetSensitive` en) selActs
-              , aEnableRen = actionSetSensitive renAct
-              , aEnableDel = actionSetSensitive delAct
-              }
+  Just ce <- getEnv clipboardEnv
+  runEnvT ce $ runIn clipboardEnv $> do
+    io $ \run -> bindActions builder $
+      [ ("add-to-playlist", envWithColl env $ addToPlaylist False)
+      , ("replace-playlist", envWithColl env $ addToPlaylist True)
+      , ("select-all", envWithSel env selectAll)
+      , ("invert-selection", envWithSel env invertSelection)
+      , ("copy", envWithIds env (run . copyIds))
+      , ("edit-properties", envWithIds env showPropertyEditor)
+      , ("export-properties", envWithIds env showPropertyExport)
+      , ("import-properties", showPropertyImport)
+      , ("manage-properties", showPropertyManager)
+      , ("save-collection", envWithColl env $ saveCollection)
+      , ("rename-collection", envWithNames env $ renameCollection)
+      , ("delete-collections", envWithNames env $ deleteCollections)
+      ]
 
   liftIO $ do
     ag  <- builderGetObject builder castToActionGroup "server-actions"
@@ -118,7 +86,7 @@ browseCollection _maybeName = do
   lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
   vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
 
-  lv <- mkListView abRef ae lpopup
+  lv <- mkListView env lpopup
   liftIO $ do
     scroll <- scrolledWindowNew Nothing Nothing
     scrolledWindowSetShadowType scroll ShadowNone
@@ -138,10 +106,9 @@ browseCollection _maybeName = do
 
     cmod <- mkModel
     onListSelected lv $ \coll -> do
-      s <- S.mkSelect abRef ae vpopup sbox cmod coll
+      s <- S.mkSelect env vpopup sbox cmod coll
       writeIORef (vKill lv) $ Just $ S.killSelect s
       scrollBoxAdd sbox $ S.sBox s
-      writeIORef abRef emptyAB
       widgetGrabFocus $ S.sCombo s
 
     widgetShowAll window

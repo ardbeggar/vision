@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 14 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -18,22 +18,67 @@
 --
 
 module Collection.Common
-  ( initCommon
-  , universe
+  ( Env (..)
+  , mkEnv
+  , envWithColl
+  , envWithIds
+  , envWithSel
+  , envWithNames
   ) where
+
+import Control.Monad.Trans
+
+import Data.IORef
+
+import Graphics.UI.Gtk
 
 import XMMS2.Client
 
-import Context
+import UI
+import Utils
+import XMMS
+
+import Collection.Actions
 
 
-data Common
-  = Common { cUniverse :: Coll }
+data Env
+  = Env { eABRef :: IORef ActionBackend
+        , eAE    :: ActionEnabler
+        }
 
-universe = cUniverse context
+mkEnv builder = do
+  abRef <- newIORef emptyAB
+  selActs <- mapM (action builder)
+             [ "add-to-playlist"
+             , "replace-playlist"
+             , "copy"
+             , "edit-properties"
+             , "export-properties"
+             , "save-collection"
+             ]
+  renAct <- action builder "rename-collection"
+  delAct <- action builder "delete-collections"
+  let ae = AE { aEnableSel = \en -> mapM_ (`actionSetSensitive` en) selActs
+              , aEnableRen = actionSetSensitive renAct
+              , aEnableDel = actionSetSensitive delAct
+              }
+  return Env { eABRef = abRef
+             , eAE    = ae
+             }
 
+envWithColl env f = do
+  ab <- readIORef $ eABRef env
+  aWithColl ab f
 
-initCommon = do
-  universe <- collUniverse
-  return $ augmentContext
-    Common { cUniverse = universe }
+envWithIds env f = envWithColl env $ \coll ->
+  collQueryIds xmms coll [] 0 0 >>* do
+    ids <- result
+    liftIO $ f ids
+
+envWithSel env f = do
+  ab <- readIORef $ eABRef env
+  withJust (aSelection ab) f
+
+envWithNames env f = do
+  ab <- readIORef $ eABRef env
+  aWithNames ab f

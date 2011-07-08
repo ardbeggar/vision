@@ -34,6 +34,7 @@ import XMMS2.Client
 import Utils
 import Compound
 
+import Collection.Common
 import Collection.Tracks
 import Collection.PropFlt
 import Collection.Combo
@@ -49,7 +50,9 @@ data Select
       , sKillS :: IORef (Maybe (IO ()))
       }
 
-mkSelect abRef ae popup sbox cmod coll = do
+mkSelect env popup sbox cmod coll = do
+  let abRef = eABRef env
+      ae    = eAE env
   kill  <- newIORef Nothing
   killS <- newIORef Nothing
   box   <- vBoxNew False 5
@@ -61,7 +64,7 @@ mkSelect abRef ae popup sbox cmod coll = do
         onCollBuilt w $ \coll -> do
           maybeKill <- readIORef kill
           withJust maybeKill id
-          sel <- mkSelect abRef ae popup sbox cmod coll
+          sel <- mkSelect env popup sbox cmod coll
           writeIORef kill $ Just $ killSelect sel
           scrollBoxAdd sbox $ sBox sel
           widgetGrabFocus $ sCombo sel
@@ -78,8 +81,8 @@ mkSelect abRef ae popup sbox cmod coll = do
       writeIORef kill Nothing
       cur <- listStoreGetValue cmod $ listStoreIterToIndex iter
       case cur of
-        CITracks    -> setup =<< mkTrackView abRef ae popup coll
-        CIProp pr   -> setup =<< mkPropFlt abRef ae popup pr coll
+        CITracks    -> setup =<< mkTrackView env popup coll
+        CIProp pr   -> setup =<< mkPropFlt env popup pr coll
         CISeparator -> return ()
 
   widgetShowAll box

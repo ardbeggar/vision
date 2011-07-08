@@ -45,6 +45,7 @@ import qualified Index
 import Medialib
 import Compound
 
+import Collection.Common
 import Collection.Actions
 import Collection.Utils
 
@@ -68,7 +69,7 @@ instance CollBuilder TrackView where
       f ils
   treeViewSel tv = (tView tv, tSel tv)
 
-mkTrackView abRef ae popup coll = do
+mkTrackView env popup coll = do
   store  <- listStoreNewDND [] Nothing Nothing
   index  <- makeIndex store return
   view   <- treeViewNewWithModel store
@@ -83,13 +84,15 @@ mkTrackView abRef ae popup coll = do
               , tSel    = sel
               , tScroll = scroll
               }
-  setupView abRef ae popup tv
+  setupView env popup tv
   loadTracks tv coll
   return tv
 
-setupView abRef ae popup tv = do
+setupView env popup tv = do
   let view  = tView tv
       sel   = tSel tv
+      abRef = eABRef env
+      ae    = eAE env
 
   treeSelectionSetMode sel SelectionMultiple
   treeViewSetRulesHint view True

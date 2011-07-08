@@ -19,7 +19,7 @@
 
 module Collection.Actions
   ( ActionBackend (..)
-  , ActionEnabled (..)
+  , ActionEnabler (..)
   , emptyAB
   ) where
 
@@ -40,7 +40,7 @@ emptyAB =
      , aSelection = Nothing
      }
 
-data ActionEnabled
+data ActionEnabler
   = AE { aEnableSel :: Bool -> IO ()
        , aEnableRen :: Bool -> IO ()
        , aEnableDel :: Bool -> IO ()

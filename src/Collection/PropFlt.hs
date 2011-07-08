@@ -42,6 +42,7 @@ import XMMS
 import Utils
 import Compound
 
+import Collection.Common
 import Collection.Actions
 import Collection.Utils
 
@@ -55,7 +56,10 @@ data PropFlt
        , pProp   :: Property
        }
 
-mkPropFlt abRef ae popup prop coll = do
+mkPropFlt env popup prop coll = do
+  let abRef = eABRef env
+      ae    = eAE env
+
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
