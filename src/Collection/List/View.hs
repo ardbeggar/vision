@@ -53,11 +53,11 @@ import Collection.Utils
 
 
 data ListView
-  = V { vView   :: TreeView
-      , vSel    :: TreeSelection
-      , vKill   :: IORef (Maybe (IO ()))
-      , vStore  :: ListStore (Maybe String)
-      , vScroll :: ScrolledWindow
+  = V { vView    :: TreeView
+      , vSel     :: TreeSelection
+      , vNextRef :: IORef VI
+      , vStore   :: ListStore (Maybe String)
+      , vScroll  :: ScrolledWindow
       }
 
 mkListView env = do
@@ -121,36 +121,32 @@ mkListView env = do
          }
     sel `on` treeSelectionSelectionChanged $ aef
 
-    kill <- newIORef Nothing
+    nextRef <- newIORef None
+
+    let v = V { vView    = view
+              , vSel     = sel
+              , vNextRef = nextRef
+              , vStore   = store
+              , vScroll  = scroll
+              }
 
     xcW <- atomically $ newTGWatch connectedV
     tid <- forkIO $ forever $ do
       void $ atomically $ watch xcW
-      postGUISync $ do
-        maybeKill <- readIORef kill
-        withJust maybeKill id
-        writeIORef kill Nothing
+      postGUISync $ killNext v
     view `onDestroy` (killThread tid)
 
     widgetShowAll scroll
-    return V { vView   = view
-             , vSel    = sel
-             , vKill   = kill
-             , vStore  = store
-             , vScroll = scroll
-             }
+    return v
 
 onListSelected lv f = do
   let sel   = vSel lv
       view  = vView lv
-      kill  = vKill lv
       store = vStore lv
       doit = do
         rows <- treeSelectionGetSelectedRows sel
         unless (null rows) $ do
-          maybeKill <- readIORef kill
-          withJust maybeKill id
-          writeIORef kill Nothing
+          killNext lv
           names <- mapM (listStoreGetValue store . head) rows
           withColl f names
   view `on` keyPressEvent $ tryEvent $ do
@@ -191,3 +187,5 @@ instance FocusChild ListView where
   type Focus ListView = TreeView
   focus = vView
 
+instance ViewItem ListView where
+  nextVIRef = vNextRef

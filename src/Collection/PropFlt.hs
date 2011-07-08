@@ -31,6 +31,7 @@ import Control.Monad.Trans
 import Data.List (intercalate, isInfixOf)
 import Data.Char (toLower)
 import Data.Map (lookup)
+import Data.IORef
 
 import Graphics.UI.Gtk
 
@@ -48,13 +49,17 @@ import Collection.Utils
 
 
 data PropFlt
-  = PF { pStore  :: ListStore X.Property
-       , pView   :: TreeView
-       , pSel    :: TreeSelection
-       , pScroll :: ScrolledWindow
-       , pColl   :: Coll
-       , pProp   :: Property
+  = PF { pStore   :: ListStore X.Property
+       , pView    :: TreeView
+       , pSel     :: TreeSelection
+       , pScroll  :: ScrolledWindow
+       , pColl    :: Coll
+       , pProp    :: Property
+       , pNextRef :: IORef VI
        }
+
+instance ViewItem PropFlt where
+  nextVIRef = pNextRef
 
 mkPropFlt env prop coll = do
   let abRef = eABRef env
@@ -112,12 +117,15 @@ mkPropFlt env prop coll = do
               getInfos (s + 100) v'
   getInfos 0 (PropString "")
 
-  let pf = PF { pStore  = store
-              , pView   = view
-              , pSel    = sel
-              , pScroll = scroll
-              , pColl   = fcoll
-              , pProp   = prop
+  nextRef <- newIORef None
+
+  let pf = PF { pStore   = store
+              , pView    = view
+              , pSel     = sel
+              , pScroll  = scroll
+              , pColl    = fcoll
+              , pProp    = prop
+              , pNextRef = nextRef
               }
       aef = do
         foc <- view `get` widgetHasFocus

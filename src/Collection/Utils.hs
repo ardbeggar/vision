@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE GADTs, UndecidableInstances #-}
+
 module Collection.Utils
   ( selectAll
   , invertSelection
@@ -28,6 +30,12 @@ module Collection.Utils
   , CollBuilder (..)
   , onCollBuilt
   , FocusChild (..)
+  , ViewItem (..)
+  , VI (..)
+  , Killable (..)
+  , killThis
+  , killNext
+  , setNext
   ) where
 
 import Control.Applicative
@@ -43,6 +51,7 @@ import XMMS2.Client
 import XMMS
 import Utils
 import UI
+import Compound
 
 
 selectAll =
@@ -132,10 +141,11 @@ class CollBuilder b where
 
 onCollBuilt b f = do
   let (view, sel) = treeViewSel b
+      doit = killNext b >> withBuiltColl b f
   view `on` keyPressEvent $ tryEvent $ do
     "Return" <- eventKeyName
     []       <- eventModifier
-    liftIO $ withBuiltColl b f
+    liftIO doit
   view `on` buttonPressEvent $ tryEvent $ do
     LeftButton  <- eventButton
     DoubleClick <- eventClick
@@ -143,8 +153,39 @@ onCollBuilt b f = do
     liftIO $ do
       Just (p, _, _) <- treeViewGetPathAtPos view (round x, round y)
       treeSelectionSelectPath sel p
-      withBuiltColl b f
+      doit
 
 class FocusChild f where
   type Focus f
   focus :: f -> Focus f
+
+class ViewItem i where
+  nextVIRef :: i -> IORef VI
+
+data VI where
+  VI   :: (ViewItem i, Killable i) => i -> VI
+  None :: VI
+
+class Killable k where
+  kill :: k -> IO ()
+
+instance (CompoundWidget w, WidgetClass (Outer w)) => Killable w where
+  kill = widgetDestroy . outer
+
+killThis :: (ViewItem i, Killable i) => i -> IO ()
+killThis vi = do
+  killNext vi
+  kill vi
+
+killNext :: ViewItem i => i -> IO ()
+killNext vi = do
+  next <- readIORef $ nextVIRef vi
+  case next of
+    VI ni -> do
+      killThis ni
+      writeIORef (nextVIRef vi) None
+    _     -> return ()
+
+setNext :: (ViewItem t, ViewItem n, Killable n) => t -> n -> IO ()
+setNext t n =
+  writeIORef (nextVIRef t) $ VI n

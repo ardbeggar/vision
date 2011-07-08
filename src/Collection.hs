@@ -30,8 +30,6 @@ import Control.Monad
 import Control.Monad.ToIO
 import Control.Monad.Trans
 
-import Data.IORef
-
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
 import UI
@@ -102,7 +100,7 @@ browseCollection _maybeName = do
 
     onListSelected lv $ \coll -> do
       s <- S.mkSelect env coll
-      writeIORef (vKill lv) $ Just $ S.killSelect s
+      setNext lv s
       addView env s
 
     widgetShowAll window

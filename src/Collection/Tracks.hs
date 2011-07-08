@@ -31,6 +31,7 @@ import Control.Monad.Trans
 import Data.Char
 import Data.List hiding (lookup)
 import Data.Maybe
+import Data.IORef
 
 import Graphics.UI.Gtk
 
@@ -51,11 +52,12 @@ import Collection.Utils
 
 
 data TrackView
-  = TV { tStore  :: ListStore MediaId
-       , tIndex  :: Index MediaInfo
-       , tView   :: TreeView
-       , tSel    :: TreeSelection
-       , tScroll :: ScrolledWindow
+  = TV { tStore   :: ListStore MediaId
+       , tIndex   :: Index MediaInfo
+       , tView    :: TreeView
+       , tSel     :: TreeSelection
+       , tScroll  :: ScrolledWindow
+       , tNextRef :: IORef VI
        }
 
 instance CollBuilder TrackView where
@@ -70,23 +72,28 @@ instance CollBuilder TrackView where
   treeViewSel tv = (tView tv, tSel tv)
 
 mkTrackView env coll = do
-  store  <- listStoreNewDND [] Nothing Nothing
-  index  <- makeIndex store return
-  view   <- treeViewNewWithModel store
-  sel    <- treeViewGetSelection view
-  scroll <- scrolledWindowNew Nothing Nothing
+  store   <- listStoreNewDND [] Nothing Nothing
+  index   <- makeIndex store return
+  view    <- treeViewNewWithModel store
+  sel     <- treeViewGetSelection view
+  nextRef <- newIORef None
+  scroll  <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetShadowType scroll ShadowIn
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
-  let tv = TV { tStore  = store
-              , tIndex  = index
-              , tView   = view
-              , tSel    = sel
-              , tScroll = scroll
+  let tv = TV { tStore   = store
+              , tIndex   = index
+              , tView    = view
+              , tSel     = sel
+              , tScroll  = scroll
+              , tNextRef = nextRef
               }
   setupView env tv
   loadTracks tv coll
   return tv
+
+instance ViewItem TrackView where
+  nextVIRef = tNextRef
 
 setupView env tv = do
   let view  = tView tv

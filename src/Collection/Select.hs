@@ -22,7 +22,6 @@
 module Collection.Select
   ( Select (..)
   , mkSelect
-  , killSelect
   ) where
 
 import Data.IORef
@@ -42,39 +41,41 @@ import Collection.Utils
 
 
 data Select
-  = S { sCombo :: ComboBox
-      , sColl  :: Coll
-      , sBox   :: VBox
-      , sKill  :: IORef (Maybe (IO ()))
-      , sKillS :: IORef (Maybe (IO ()))
+  = S { sCombo   :: ComboBox
+      , sColl    :: Coll
+      , sBox     :: VBox
+      , sNextRef :: IORef VI
       }
 
+instance ViewItem Select where
+  nextVIRef = sNextRef
+
 mkSelect env coll = do
-  kill  <- newIORef Nothing
-  killS <- newIORef Nothing
-  box   <- vBoxNew False 5
-  combo <- mkCombo env
+  nextRef <- newIORef None
+  box     <- vBoxNew False 5
+  combo   <- mkCombo env
+  let s = S { sCombo  = combo
+            , sBox     = box
+            , sColl    = coll
+            , sNextRef = nextRef
+            }
+
   boxPackStart box combo PackNatural 0
 
   let setup w = do
-        writeIORef killS $ Just $ widgetDestroy $ outer w
+        setNext s w
         onCollBuilt w $ \coll -> do
-          maybeKill <- readIORef kill
-          withJust maybeKill id
-          sel <- mkSelect env coll
-          writeIORef kill $ Just $ killSelect sel
-          addView env sel
+          s <- mkSelect env coll
+          killNext w
+          setNext w s
+          addView env s
         boxPackStartDefaults box $ outer w
         widgetGrabFocus $ focus w
 
   combo `on` changed $ do
     iter <- comboBoxGetActiveIter combo
     withJust iter $ \iter -> do
-      maybeKillS <- readIORef killS
-      withJust maybeKillS id
-      maybeKill <- readIORef kill
-      withJust maybeKill id
-      writeIORef kill Nothing
+      killNext s
       cur <- listStoreGetValue (eCModel env) $ listStoreIterToIndex iter
       case cur of
         CITracks    -> setup =<< mkTrackView env coll
@@ -82,17 +83,7 @@ mkSelect env coll = do
         CISeparator -> return ()
 
   widgetShowAll box
-  return S { sCombo = combo
-           , sBox   = box
-           , sColl  = coll
-           , sKill  = kill
-           , sKillS = killS
-           }
-
-killSelect sel = do
-  maybeKill <- readIORef $ sKill sel
-  withJust maybeKill id
-  widgetDestroy $ sBox sel
+  return s
 
 instance CompoundWidget Select where
   type Outer Select = VBox
