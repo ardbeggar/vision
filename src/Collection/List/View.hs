@@ -55,7 +55,7 @@ data ListView
   = V { vView    :: TreeView
       , vSel     :: TreeSelection
       , vNextRef :: IORef VI
-      , vStore   :: ListStore (Maybe String)
+      , vStore   :: ListStore (Maybe (String, Coll))
       , vScroll  :: ScrolledWindow
       }
 
@@ -87,11 +87,11 @@ mkListView env = do
         Nothing ->
           [ cellText := "All Media", cellTextWeight := 800 ]
         Just cn ->
-          [ cellText := cn, cellTextWeightSet := False ]
+          [ cellText := fst cn, cellTextWeightSet := False ]
 
     treeViewSetEnableSearch view True
     treeViewSetSearchEqualFunc view . Just $ \str iter ->
-      maybe False (isInfixOf (map toLower str) . map toLower) <$>
+      maybe False (isInfixOf (map toLower str) . map toLower . fst) <$>
       (listStoreGetValue store $ listStoreIterToIndex iter)
 
     nextRef <- newIORef None
@@ -114,7 +114,7 @@ mkListView env = do
               _   -> False
     setupViewFocus abRef view aef
       AB { aWithColl  = withBuiltColl v
-         , aWithNames = \f -> withNames v (f . map fromJust . filter isJust)
+         , aWithNames = \f -> withColls v (f . map fst . catMaybes)
          , aSelection = Just sel
          }
     sel `on` treeSelectionSelectionChanged $ aef
@@ -129,33 +129,23 @@ mkListView env = do
     return v
 
 instance CollBuilder ListView where
-  withBuiltColl lv f = withNames lv $ withColl f
+  withBuiltColl lv f = withColls lv $ withColl f
   treeViewSel lv = (vView lv, vSel lv)
 
-withNames lv f = do
+withColls lv f = do
   let store = vStore lv
       sel   = vSel lv
   rows <- treeSelectionGetSelectedRows sel
   unless (null rows) $ do
-    names <- mapM (listStoreGetValue store . head) rows
-    f names
+    colls <- mapM (listStoreGetValue store . head) rows
+    f colls
 
+withColl _ []            = return ()
+withColl f (Nothing : _) = f =<< collUniverse
 withColl f list = do
-  if Nothing `elem` list
-    then do
-    coll <- collUniverse
-    f coll
-    else do
-    uni <- collNew TypeUnion
-    withUni f uni list
-
-withUni f uni [] = f uni
-withUni f uni ((Just name) : names) =
-  collGet xmms name "Collections" >>* do
-    coll <- result
-    liftIO $ do
-      collAddOperand uni coll
-      withUni f uni names
+  uni <- collNew TypeUnion
+  mapM_ (collAddOperand uni . snd) $ catMaybes list
+  f uni
 
 instance CompoundWidget ListView where
   type Outer ListView = ScrolledWindow

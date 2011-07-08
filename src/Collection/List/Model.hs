@@ -45,7 +45,7 @@ import XMMS
 
 
 data Model
-  = Model { mStore :: ListStore (Maybe String) }
+  = Model { mStore :: ListStore (Maybe (String, Coll)) }
     deriving (Typeable)
 
 data Ix = Ix deriving (Typeable)
@@ -78,10 +78,10 @@ setupModel = io $ \run -> do
 
 listCollections = io $ \run ->
   collList xmms "Collections" >>* do
-    colls <- result
+    names <- result
     liftIO $ run $ do
       clearStore
-      fillStore colls
+      fillStore names
 
 store = asksx Ix mStore
 
@@ -89,8 +89,11 @@ clearStore = do
   store <- store
   liftIO $ listStoreClear store
 
-fillStore colls = do
+fillStore names = do
   store <- store
   liftIO $ do
     listStoreAppend store Nothing
-    mapM_ (listStoreAppend store . Just) colls
+    forM_ names $ \name ->
+      collGet xmms name "Collections" >>* do
+        coll <- result
+        liftIO $ listStoreAppend store $ Just (name, coll)
