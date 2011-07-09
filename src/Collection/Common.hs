@@ -28,6 +28,7 @@ module Collection.Common
   , FocusChild (..)
   ) where
 
+import Control.Monad
 import Control.Monad.Trans
 
 import Data.IORef
@@ -85,9 +86,11 @@ mkEnv builder = do
 
   fcRef <- newIORef Nothing
 
-  let scrollIn mfc = withJust mfc $ \fc -> do
-        Rectangle x _ w _ <- widgetGetAllocation fc
-        adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
+  let scrollIn mfc = void $ withJust mfc $ \fc ->
+        flip idleAdd priorityLow $ do
+          Rectangle x _ w _ <- widgetGetAllocation fc
+          adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
+          return False
 
   adj `afterAdjChanged` do
     mfc <- readIORef fcRef
