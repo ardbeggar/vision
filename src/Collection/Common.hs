@@ -82,10 +82,20 @@ mkEnv builder = do
   scrolledWindowSetShadowType scroll ShadowNone
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
   adj <- scrolledWindowGetHAdjustment scroll
+
+  fcRef <- newIORef Nothing
+
+  let scrollIn mfc = withJust mfc $ \fc -> do
+        Rectangle x _ w _ <- widgetGetAllocation fc
+        adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
+
   adj `afterAdjChanged` do
-    max <- adjustmentGetUpper adj
-    pgs <- adjustmentGetPageSize adj
-    adjustmentSetValue adj $ max - pgs
+    mfc <- readIORef fcRef
+    scrollIn mfc
+
+  (sBox sbox) `on` setFocusChild $ \mfc -> do
+    writeIORef fcRef mfc
+    scrollIn mfc
 
   containerAdd scroll $ outer sbox
 
@@ -123,4 +133,3 @@ addView env w = do
 class FocusChild f where
   type Focus f
   focus :: f -> Focus f
-
