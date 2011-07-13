@@ -67,8 +67,9 @@ import Playlist.Control
 setupUI builder = do
   setupWindowTitle
 
-  Just env <- getEnv playtimeEnv
-  runIn env $> setupPlaybar builder
+  Just ptEnv  <- getEnv playtimeEnv
+  Just volEnv <- getEnv volumeEnv
+  runIn (ptEnv :*: volEnv) $> setupPlaybar builder
 
   Just env <- getEnv clipboardEnv
   runIn (env :*: registryEnv) $> setupActions builder
@@ -203,6 +204,7 @@ setupWindowTitle = liftIO $ do
 
 setupPlaybar builder = do
   seekView <- makeSeekControl
+  volView  <- makeVolumeControl
 
   liftIO $ do
     playbar <- builderGetObject builder castToToolbar "playbar"
@@ -221,7 +223,6 @@ setupPlaybar builder = do
     separatorToolItemSetDraw sep False
     toolbarInsert playbar sep (-1)
 
-    volView <- makeVolumeControl
     volumeItem <- toolItemNew
     toolItemSetHomogeneous volumeItem False
     toolItemSetExpand volumeItem False

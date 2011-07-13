@@ -17,19 +17,25 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Volume
   ( initVolume
+  , volumeEnv
   , makeVolumeControl
   ) where
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.EnvIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
 import qualified Data.Map as Map
+import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk hiding (add, remove)
 
@@ -37,58 +43,55 @@ import XMMS2.Client
 
 import XMMS
 import Utils
-import Context
+import Registry
 
 
-data Volume
-  = Volume { vAdj :: Adjustment }
+data Ix = Ix deriving (Typeable)
+deriving instance Typeable Adjustment
 
-adj = vAdj context
+volumeEnv :: Extract Ix Adjustment
+volumeEnv = Extract
 
 initVolume = do
-  context <- initContext
-  let ?context = context
+  adj <- liftIO $ adjustmentNew 0 0 100 5 5 0
+  addEnv Ix adj
 
-  cId <- adj `onValueChanged` do
-    vol <- adjustmentGetValue adj
-    setVolume $ round vol
+  liftIO $ do
+    cId <- adj `onValueChanged` do
+      vol <- adjustmentGetValue adj
+      setVolume $ round vol
 
-  xcW <- atomically $ newTGWatch connectedV
-  forkIO $ forever $ do
-    conn <- atomically $ watch xcW
-    if conn
-      then do
-      playbackVolumeGet xmms >>* do
-        handleVolume cId
-        liftIO $ broadcastPlaybackVolumeChanged xmms >>* do
-          handleVolume cId
-          persist
-      else withoutVolumeChange cId $ adjustmentSetValue adj 0
+    xcW <- atomically $ newTGWatch connectedV
+    forkIO $ forever $ do
+      conn <- atomically $ watch xcW
+      if conn
+        then do
+        playbackVolumeGet xmms >>* do
+          handleVolume adj cId
+          liftIO $ broadcastPlaybackVolumeChanged xmms >>* do
+            handleVolume adj cId
+            persist
+        else withoutVolumeChange cId $ adjustmentSetValue adj 0
 
-  return ?context
-
-
-initContext = do
-  adj <- adjustmentNew 0 0 100 5 5 0
-  return $ augmentContext Volume { vAdj = adj }
-
+  return ()
 
 makeVolumeControl = do
-  view <- hScaleNew adj
-  scaleSetDrawValue view False
-  rangeSetUpdatePolicy view UpdateContinuous
-  widgetSetCanFocus view False
+  adj <- envx Ix
+  liftIO $ do
+    view <- hScaleNew adj
+    scaleSetDrawValue view False
+    rangeSetUpdatePolicy view UpdateContinuous
+    widgetSetCanFocus view False
 
-  xcW <- atomically $ newTGWatch connectedV
-  tid <- forkIO $ forever $ do
-    conn <- atomically $ watch xcW
-    widgetSetSensitive view conn
-  view `onDestroy` killThread tid
+    xcW <- atomically $ newTGWatch connectedV
+    tid <- forkIO $ forever $ do
+      conn <- atomically $ watch xcW
+      widgetSetSensitive view conn
+    view `onDestroy` killThread tid
 
-  return view
+    return view
 
-
-handleVolume cId = do
+handleVolume adj cId = do
   vol <- catchResult 0 (maximum . Map.elems)
   liftIO $ withoutVolumeChange cId $
     adjustmentSetValue adj $ fromIntegral vol

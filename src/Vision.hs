@@ -64,9 +64,7 @@ main = do
     context <- liftIO $ initPlayback
     let ?context = context
 
-    context <- liftIO $ initVolume
-    let ?context = context
-
+    initVolume
     initPlaytime
     initClipboard
 
@@ -79,6 +77,5 @@ main = do
     let ?context = context
 
     showPlaylist
-    return ()
 
   mainGUI
