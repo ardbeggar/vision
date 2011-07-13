@@ -33,25 +33,7 @@ module Context
   , makeContext
   , augmentContext
   , context
-  , EnvM
-  , runIn
-  , startRegistry
-  , registryEnv
-  , RegistryEnvOp
-  , addEnv
-  , getEnv
   ) where
-
-import Control.Monad.Trans
-import Control.Monad.EnvIO
-
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
-import Control.Concurrent.STM
-
-import Data.Typeable
-import Data.Dynamic
-import Data.Env
 
 
 infixr 9 :*
@@ -79,46 +61,3 @@ augmentContext c = c :* ?context
 
 context :: (?context :: a, ContextClass c a) => c
 context = ctxt ?context
-
-
-deriving instance Typeable2 Env
-
-data Ix = Ix deriving Typeable
-
-type EnvMap = TVar (IntMap Dynamic)
-
-registryEnv :: Extract Ix EnvMap
-registryEnv = Extract
-
-class    (EnvM Ix EnvMap m) => RegistryM m
-instance (EnvM Ix EnvMap m) => RegistryM m
-
-startRegistry f = do
-  v <- newTVarIO $ IntMap.empty
-  runEnvIO (addEnv Ix v >> f) $ build () $ mkEnv Ix v
-
-class    (RegistryM m, Typeable ix, Typeable a) => RegistryEnvOp ix a m
-instance (RegistryM m, Typeable ix, Typeable a) => RegistryEnvOp ix a m
-
-addEnv :: RegistryEnvOp ix a m => ix -> a -> m ()
-addEnv ix r = do
-  let val = mkEnv ix r
-  var <- envx Ix
-  liftIO $ do
-    key <- typeRepKey $ typeOf val
-    atomically $ do
-      map <- readTVar var
-      writeTVar var $ IntMap.insert key (toDyn val) map
-
-getEnv :: RegistryEnvOp ix a m => Extract ix a -> m (Maybe (Env ix a))
-getEnv spec = do
-  var <- envx Ix
-  liftIO $ do
-    key <- typeRepKey $ typeOf $ spec' spec
-    atomically $ do
-      map <- readTVar var
-      case IntMap.lookup key map of
-        Nothing -> return Nothing
-        Just dv -> return $ fromDynamic dv
-  where spec' :: Extract ix a -> Env ix a
-        spec' = const undefined

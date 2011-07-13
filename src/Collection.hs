@@ -35,7 +35,7 @@ import Graphics.UI.Gtk hiding (selectAll, focus)
 
 import UI
 import Clipboard
-import Context
+import Registry
 import XMMS
 import Properties
 

@@ -37,7 +37,7 @@ import Clipboard
 import Location
 import Collection
 import Playlist
-import Context
+import Registry
 
 
 main = do

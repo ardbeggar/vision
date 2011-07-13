@@ -40,7 +40,7 @@ import Data.Env hiding (Env)
 
 import Graphics.UI.Gtk
 
-import Context
+import Registry
 import Atoms (xmms2MlibIdTarget)
 
 

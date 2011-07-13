@@ -51,6 +51,7 @@ import Medialib
 import Context hiding (makeContext)
 import Utils
 import Playback
+import Registry
 
 
 data Playtime

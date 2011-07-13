@@ -55,7 +55,7 @@ import Location
 import Collection
 import Compound
 import Editor
-import Context
+import Registry
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View

@@ -42,7 +42,7 @@ import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
 
-import Context
+import Registry
 import XMMS
 
 
