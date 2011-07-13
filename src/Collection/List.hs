@@ -18,12 +18,7 @@
 --
 
 module Collection.List
-  ( initList
-  , module Collection.List.View
+  ( module Collection.List.View
   ) where
 
-import Collection.List.Model
 import Collection.List.View
-
-
-initList = initModel

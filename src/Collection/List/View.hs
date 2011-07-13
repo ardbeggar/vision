@@ -62,8 +62,15 @@ data ListView
       }
 
 mkListView env = do
-  Just me <- getEnv modelEnv
-  store   <- runIn me $> store
+  me <- do
+    maybeME <- getEnv modelEnv
+    case maybeME of
+      Just me -> return me
+      Nothing -> do
+        initModel
+        fromJust <$> getEnv modelEnv
+
+  store <- runIn me $> store
   liftIO $ do
     let abRef = eABRef env
         ae    = eAE env

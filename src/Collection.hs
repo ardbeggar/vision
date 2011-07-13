@@ -18,8 +18,7 @@
 --
 
 module Collection
-  ( initCollection
-  , browseCollection
+  ( browseCollection
   ) where
 
 import Control.Concurrent
@@ -44,9 +43,6 @@ import Collection.List
 import Collection.Select
 import Collection.Utils
 
-
-initCollection =
-  initList
 
 browseCollection _maybeName = do
   builder <- liftIO $ makeBuilder "collection-browser"
