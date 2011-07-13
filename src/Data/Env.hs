@@ -20,11 +20,14 @@
 {-# LANGUAGE TypeOperators,
              MultiParamTypeClasses,
              FunctionalDependencies,
+             FlexibleInstances,
+             OverlappingInstances,
              UndecidableInstances #-}
 
 module Data.Env
-  ( mkEnv
-  , (:*:)
+  ( Env (..)
+  , mkEnv
+  , (:*:) (..)
   , EnvX (..)
   , EnvB (..)
   , Extract (..)

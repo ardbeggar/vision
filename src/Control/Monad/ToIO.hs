@@ -31,8 +31,10 @@ import Control.Monad.W
 class (Monad t, MonadIO t) => ToIO t where
   toIO :: t (W t IO)
 
-io :: ToIO t => ((forall a. t a -> IO a) -> IO b) -> t b
-io f = withW toIO $ \w -> liftIO $ f w
+io :: ToIO m => ((forall a. m a -> IO a) -> IO b) -> m b
+io f = do
+  W run <- toIO
+  liftIO $ f run
 
 instance ToIO IO where
   toIO = return $ W id

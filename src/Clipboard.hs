@@ -26,32 +26,25 @@ module Clipboard
   , clipboardTargets
   , getClipboardTargets
   , copyIds
-  , ClipboardM
   ) where
 
 import Control.Concurrent.STM
 import Control.Monad.Trans
-import Control.Monad.Index
-import Control.Monad.ReaderX
 import Control.Monad.ToIO
+import Control.Monad.EnvIO
+import Control.Monad.W
 
 import Data.Maybe
 import Data.Typeable
+import Data.Env hiding (Env)
 
 import Graphics.UI.Gtk
-
-import XMMS2.Client (MediaId)
 
 import Context
 import Atoms (xmms2MlibIdTarget)
 
 
-class    (EnvM Ix Env m, MonadIO m) => ClipboardM m
-instance (EnvM Ix Env m, MonadIO m) => ClipboardM m
-
-
 data Ix = Ix deriving (Typeable)
-instance Index Ix where getVal = Ix
 
 data Env
   = Env { cTargets            :: TVar [TargetTag]
@@ -59,16 +52,15 @@ data Env
         }
     deriving (Typeable)
 
-clipboardEnv :: (Ix, Env)
-clipboardEnv = undefined
+clipboardEnv :: Extract Ix Env
+clipboardEnv = Extract
 
-clipboard        = asksx Ix cClipboard
-clipboardTargets = asksx Ix cTargets
+clipboard        = envsx Ix cClipboard
+clipboardTargets = envsx Ix cTargets
 
 getClipboardTargets =
   clipboardTargets >>= liftIO . readTVarIO
 
-copyIds :: ClipboardM m => [MediaId] -> m ()
 copyIds ids = do
   clipboard <- clipboard
   liftIO $ do
@@ -86,7 +78,7 @@ updateClipboardTargets ts = do
 initClipboard = do
   env <- makeEnv
   addEnv Ix env
-  runEnvT (Ix, env) $ runIn clipboardEnv $> do
+  runIn (mkEnv Ix env) $> do
     io $ \run -> timeoutAdd (run checkClipboard) 0
   return ()
 

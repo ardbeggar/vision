@@ -27,11 +27,14 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.W
 import Control.Monad.ToIO
+import Control.Monad.EnvIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TWatch
 import Control.Concurrent.STM.TGVar
+
+import Data.Env
 
 import System.IO.Unsafe
 
@@ -65,12 +68,10 @@ setupUI builder = do
   setupWindowTitle
 
   Just env <- getEnv playtimeEnv
-  runEnvT env $ runIn playtimeEnv $>
-    setupPlaybar builder
+  runIn env $> setupPlaybar builder
 
   Just env <- getEnv clipboardEnv
-  runEnvT env $ runIn clipboardEnv &> registryEnv $>
-    setupActions builder
+  runIn (env :*: registryEnv) $> setupActions builder
 
   liftIO $ do
     playlistView `onRowActivated` \[n] _ ->
@@ -82,7 +83,6 @@ setupUI builder = do
     window `onDestroy` mainQuit
 
   return ()
-
 
 setupActions builder = do
   urlEntryDialog <- liftIO $ unsafeInterleaveIO $ makeURLEntryDialog
@@ -97,9 +97,9 @@ setupActions builder = do
         "Sort playlist" ++ maybe "" (": " ++) name
     outerw `onDestroy` (killThread tid)
 
-  withW (runIn registryEnv) $ \runR ->
-    withW (runIn clipboardEnv) $ \runC ->
-    liftIO $ bindActions builder
+  W runR <- runIn registryEnv
+  W runC <- runIn clipboardEnv
+  liftIO $ bindActions builder
     [ ("play",               startPlayback False)
     , ("pause",              pausePlayback)
     , ("stop",               stopPlayback)

@@ -35,12 +35,12 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.State
-import Control.Monad.Index
-import Control.Monad.ReaderX
+import Control.Monad.EnvIO
 
 import Data.Maybe
 import qualified Data.Map as Map
 import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk hiding (add, remove, get)
 
@@ -68,13 +68,12 @@ seekCountV = pSeekCountV context
 
 
 data Ix = Ix deriving (Typeable)
-instance Index Ix where getVal = Ix
 
-class    (EnvM Ix Playtime m, MonadIO m) => PlaytimeM m
-instance (EnvM Ix Playtime m, MonadIO m) => PlaytimeM m
+class    (EnvM Ix Playtime m) => PlaytimeM m
+instance (EnvM Ix Playtime m) => PlaytimeM m
 
-playtimeEnv :: (Ix, Playtime)
-playtimeEnv = undefined
+playtimeEnv :: Extract Ix Playtime
+playtimeEnv = Extract
 
 initPlaytime = do
   pt <- liftIO $ makeContext
@@ -140,14 +139,8 @@ setupSeek =  adj `onValueChanged` do
   playbackSeekMs xmms (round v) SeekSet >>* do
     liftIO $ modSeekCount $ \n -> n - 1
 
-
-makeSeekControl ::
-  ( PlaytimeM m
-  , PlaybackCC a
-  , ?context :: a
-  ) => m HScale
 makeSeekControl = do
-  adj <- asksx Ix pAdj
+  adj <- envsx Ix pAdj
   liftIO $ do
     view <- hScaleNew adj
     scaleSetDrawValue view False

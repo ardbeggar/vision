@@ -19,15 +19,16 @@
 
 {-# LANGUAGE MultiParamTypeClasses,
              FunctionalDependencies,
+             FlexibleInstances,
              UndecidableInstances #-}
 
 module Control.Monad.EnvIO
   ( EnvM (..)
+  , envsx
   , EnvIO (..)
   , env
   , runIn
   , runIn'
-  , ($>)
   ) where
 
 import Prelude hiding (catch)
@@ -95,9 +96,5 @@ runIn' f = do
   return $ W $ \m ->
     runEnvIO m $ f e
 
--- TODO: move to Control.Monad.W
-($>) :: MonadIO m => m (W n IO) -> n b -> m b
-w $> f = do
-  W run <- w
-  liftIO $ run f
-infixr 0 $>
+envsx :: EnvX ix a e => ix -> (a -> b) -> EnvIO e b
+envsx ix acc = acc <$> envx ix

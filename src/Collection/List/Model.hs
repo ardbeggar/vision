@@ -27,14 +27,16 @@ module Collection.List.Model
 
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.ReaderX
 import Control.Monad.ToIO
+import Control.Monad.EnvIO
+import Control.Monad.W
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
 import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -49,14 +51,13 @@ data Model
     deriving (Typeable)
 
 data Ix = Ix deriving (Typeable)
-instance Index Ix where getVal = Ix
 
-modelEnv :: (Ix, Model)
-modelEnv = undefined
+modelEnv :: Extract Ix Model
+modelEnv = Extract
 
 initModel = do
   model <- mkModel
-  runEnvT (Ix, model) $ runIn modelEnv $> setupModel
+  runIn (mkEnv Ix model) $> setupModel
   addEnv Ix model
 
 mkModel = liftIO $ do
@@ -83,7 +84,7 @@ listCollections = io $ \run ->
       clearStore
       fillStore names
 
-store = asksx Ix mStore
+store = envsx Ix mStore
 
 clearStore = do
   store <- store

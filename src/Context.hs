@@ -19,10 +19,13 @@
 
 {-# LANGUAGE MultiParamTypeClasses,
              FlexibleInstances,
+             FlexibleContexts,
              OverlappingInstances,
              TypeOperators,
              DeriveDataTypeable,
-             UndecidableInstances #-}
+             UndecidableInstances,
+             ImplicitParams,
+             StandaloneDeriving #-}
 
 module Context
   ( ContextClass
@@ -31,10 +34,7 @@ module Context
   , augmentContext
   , context
   , EnvM
-  , runEnvT
   , runIn
-  , (&>)
-  , ($>)
   , startRegistry
   , registryEnv
   , RegistryEnvOp
@@ -42,19 +42,16 @@ module Context
   , getEnv
   ) where
 
-import Control.Monad.ReaderX
-import Control.Monad.ToIO
-import Control.Monad.W
-import Prelude hiding (catch)
-import Control.Monad.CatchIO
+import Control.Monad.Trans
+import Control.Monad.EnvIO
 
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Control.Concurrent.STM
-import qualified Control.Monad.EnvIO
 
 import Data.Typeable
 import Data.Dynamic
+import Data.Env
 
 
 infixr 9 :*
@@ -84,88 +81,44 @@ context :: (?context :: a, ContextClass c a) => c
 context = ctxt ?context
 
 
-class    MonadReaderX ix r m => EnvM ix r m
-instance MonadReaderX ix r m => EnvM ix r m
-
-runEnvT :: Index ix => (ix, r) -> ReaderTX ix r m a -> m a
-runEnvT (ix, r) f = runReaderTX ix f r
-
-instance (Index ix, MonadCatchIO m) =>
-         MonadCatchIO (ReaderTX ix env m) where
-  m `catch` f = mkReaderTX getVal $ \r ->
-    (runReaderTX getVal m r)
-    `catch`
-    (\e -> runReaderTX getVal (f e) r)
-  block       = mapReaderTX getVal block
-  unblock     = mapReaderTX getVal unblock
-
-instance (Index ix, ToIO m) => ToIO (ReaderTX ix r m) where
-  toIO = do
-    let ix = getVal
-    r <- askx ix
-    t <- lift toIO
-    return $ W $ \m ->
-      runW t $ runReaderTX ix m r
-
-runIn ::
-  MonadReaderX ix r m
-  => (ix, r)
-  -> m (W (ReaderTX ix r n) n)
-runIn _ = do
-  let ix = getVal
-  b <- askx ix
-  return $ W $ \m ->
-    runReaderTX ix m b
-
-(&>) ::
-  MonadReaderX ix r m =>
-  m (W n n1) -> (ix, r) -> m (W (ReaderTX ix r n) n1)
-a &> b = do
-  a' <- a
-  b' <- runIn b
-  return $ W $ runW a' . runW b'
-
-($>) :: MonadIO m => m (W n IO) -> n b -> m b
-r $> f = do
-  r' <- r
-  liftIO $ runW r' f
+deriving instance Typeable2 Env
 
 data Ix = Ix deriving Typeable
-instance Index Ix where getVal = Ix
 
 type EnvMap = TVar (IntMap Dynamic)
 
-registryEnv :: (Ix, EnvMap)
-registryEnv = undefined
+registryEnv :: Extract Ix EnvMap
+registryEnv = Extract
 
-class    (EnvM Ix EnvMap m, MonadIO m) => RegistryM m
-instance (EnvM Ix EnvMap m, MonadIO m) => RegistryM m
+class    (EnvM Ix EnvMap m) => RegistryM m
+instance (EnvM Ix EnvMap m) => RegistryM m
 
-startRegistry :: ReaderTX Ix EnvMap IO a -> IO a
 startRegistry f = do
   v <- newTVarIO $ IntMap.empty
-  runEnvT (Ix, v) (addEnv Ix v >> getEnv (Ix, v) >> f)
+  runEnvIO (addEnv Ix v >> f) $ build () $ mkEnv Ix v
 
-class    (RegistryM m, Index ix, Typeable ix, Typeable r) => RegistryEnvOp ix r m
-instance (RegistryM m, Index ix, Typeable ix, Typeable r) => RegistryEnvOp ix r m
+class    (RegistryM m, Typeable ix, Typeable a) => RegistryEnvOp ix a m
+instance (RegistryM m, Typeable ix, Typeable a) => RegistryEnvOp ix a m
 
-addEnv :: RegistryEnvOp ix r m => ix -> r -> m ()
+addEnv :: RegistryEnvOp ix a m => ix -> a -> m ()
 addEnv ix r = do
-  let val = (ix, r)
-  var <- askx Ix
+  let val = mkEnv ix r
+  var <- envx Ix
   liftIO $ do
     key <- typeRepKey $ typeOf val
     atomically $ do
       map <- readTVar var
       writeTVar var $ IntMap.insert key (toDyn val) map
 
-getEnv :: RegistryEnvOp ix r m => (ix, r) -> m (Maybe (ix, r))
+getEnv :: RegistryEnvOp ix a m => Extract ix a -> m (Maybe (Env ix a))
 getEnv spec = do
-  var <- askx Ix
+  var <- envx Ix
   liftIO $ do
-    key <- typeRepKey $ typeOf spec
+    key <- typeRepKey $ typeOf $ spec' spec
     atomically $ do
       map <- readTVar var
       case IntMap.lookup key map of
         Nothing -> return Nothing
         Just dv -> return $ fromDynamic dv
+  where spec' :: Extract ix a -> Env ix a
+        spec' = const undefined

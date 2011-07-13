@@ -28,8 +28,10 @@ import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.ReaderX
+import Control.Monad.EnvIO
+import Control.Monad.W
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
@@ -61,7 +63,7 @@ data ListView
 
 mkListView env = do
   Just me <- getEnv modelEnv
-  store   <- runEnvT me store
+  store   <- runIn me $> store
   liftIO $ do
     let abRef = eABRef env
         ae    = eAE env

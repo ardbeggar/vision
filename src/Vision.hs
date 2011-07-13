@@ -79,5 +79,6 @@ main = do
     let ?context = context
 
     showPlaylist
+    return ()
 
   mainGUI

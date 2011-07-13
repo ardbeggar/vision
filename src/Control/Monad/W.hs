@@ -21,13 +21,17 @@
 
 module Control.Monad.W
   ( W (..)
-  , withW
+  , ($>)
   ) where
+
+import Control.Monad.Trans
 
 
 newtype W m n = W { runW :: forall a. m a -> n a }
 
-withW :: Monad m => m (W t t1) -> ((forall a. t a -> t1 a) -> m b) -> m b
-withW w f = do
-  w' <- w
-  f $ runW w'
+($>) :: MonadIO m => m (W n IO) -> n b -> m b
+w $> f = do
+  W run <- w
+  liftIO $ run f
+
+infixr 0 $>

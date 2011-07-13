@@ -29,6 +29,7 @@ import Control.Concurrent.STM.TGVar
 import Control.Monad
 import Control.Monad.ToIO
 import Control.Monad.Trans
+import Control.Monad.W
 
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
@@ -40,7 +41,7 @@ import Properties
 
 import Collection.Common
 import Collection.List
-import qualified Collection.Select as S
+import Collection.Select
 import Collection.Utils
 
 
@@ -55,21 +56,20 @@ browseCollection _maybeName = do
   env <- liftIO $ mkEnv builder
 
   Just ce <- getEnv clipboardEnv
-  runEnvT ce $ runIn clipboardEnv $> do
-    io $ \run -> bindActions builder $
-      [ ("add-to-playlist", envWithColl env $ addToPlaylist False)
-      , ("replace-playlist", envWithColl env $ addToPlaylist True)
-      , ("select-all", envWithSel env selectAll)
-      , ("invert-selection", envWithSel env invertSelection)
-      , ("copy", envWithIds env (run . copyIds))
-      , ("edit-properties", envWithIds env showPropertyEditor)
-      , ("export-properties", envWithIds env showPropertyExport)
-      , ("import-properties", showPropertyImport)
-      , ("manage-properties", showPropertyManager)
-      , ("save-collection", envWithColl env $ saveCollection)
-      , ("rename-collection", envWithNames env $ renameCollection)
-      , ("delete-collections", envWithNames env $ deleteCollections)
-      ]
+  runIn ce $> io $ \run -> bindActions builder $
+    [ ("add-to-playlist", envWithColl env $ addToPlaylist False)
+    , ("replace-playlist", envWithColl env $ addToPlaylist True)
+    , ("select-all", envWithSel env selectAll)
+    , ("invert-selection", envWithSel env invertSelection)
+    , ("copy", envWithIds env (run . copyIds))
+    , ("edit-properties", envWithIds env showPropertyEditor)
+    , ("export-properties", envWithIds env showPropertyExport)
+    , ("import-properties", showPropertyImport)
+    , ("manage-properties", showPropertyManager)
+    , ("save-collection", envWithColl env $ saveCollection)
+    , ("rename-collection", envWithNames env $ renameCollection)
+    , ("delete-collections", envWithNames env $ deleteCollections)
+    ]
 
   liftIO $ do
     ag  <- builderGetObject builder castToActionGroup "server-actions"
@@ -85,8 +85,7 @@ browseCollection _maybeName = do
     boxPackStartDefaults box $ eScroll env
 
     addView env lv
-
-    onCollBuilt env lv $ S.mkSelect env
+    onCollBuilt env lv $ mkSelect env
 
     widgetShowAll window
 
