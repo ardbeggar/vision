@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 28 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -18,23 +18,18 @@
 --
 
 module Location
-  ( initLocation
-  , browseLocation
+  ( browseLocation
   ) where
 
 import Graphics.UI.Gtk
 
 import UI
-import Location.History
+
 import Location.Model
 import Location.View
 import Location.DnD
 import Location.Control
 import Location.UI
-
-
-initLocation =
-  initHistory
 
 
 browseLocation order maybeURL = do
@@ -58,6 +53,3 @@ browseLocation order maybeURL = do
   case maybeURL of
     Just url -> loadLocation $ Go url
     Nothing  -> openLocation
-
-
-

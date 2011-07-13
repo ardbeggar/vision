@@ -70,7 +70,6 @@ executable vision
                     Clipboard,
                     Index,
                     Location,
-                    Location.History,
                     Location.PathComp,
                     Location.Model,
                     Location.View,

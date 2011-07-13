@@ -34,7 +34,6 @@ import Playback
 import Volume
 import Playtime
 import Clipboard
-import Location
 import Collection
 import Playlist
 import Registry
@@ -67,10 +66,6 @@ main = do
     initVolume
     initPlaytime
     initClipboard
-
-    context <- liftIO $ initLocation
-    let ?context = context
-
     initCollection
 
     context <- liftIO $ initPlaylist

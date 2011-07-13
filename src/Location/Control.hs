@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 28 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -39,7 +39,6 @@ import XMMS2.Client
 import XMMS
 import Environment
 import UI
-import Location.History
 import Location.Model
 import Location.View
 import Location.PathComp
@@ -50,7 +49,6 @@ loadLocation location = do
   maybeURL <- updateLocation location
   case maybeURL of
     Just url -> do
-      addToHistory url
       clearPathComp locationComp
       entrySetText locationEntry url
       xformMediaBrowse xmms url >>* handleBrowse url
