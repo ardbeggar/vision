@@ -109,6 +109,7 @@ executable vision
                     Control.Concurrent.STM.Watch,
                     Control.Monad.ToIO,
                     Control.Monad.W,
+                    Control.Monad.EnvIO,
                     Data.Env
   hs-source-dirs:   src
   build-depends:    base >= 4 && < 5, xmms2-client >= 0.0.7.0,

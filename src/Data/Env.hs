@@ -25,9 +25,9 @@
 module Data.Env
   ( mkEnv
   , (:*:)
-  , extract
+  , EnvX (..)
+  , EnvB (..)
   , Extract (..)
-  , build
   ) where
 
 

@@ -51,7 +51,7 @@ import Control.Monad.CatchIO
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Control.Concurrent.STM
-import qualified Data.Env as Env
+import qualified Control.Monad.EnvIO
 
 import Data.Typeable
 import Data.Dynamic
