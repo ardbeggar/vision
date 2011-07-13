@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 6 Sep. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -55,7 +55,7 @@ showAbout window =
         aboutDialogSetName about "Vision"
         aboutDialogSetVersion about $ showVersion version
         aboutDialogSetComments about "An XMMS2 client."
-        aboutDialogSetCopyright about "Copyright © 2010 Oleg Belozeorov."
+        aboutDialogSetCopyright about "Copyright © 2010-2011 Oleg Belozeorov."
         aboutDialogSetLicense about $ Just license
         aboutDialogSetWrapLicense about True
         aboutDialogSetAuthors about authors
