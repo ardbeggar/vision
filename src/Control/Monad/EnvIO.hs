@@ -30,11 +30,14 @@ module Control.Monad.EnvIO
   , ($>)
   ) where
 
+import Prelude hiding (catch)
+
 import Control.Applicative
 
 import Control.Monad.Trans
 import Control.Monad.W
 import Control.Monad.ToIO
+import Control.Monad.CatchIO
 
 import Data.Env
 
@@ -64,12 +67,23 @@ instance ToIO (EnvIO e) where
     e <- env
     return $ W $ flip runEnvIO e
 
+instance MonadCatchIO (EnvIO e) where
+  m `catch` f = EnvIO $ \e ->
+    (runEnvIO m e)
+    `catch`
+    (\x -> runEnvIO (f x) e)
+  block       = mapEnvIO block
+  unblock     = mapEnvIO unblock
+
 instance EnvX ix a e => EnvM ix a (EnvIO e) where
   envx ix = extract ix <$> env
 
 
 env :: EnvIO e e
 env = EnvIO $ return
+
+mapEnvIO :: (IO a -> IO b) -> EnvIO e a -> EnvIO e b
+mapEnvIO f m = EnvIO $ f . runEnvIO m
 
 runIn :: EnvB ix a e e' b => b -> EnvIO e (W (EnvIO e') IO)
 runIn t =
