@@ -42,7 +42,7 @@ import Graphics.UI.Gtk
 import Utils
 import Compound
 import Context
-import UIEnvIO
+import UI
 import Editor
 import Properties.Property
 import Properties.Model

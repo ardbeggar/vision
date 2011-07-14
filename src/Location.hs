@@ -27,7 +27,7 @@ import Control.Monad.EnvIO
 import Graphics.UI.Gtk
 
 import Builder
-import UIEnvIO
+import UI
 import Environment
 
 import Location.Model

@@ -17,10 +17,16 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE RankNTypes #-}
-
 module UI
-  ( initUI
+  ( runUI
+  , uiEnv
+  , window
+  , contents
+  , getWidget
+  , windowGroup
+  , setWindowTitle
+  , informUser
+{-
   , window
   , contents
   , setWindowTitle
@@ -37,20 +43,22 @@ module UI
   , bindAction
   , bindActions
   , informUser
+-}
   ) where
 
 import Control.Applicative
 import Control.Monad.Trans
+import Control.Monad.EnvIO
 
 import Data.Maybe
 
 import Graphics.UI.Gtk
 
-import Context
-import Environment
 import About
-import Builder ()
+import Builder
 
+
+data Ix = Ix
 
 data UI
   = UI { uWindow      :: Window
@@ -62,101 +70,93 @@ data UI
        , uInfoText    :: Label
        }
 
-window        = uWindow context
-contents      = uContents context
-uiManager     = uManager context
-uiActionGroup = uActionGroup context
-windowGroup   = uWindowGroup context
-infoBar       = uInfoBar context
-infoText      = uInfoText context
+uiEnv :: Extract Ix UI
+uiEnv = Extract
 
+window        = envsx Ix uWindow
+contents      = envsx Ix uContents
+uiManager     = envsx Ix uManager
+{-
+uiActionGroup = envsx Ix uActionGroup
+-}
+windowGroup   = envsx Ix uWindowGroup
+infoBar       = envsx Ix uInfoBar
+infoText      = envsx Ix uInfoText
 
-setWindowTitle = windowSetTitle window
+setWindowTitle title = do
+  window <- window
+  liftIO $ windowSetTitle window title
+
+{-
 addUIActions = actionGroupAddActions uiActionGroup
 insertActionGroup = uiManagerInsertActionGroup uiManager
 addUIFromFile = uiManagerAddUiFromFile uiManager . uiFilePath
-maybeGetWidget cast name = fmap cast <$> uiManagerGetWidget uiManager name
-getWidget cast name = fromJust <$> maybeGetWidget cast name
 getAction group name = fromJust <$> actionGroupGetAction group name
+-}
+maybeGetWidget cast name = do
+  uiManager <- uiManager
+  liftIO $ fmap cast <$> uiManagerGetWidget uiManager name
 
+getWidget cast name =
+  fromJust <$> maybeGetWidget cast name
 
-initUI builder = do
-  context <- augmentContext <$> makeUI builder
-  let ?context = context
+runUI f = do
+  env <- makeUI
+  runIn' (env :*:) $> do
+    window <- window
+    mapM_ (uncurry maybeBindAction)
+      [ ("close", liftIO $ widgetDestroy window)
+      , ("quit",  liftIO $ mainQuit)
+      , ("about", liftIO $ showAbout window)
+      ]
+    infoBar <- infoBar
+    liftIO $ window `on` keyPressEvent $ tryEvent $ do
+      []       <- eventModifier
+      "Escape" <- eventKeyName
+      liftIO $ infoBarEmitResponse infoBar dismiss
+    f
 
-  mapM_ (uncurry $ maybeBindAction builder)
-    [ ("close", widgetDestroy window)
-    , ("quit",  mainQuit)
-    , ("about", showAbout window)
-    ]
-
-  window `on` keyPressEvent $ tryEvent $ do
-    []       <- eventModifier
-    "Escape" <- eventKeyName
-    liftIO $ infoBarEmitResponse infoBar dismiss
-
-  return context
-
-makeUI builder = do
-  window              <- builderGetObject builder castToWindow "main-window"
-  contents            <- builderGetObject builder castToVBox "contents"
-  uiManager           <- builderGetObject builder castToUIManager "ui-manager"
-  uiActionGroup       <- builderGetObject builder castToActionGroup "ui-actions"
-  windowGroup         <- windowGroupNew
-  (infoBar, infoText) <- makeInfoBar builder
-  return UI { uWindow      = window
-            , uContents    = contents
-            , uManager     = uiManager
-            , uActionGroup = uiActionGroup
-            , uWindowGroup = windowGroup
-            , uInfoBar     = infoBar
-            , uInfoText    = infoText
-            }
-
-makeBuilder name = do
-  builder <- builderNew
-  builderAddFromFile builder $ gladeFilePath name
-  return builder
-
-action builder name =
-  builderGetObject builder castToAction name
-
-actions builder =
-  mapM (action builder)
-
-bindAction builder name func = do
-  a <- action builder name
-  a `on` actionActivated $ func
-
-bindActions builder =
-  mapM (uncurry $ bindAction builder)
-
-maybeBindAction builder name func = do
-  ma <- builderGetObjectRaw builder name
-  case ma of
-    Just a  -> Just <$> on (castToAction a) actionActivated func
-    Nothing -> return Nothing
+makeUI = do
+  window              <- getObject castToWindow "main-window"
+  contents            <- getObject castToVBox "contents"
+  uiManager           <- getObject castToUIManager "ui-manager"
+  uiActionGroup       <- getObject castToActionGroup "ui-actions"
+  windowGroup         <- liftIO $ windowGroupNew
+  (infoBar, infoText) <- makeInfoBar
+  return $ mkEnv Ix
+    UI { uWindow      = window
+       , uContents    = contents
+       , uManager     = uiManager
+       , uActionGroup = uiActionGroup
+       , uWindowGroup = windowGroup
+       , uInfoBar     = infoBar
+       , uInfoText    = infoText
+       }
 
 informUser t m = do
-  infoBar `set` [ infoBarMessageType := t ]
-  labelSetMarkup infoText m
-  widgetSetNoShowAll infoBar False
-  widgetShowAll infoBar
+  infoBar  <- infoBar
+  infoText <- infoText
+  liftIO $ do
+    infoBar `set` [ infoBarMessageType := t ]
+    labelSetMarkup infoText m
+    widgetSetNoShowAll infoBar False
+    widgetShowAll infoBar
 
-makeInfoBar builder = do
-  infoBar <- builderGetObject builder castToInfoBar "info-bar"
-  widgetSetNoShowAll infoBar True
-  infoBarAddButton infoBar "Dismiss" dismiss
-  infoBarSetDefaultResponse infoBar dismiss
-  infoBar `on` infoBarResponse $ const $ widgetHide infoBar
-  infoBar `on` infoBarClose $ widgetHide infoBar
+makeInfoBar = do
+  infoBar <- getObject castToInfoBar "info-bar"
+  liftIO $ do
+    widgetSetNoShowAll infoBar True
+    infoBarAddButton infoBar "Dismiss" dismiss
+    infoBarSetDefaultResponse infoBar dismiss
+    infoBar `on` infoBarResponse $ const $ widgetHide infoBar
+    infoBar `on` infoBarClose $ widgetHide infoBar
 
-  infoText <- labelNew Nothing
-  miscSetAlignment infoText 0.0 0.5
-  labelSetUseMarkup infoText True
-  boxPackStartDefaults infoBar infoText
-  boxReorderChild infoBar infoText 0
+    infoText <- labelNew Nothing
+    miscSetAlignment infoText 0.0 0.5
+    labelSetUseMarkup infoText True
+    boxPackStartDefaults infoBar infoText
+    boxReorderChild infoBar infoText 0
 
-  return (infoBar, infoText)
+    return (infoBar, infoText)
 
 dismiss = 0

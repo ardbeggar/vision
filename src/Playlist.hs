@@ -25,7 +25,7 @@ module Playlist
 import Control.Monad.Trans
 import Graphics.UI.Gtk
 
-import UIEnvIO
+import UI
 import Builder
 import Environment
 

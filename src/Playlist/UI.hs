@@ -43,7 +43,7 @@ import Graphics.UI.Gtk hiding (add, remove)
 import XMMS2.Client hiding (Data, playbackStatus)
 
 import Builder
-import UIEnvIO
+import UI
 import XMMS
 import Playback
 import Playtime

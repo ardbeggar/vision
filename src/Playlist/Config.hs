@@ -28,7 +28,7 @@ import System.IO.Unsafe
 
 import Graphics.UI.Gtk
 
-import UIEnvIO
+import UI
 import Editor
 import Context
 import Compound

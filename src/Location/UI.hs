@@ -31,7 +31,7 @@ import Control.Concurrent.STM.TGVar
 
 import Graphics.UI.Gtk hiding (add)
 
-import UIEnvIO
+import UI
 import Builder
 import XMMS
 import Utils

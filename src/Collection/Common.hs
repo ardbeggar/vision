@@ -41,7 +41,7 @@ import Graphics.UI.Gtk hiding (focus)
 
 import XMMS2.Client
 
-import UIEnvIO
+import UI
 import Utils
 import XMMS
 import Compound

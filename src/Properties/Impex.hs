@@ -50,7 +50,7 @@ import Graphics.UI.Gtk
 import XMMS2.Client hiding (Property)
 import qualified XMMS2.Client as X
 
-import UIEnvIO
+import UI
 import Context
 import Medialib
 import Utils

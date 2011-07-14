@@ -37,7 +37,7 @@ import Graphics.UI.Gtk hiding (add, remove)
 
 import Context
 import Utils
-import UIEnvIO
+import UI
 import XMMS
 import Medialib
 import Properties.Editor.Model

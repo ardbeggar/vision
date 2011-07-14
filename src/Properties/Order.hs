@@ -32,7 +32,7 @@ import Control.Monad.Trans
 
 import Graphics.UI.Gtk
 
-import UIEnvIO
+import UI
 import Editor
 import Properties.Property
 import Properties.View

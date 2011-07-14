@@ -39,7 +39,7 @@ import XMMS2.Client
 
 import XMMS
 import Environment
-import UIEnvIO
+import UI
 import Location.Model
 import Location.View
 import Location.PathComp

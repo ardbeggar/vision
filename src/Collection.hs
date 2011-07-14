@@ -32,7 +32,7 @@ import Control.Monad.W
 
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
-import UIEnvIO
+import UI
 import Clipboard
 import Registry
 import XMMS

@@ -50,7 +50,7 @@ import XMMS2.Client
 
 import XMMS
 import Utils
-import UIEnvIO
+import UI
 import Compound
 
 import Collection.Common
