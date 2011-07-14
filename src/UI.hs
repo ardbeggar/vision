@@ -26,24 +26,6 @@ module UI
   , windowGroup
   , setWindowTitle
   , informUser
-{-
-  , window
-  , contents
-  , setWindowTitle
-  , getWidget
-  , addUIFromFile
-  , insertActionGroup
-  , addUIActions
-  , getAction
-  , windowGroup
-  , makeUI
-  , makeBuilder
-  , action
-  , actions
-  , bindAction
-  , bindActions
-  , informUser
--}
   ) where
 
 import Control.Applicative
@@ -76,9 +58,6 @@ uiEnv = Extract
 window        = envsx Ix uWindow
 contents      = envsx Ix uContents
 uiManager     = envsx Ix uManager
-{-
-uiActionGroup = envsx Ix uActionGroup
--}
 windowGroup   = envsx Ix uWindowGroup
 infoBar       = envsx Ix uInfoBar
 infoText      = envsx Ix uInfoText
@@ -87,12 +66,6 @@ setWindowTitle title = do
   window <- window
   liftIO $ windowSetTitle window title
 
-{-
-addUIActions = actionGroupAddActions uiActionGroup
-insertActionGroup = uiManagerInsertActionGroup uiManager
-addUIFromFile = uiManagerAddUiFromFile uiManager . uiFilePath
-getAction group name = fromJust <$> actionGroupGetAction group name
--}
 maybeGetWidget cast name = do
   uiManager <- uiManager
   liftIO $ fmap cast <$> uiManagerGetWidget uiManager name
