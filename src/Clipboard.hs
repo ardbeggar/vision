@@ -32,7 +32,6 @@ import Control.Concurrent.STM
 import Control.Monad.Trans
 import Control.Monad.ToIO
 import Control.Monad.EnvIO
-import Control.Monad.W
 
 import Data.Maybe
 import Data.Typeable

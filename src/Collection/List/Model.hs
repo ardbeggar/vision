@@ -29,7 +29,6 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.ToIO
 import Control.Monad.EnvIO
-import Control.Monad.W
 
 import Control.Concurrent
 import Control.Concurrent.STM

@@ -24,6 +24,9 @@
 
 module Control.Monad.EnvIO
   ( module Data.Env
+  , module Control.Monad.Trans
+  , module Control.Monad.ToIO
+  , module Control.Monad.W
   , EnvM (..)
   , envsx
   , EnvIO (..)

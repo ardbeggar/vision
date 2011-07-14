@@ -31,7 +31,6 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.EnvIO
-import Control.Monad.W
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
