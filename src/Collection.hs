@@ -32,11 +32,13 @@ import Control.Monad.W
 
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
-import UI
+import UI hiding (bindActions)
 import Clipboard
 import Registry
 import XMMS
 import Properties
+import Builder
+import Environment
 
 import Collection.Common
 import Collection.List
@@ -44,20 +46,22 @@ import Collection.Select
 import Collection.Utils
 
 
-browseCollection _maybeName = do
-  builder <- liftIO $ makeBuilder "collection-browser"
+browseCollection _maybeName = runBuilder $ do
+  addFromFile $ gladeFilePath "collection-browser"
+  builder <- builder
   context <- liftIO $ initUI builder
   let ?context = context
 
   env <- liftIO $ mkEnv builder
 
   Just ce <- getEnv clipboardEnv
-  runIn ce $> io $ \run -> bindActions builder $
+  W runC  <- runIn ce $> toIO
+  bindActions
     [ ("add-to-playlist", envWithColl env $ addToPlaylist False)
     , ("replace-playlist", envWithColl env $ addToPlaylist True)
     , ("select-all", envWithSel env selectAll)
     , ("invert-selection", envWithSel env invertSelection)
-    , ("copy", envWithIds env (run . copyIds))
+    , ("copy", envWithIds env (runC . copyIds))
     , ("edit-properties", envWithIds env showPropertyEditor)
     , ("export-properties", envWithIds env showPropertyExport)
     , ("import-properties", showPropertyImport)
@@ -67,19 +71,18 @@ browseCollection _maybeName = do
     , ("delete-collections", envWithNames env $ deleteCollections)
     ]
 
+  ag <- getObject castToActionGroup "server-actions"
   liftIO $ do
-    ag  <- builderGetObject builder castToActionGroup "server-actions"
     xcW <- atomically $ newTGWatch connectedV
     tid <- forkIO $ forever $ do
       conn <- atomically $ watch xcW
       postGUISync $ actionGroupSetSensitive ag conn
     window `onDestroy` (killThread tid)
 
-  lv <- mkListView env
+  lv  <- mkListView env
+  box <- getObject castToVBox "views"
   liftIO $ do
-    box <- builderGetObject builder castToVBox "views"
     boxPackStartDefaults box $ eScroll env
-
     addView env lv
     onCollBuilt env lv $ mkSelect env
 
