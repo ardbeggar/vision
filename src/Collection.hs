@@ -32,7 +32,7 @@ import Control.Monad.W
 
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
-import UI hiding (bindActions)
+import UIEnvIO
 import Clipboard
 import Registry
 import XMMS
@@ -48,14 +48,11 @@ import Collection.Utils
 
 browseCollection _maybeName = runBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
-  builder <- builder
-  context <- liftIO $ initUI builder
-  let ?context = context
-
-  runCommon $ do
+  runUI $ runCommon $ do
     Just cb <- getEnv clipboardEnv
     W runCB <- runIn cb $> toIO
     W runCM <- runIn commonEnv $> toIO
+    W runUI <- runIn uiEnv $> toIO
     bindActions
       [ ("add-to-playlist", runCM $ comWithColl $ addToPlaylist False)
       , ("replace-playlist", runCM $ comWithColl $ addToPlaylist True)
@@ -66,10 +63,12 @@ browseCollection _maybeName = runBuilder $ do
       , ("export-properties", runCM $ comWithIds showPropertyExport)
       , ("import-properties", liftIO showPropertyImport)
       , ("manage-properties", liftIO showPropertyManager)
-      , ("save-collection", runCM $ comWithColl $ saveCollection)
-      , ("rename-collection", runCM $ comWithNames $ renameCollection)
+      , ("save-collection", runCM $ comWithColl $ runUI . saveCollection)
+      , ("rename-collection", runCM $ comWithNames $ runUI . renameCollection)
       , ("delete-collections", runCM $ comWithNames $ deleteCollections)
       ]
+
+    window <- window
 
     ag <- getObject castToActionGroup "server-actions"
     liftIO $ do

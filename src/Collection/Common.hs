@@ -41,7 +41,7 @@ import Graphics.UI.Gtk hiding (focus)
 
 import XMMS2.Client
 
-import UI hiding (action, actions)
+import UIEnvIO
 import Utils
 import XMMS
 import Compound
@@ -87,10 +87,11 @@ runCommon f = do
               , aEnableDel = actionSetSensitive delAct
               }
 
+  lpopup <- getWidget castToMenu "ui/list-popup"
+  vpopup <- getWidget castToMenu "ui/view-popup"
+
   env <- liftIO $ do
     sbox   <- mkScrollBox
-    lpopup <- getWidget castToMenu "ui/list-popup"
-    vpopup <- getWidget castToMenu "ui/view-popup"
     cmodel <- mkModel
 
     scroll <- scrolledWindowNew Nothing Nothing

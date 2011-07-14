@@ -50,7 +50,7 @@ import XMMS2.Client
 
 import XMMS
 import Utils
-import UI
+import UIEnvIO
 import Compound
 
 import Collection.Common
@@ -77,13 +77,13 @@ addToPlaylist replace coll = do
 
 saveCollection coll = do
   res  <- runDlg "Save collection" False (const True) ""
-  withJust res $ \name -> do
+  withJust res $ \name -> liftIO $ do
     collSave xmms coll name "Collections"
     return ()
 
 renameCollection [old] = do
   res <- runDlg "Rename collection" False (/= old) old
-  withJust res $ \new -> do
+  withJust res $ \new -> liftIO $ do
     collRename xmms old new "Collections"
     return ()
 renameCollection _ = return ()
@@ -92,49 +92,52 @@ deleteCollections =
   mapM_ (\name -> collRemove xmms name "Collections")
 
 runDlg title enable isOk init = do
-  dialog <- dialogNew
-  windowSetTitle dialog title
-  windowSetTransientFor dialog window
-  windowSetModal dialog True
-  windowGroupAddWindow windowGroup dialog
+  window      <- window
+  windowGroup <- windowGroup
+  liftIO $ do
+    dialog <- dialogNew
+    windowSetTitle dialog title
+    windowSetTransientFor dialog window
+    windowSetModal dialog True
+    windowGroupAddWindow windowGroup dialog
 
-  dialogSetHasSeparator dialog False
-  dialogAddButton dialog "gtk-cancel" ResponseCancel
-  dialogAddButtonCR dialog "gtk-ok" ResponseOk
-  dialogSetDefaultResponse dialog ResponseOk
-  dialogSetResponseSensitive dialog ResponseOk enable
+    dialogSetHasSeparator dialog False
+    dialogAddButton dialog "gtk-cancel" ResponseCancel
+    dialogAddButtonCR dialog "gtk-ok" ResponseOk
+    dialogSetDefaultResponse dialog ResponseOk
+    dialogSetResponseSensitive dialog ResponseOk enable
 
-  box <- vBoxNew False 0
-  containerSetBorderWidth box 7
-  upper <- dialogGetUpper dialog
-  containerAdd upper box
+    box <- vBoxNew False 0
+    containerSetBorderWidth box 7
+    upper <- dialogGetUpper dialog
+    containerAdd upper box
 
-  entry <- entryNew
-  entrySetText entry init
-  editableSelectRegion entry 0 (-1)
-  editableSetPosition entry (-1)
-  boxPackStart box entry PackNatural 0
+    entry <- entryNew
+    entrySetText entry init
+    editableSelectRegion entry 0 (-1)
+    editableSetPosition entry (-1)
+    boxPackStart box entry PackNatural 0
 
-  let ok = do
-        new <- trim <$> entryGetText entry
-        return $ not (null new) && isOk new
-      check = dialogSetResponseSensitive dialog ResponseOk =<< ok
-      checkInsert str pos = check >> return (length str + pos)
-      checkDelete _ _     = check
-  entry `onEntryActivate` do
-    ok <- ok
-    when ok $ dialogResponse dialog ResponseOk
-  entry `afterInsertText` checkInsert
-  entry `afterDeleteText` checkDelete
+    let ok = do
+          new <- trim <$> entryGetText entry
+          return $ not (null new) && isOk new
+        check = dialogSetResponseSensitive dialog ResponseOk =<< ok
+        checkInsert str pos = check >> return (length str + pos)
+        checkDelete _ _     = check
+    entry `onEntryActivate` do
+      ok <- ok
+      when ok $ dialogResponse dialog ResponseOk
+    entry `afterInsertText` checkInsert
+    entry `afterDeleteText` checkDelete
 
-  widgetShowAll dialog
-  resp <- dialogRun dialog
-  new  <- trim <$> entryGetText entry
-  widgetDestroy dialog
+    widgetShowAll dialog
+    resp <- dialogRun dialog
+    new  <- trim <$> entryGetText entry
+    widgetDestroy dialog
 
-  return $ case resp of
-    ResponseOk -> Just new
-    _          -> Nothing
+    return $ case resp of
+      ResponseOk -> Just new
+      _          -> Nothing
 
 
 class CollBuilder b where
