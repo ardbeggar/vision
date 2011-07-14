@@ -49,6 +49,7 @@ executable vision
                     About,
                     Builder,
                     UI,
+                    UIEnvIO,
                     Atoms,
                     DnD,
                     Config,
