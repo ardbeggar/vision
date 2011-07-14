@@ -35,8 +35,10 @@ import Data.Maybe
 
 import Graphics.UI.Gtk
 
+import Builder
 import Context
 import Environment
+
 import Location.Model
 import Location.PathComp
 
@@ -54,75 +56,76 @@ locationEntry = vEntry context
 locationComp  = vComp context
 
 
-initView builder = do
-  context <- initContext builder
+initView = do
+  context <- initContext
   let ?context = context
 
-  treeViewSetModel locationView sortModel
+  liftIO $ do
+    treeViewSetModel locationView sortModel
 
-  treeSelectionSetMode locationSel SelectionMultiple
+    treeSelectionSetMode locationSel SelectionMultiple
 
-  column <- treeViewColumnNew
-  treeViewAppendColumn locationView column
-  treeViewColumnSetTitle column "Name"
-  treeViewColumnSetSortOrder column =<< getSortOrder
-  treeViewColumnSetSortIndicator column True
-  treeViewColumnSetClickable column True
-  column `onColClicked` do
-    order <- treeViewColumnGetSortOrder column
-    let order' = case order of
-          SortAscending  -> SortDescending
-          SortDescending -> SortAscending
-    treeViewColumnSetSortOrder column order'
-    setSortOrder order'
+    column <- treeViewColumnNew
+    treeViewAppendColumn locationView column
+    treeViewColumnSetTitle column "Name"
+    treeViewColumnSetSortOrder column =<< getSortOrder
+    treeViewColumnSetSortIndicator column True
+    treeViewColumnSetClickable column True
+    column `onColClicked` do
+      order <- treeViewColumnGetSortOrder column
+      let order' = case order of
+            SortAscending  -> SortDescending
+            SortDescending -> SortAscending
+      treeViewColumnSetSortOrder column order'
+      setSortOrder order'
 
-  cell <- cellRendererPixbufNew
-  treeViewColumnPackStart column cell False
-  cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
-    item <- itemByIter iter
-    cell `set` [ cellPixbufStockId :=
-                 if iIsDir item
-                 then stockDirectory
-                 else stockFile ]
+    cell <- cellRendererPixbufNew
+    treeViewColumnPackStart column cell False
+    cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
+      item <- itemByIter iter
+      cell `set` [ cellPixbufStockId :=
+                   if iIsDir item
+                   then stockDirectory
+                   else stockFile ]
 
-  cell <- cellRendererTextNew
-  treeViewColumnPackStart column cell True
-  cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
-    item <- itemByIter iter
-    cell `set` [ cellText := iName item ]
+    cell <- cellRendererTextNew
+    treeViewColumnPackStart column cell True
+    cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
+      item <- itemByIter iter
+      cell `set` [ cellText := iName item ]
 
-  treeViewSetEnableSearch locationView True
-  treeViewSetSearchEqualFunc locationView $ Just $ \str iter -> do
-    item <- itemByIter iter
-    return $ isInfixOf (map toLower str) (map toLower $ iName item)
+    treeViewSetEnableSearch locationView True
+    treeViewSetSearchEqualFunc locationView $ Just $ \str iter -> do
+      item <- itemByIter iter
+      return $ isInfixOf (map toLower str) (map toLower $ iName item)
 
-  entrySetCompletion locationEntry $ pathComp locationComp
+    entrySetCompletion locationEntry $ pathComp locationComp
 
-  locationEntry `onEditableChanged` do
-    url <- entryGetText locationEntry
-    updatePathComp locationComp url
-
-  locationEntry `on` keyPressEvent $ tryEvent $ do
-    []    <- eventModifier
-    "Tab" <- eventKeyName
-    liftIO $ do
-      (url, modify, ofs) <- makeURL <$> entryGetText locationEntry
-      when modify $ do
-        pos <- editableGetPosition locationEntry
-        entrySetText locationEntry url
-        editableSetPosition locationEntry $ pos + ofs
+    locationEntry `onEditableChanged` do
+      url <- entryGetText locationEntry
       updatePathComp locationComp url
-      entryCompletionInsertPrefix $ pathComp locationComp
-      entryCompletionComplete $ pathComp locationComp
+
+    locationEntry `on` keyPressEvent $ tryEvent $ do
+      []    <- eventModifier
+      "Tab" <- eventKeyName
+      liftIO $ do
+        (url, modify, ofs) <- makeURL <$> entryGetText locationEntry
+        when modify $ do
+          pos <- editableGetPosition locationEntry
+          entrySetText locationEntry url
+          editableSetPosition locationEntry $ pos + ofs
+        updatePathComp locationComp url
+        entryCompletionInsertPrefix $ pathComp locationComp
+        entryCompletionComplete $ pathComp locationComp
 
   return ?context
 
 
-initContext builder = do
-  view  <- builderGetObject builder castToTreeView "location-view"
-  sel   <- treeViewGetSelection view
-  entry <- builderGetObject builder castToEntry "location-entry"
-  comp  <- makePathComp
+initContext = do
+  view  <- getObject castToTreeView "location-view"
+  sel   <- liftIO $ treeViewGetSelection view
+  entry <- getObject castToEntry "location-entry"
+  comp  <- liftIO $ makePathComp
   return $ augmentContext
     View { vView  = view
          , vSel   = sel

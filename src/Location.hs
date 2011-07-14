@@ -21,9 +21,14 @@ module Location
   ( browseLocation
   ) where
 
+import Control.Monad.Trans
+import Control.Monad.EnvIO
+
 import Graphics.UI.Gtk
 
-import UI
+import Builder
+import UIEnvIO
+import Environment
 
 import Location.Model
 import Location.View
@@ -35,21 +40,22 @@ import Location.UI
 browseLocation order maybeURL = do
   let f = browseLocation
 
-  builder <- makeBuilder "location-browser"
+  flip runEnvIO () $ runBuilder $ do
+    addFromFile $ gladeFilePath "location-browser"
 
-  context <- initModel order
-  let ?context = context
+    context <- liftIO $ initModel order
+    let ?context = context
 
-  context <- initView builder
-  let ?context = context
+    context <- initView
+    let ?context = context
 
-  context <- initUI builder
-  let ?context = context
+    runUI $ do
+      setupUI f
+      liftIO $ setupDnD
 
-  setupUI builder f
-  setupDnD
+      window <- window
+      liftIO $ widgetShowAll window
 
-  widgetShowAll window
-  case maybeURL of
-    Just url -> loadLocation $ Go url
-    Nothing  -> openLocation
+      case maybeURL of
+        Just url -> loadLocation $ Go url
+        Nothing  -> openLocation

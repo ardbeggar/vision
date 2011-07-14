@@ -28,6 +28,7 @@ module Location.Control
 import Prelude hiding (catch)
 import Control.Monad.CatchIO
 import Control.Monad.Trans
+import Control.Monad.EnvIO
 
 import Data.Maybe
 import Data.List
@@ -38,29 +39,29 @@ import XMMS2.Client
 
 import XMMS
 import Environment
-import UI
+import UIEnvIO
 import Location.Model
 import Location.View
 import Location.PathComp
 
 
-loadLocation location = do
+loadLocation location = io $ \run -> do
   listStoreClear locationStore
   maybeURL <- updateLocation location
   case maybeURL of
     Just url -> do
       clearPathComp locationComp
       entrySetText locationEntry url
-      xformMediaBrowse xmms url >>* handleBrowse url
+      xformMediaBrowse xmms url >>* handleBrowse run url
     Nothing ->
       return ()
 
-handleBrowse url =
+handleBrowse run url =
   handleBrowse' `catch` \(e :: XMMSException) -> do
     let t = case e of
           XMMSError s -> s
           _           -> "Unknown error"
-    liftIO $ informUser MessageError $ escapeMarkup url ++ ": <b>" ++ escapeMarkup t ++ "</b>"
+    liftIO $ run $ informUser MessageError $ escapeMarkup url ++ ": <b>" ++ escapeMarkup t ++ "</b>"
   where handleBrowse' = do
           r <- result
           liftIO $ do
@@ -101,6 +102,6 @@ addOne p = do
              return ()))
       return ()
 
-openLocation = do
+openLocation = liftIO $ do
   widgetGrabFocus locationEntry
   editableSelectRegion locationEntry 0 (-1)

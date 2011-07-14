@@ -23,7 +23,7 @@ module Location.UI
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Trans
+import Control.Monad.EnvIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -31,7 +31,8 @@ import Control.Concurrent.STM.TGVar
 
 import Graphics.UI.Gtk hiding (add)
 
-import UI
+import UIEnvIO
+import Builder
 import XMMS
 import Utils
 import Location.Model
@@ -39,36 +40,37 @@ import Location.View
 import Location.Control
 
 
-setupUI builder browse = do
-  setupActions builder browse
-  setupToolbar builder
-  setupLocationEntry builder
-  setupLocationView builder
-  setupConnection builder
+setupUI browse = do
+  setupActions browse
+  setupToolbar
+  setupLocationEntry
+  setupLocationView
+  setupConnection
 
-setupActions builder browse = do
-  bindActions builder
-    [ ("new-window"           , newWindow browse                )
-    , ("open-location"        , openLocation                    )
-    , ("load"                 , loadCurrentLocation             )
-    , ("down"                 , loadAtCursor (loadLocation . Go))
-    , ("browse-in-new-window" , browseInNewWindow browse        )
-    , ("add-to-playlist"      , addToPlaylist                   )
-    , ("replace-playlist"     , replacePlaylist                 )
-    , ("back"                 , loadLocation Back               )
-    , ("forward"              , loadLocation Forward            )
-    , ("up"                   , loadLocation Up                 )
-    , ("refresh"              , loadLocation Refresh            )
+setupActions browse = do
+  W runUI <- runIn uiEnv
+  bindActions
+    [ ("new-window"           , newWindow browse                        )
+    , ("open-location"        , openLocation                            )
+    , ("load"                 , runUI loadCurrentLocation               )
+    , ("down"                 , loadAtCursor (runUI . loadLocation . Go))
+    , ("browse-in-new-window" , browseInNewWindow browse                )
+    , ("add-to-playlist"      , addToPlaylist                           )
+    , ("replace-playlist"     , replacePlaylist                         )
+    , ("back"                 , runUI $ loadLocation Back               )
+    , ("forward"              , runUI $ loadLocation Forward            )
+    , ("up"                   , runUI $ loadLocation Up                 )
+    , ("refresh"              , runUI $ loadLocation Refresh            )
     ]
 
-  down    <- action builder "down"
-  binw    <- action builder "browse-in-new-window"
-  addp    <- action builder "add-to-playlist"
-  repp    <- action builder "replace-playlist"
-  back    <- action builder "back"
-  forward <- action builder "forward"
-  up      <- action builder "up"
-  refresh <- action builder "refresh"
+  down    <- action "down"
+  binw    <- action "browse-in-new-window"
+  addp    <- action "add-to-playlist"
+  repp    <- action "replace-playlist"
+  back    <- action "back"
+  forward <- action "forward"
+  up      <- action "up"
+  refresh <- action "refresh"
 
   let updateB = do
         rows       <- treeSelectionGetSelectedRows locationSel
@@ -89,81 +91,82 @@ setupActions builder browse = do
         actionSetSensitive up eu
         actionSetSensitive refresh er
 
-  lW <- atomically $ newTGWatch location
-  forkIO $ forever $ do
-    void $ atomically $ watch lW
-    postGUISync $ do
-      updateN
-      updateWindowTitle
+  io $ \run -> do
+    lW <- atomically $ newTGWatch location
+    forkIO $ forever $ do
+      void $ atomically $ watch lW
+      postGUISync $ do
+        updateN
+        run updateWindowTitle
 
-  locationSel `onSelectionChanged` updateB
-  postGUIAsync updateB
-
-  return ()
-
-setupToolbar builder = do
-  toolbar <- builderGetObject builder castToToolbar "toolbar"
-
-  item <- separatorToolItemNew
-  separatorToolItemSetDraw item False
-  toolbarInsert toolbar item 4
-
-  item <- toolItemNew
-  toolItemSetHomogeneous item False
-  toolItemSetExpand item True
-  containerAdd item locationEntry
-  toolbarInsert toolbar item 5
-
-  item <- separatorToolItemNew
-  separatorToolItemSetDraw item False
-  toolbarInsert toolbar item 6
-
-setupLocationEntry builder = do
-  load <- action builder "load"
-  locationEntry `onEntryActivate` actionActivate load
-  locationEntry `onIconPress` \icon ->
-    case icon of
-      PrimaryIcon   -> entrySetText locationEntry ""
-      SecondaryIcon -> actionActivate load
+    locationSel `onSelectionChanged` updateB
+    postGUIAsync updateB
 
   return ()
 
-setupLocationView builder = do
+setupToolbar = do
+  toolbar <- getObject castToToolbar "toolbar"
+
+  liftIO $ do
+    item <- separatorToolItemNew
+    separatorToolItemSetDraw item False
+    toolbarInsert toolbar item 4
+
+    item <- toolItemNew
+    toolItemSetHomogeneous item False
+    toolItemSetExpand item True
+    containerAdd item locationEntry
+    toolbarInsert toolbar item 5
+
+    item <- separatorToolItemNew
+    separatorToolItemSetDraw item False
+    toolbarInsert toolbar item 6
+
+setupLocationEntry = do
+  load <- action "load"
+  liftIO $ do
+    locationEntry `onEntryActivate` actionActivate load
+    locationEntry `onIconPress` \icon ->
+      case icon of
+        PrimaryIcon   -> entrySetText locationEntry ""
+        SecondaryIcon -> actionActivate load
+  return ()
+
+setupLocationView = do
   popup <- getWidget castToMenu "ui/location-popup"
-  setupTreeViewPopup locationView popup
+  down  <- action "down"
+  binw  <- action "browse-in-new-window"
+  liftIO $ do
+    setupTreeViewPopup locationView popup
 
-  down <- action builder "down"
-  locationView `onRowActivated` \_ _ ->
-    actionActivate down
+    locationView `onRowActivated` \_ _ ->
+      actionActivate down
 
-  binw <- action builder "browse-in-new-window"
-  locationView `on` buttonPressEvent $ tryEvent $ do
-    MiddleButton <- eventButton
-    SingleClick  <- eventClick
-    (x, y)       <- eventCoordinates
-    liftIO $ do
-      maybePath <- treeViewGetPathAtPos locationView (round x, round y)
-      case maybePath of
-        Just (path, _, _) -> do
-          treeViewSetCursor locationView path Nothing
-          actionActivate binw
-        Nothing           ->
-          return ()
-
-  return ()
-
-setupConnection builder = do
-  ag <- builderGetObject builder castToActionGroup "server-actions"
-  xcW <- atomically $ newTGWatch connectedV
-  forkIO $ forever $ do
-    conn <- atomically $ watch xcW
-    actionGroupSetSensitive ag conn
-    locationEntry `set` [secondaryIconSensitive := conn]
+    locationView `on` buttonPressEvent $ tryEvent $ do
+      MiddleButton <- eventButton
+      SingleClick  <- eventClick
+      (x, y)       <- eventCoordinates
+      liftIO $ do
+        maybePath <- treeViewGetPathAtPos locationView (round x, round y)
+        case maybePath of
+          Just (path, _, _) -> do
+            treeViewSetCursor locationView path Nothing
+            actionActivate binw
+          Nothing           ->
+            return ()
 
   return ()
 
+setupConnection = do
+  ag <- getObject castToActionGroup "server-actions"
+  liftIO $ do
+    xcW <- atomically $ newTGWatch connectedV
+    forkIO $ forever $ do
+      conn <- atomically $ watch xcW
+      actionGroupSetSensitive ag conn
+      locationEntry `set` [secondaryIconSensitive := conn]
 
-loadCurrentLocation = do
+loadCurrentLocation = io $ \run -> do
   text <- trim <$> entryGetText locationEntry
   case text of
     [] -> do
@@ -173,7 +176,7 @@ loadCurrentLocation = do
         _  -> do
           entrySetText locationEntry cur
           widgetGrabFocus locationView
-    _  -> loadLocation . Go $ makeURL text
+    _  -> run $ loadLocation . Go $ makeURL text
 
 loadAtCursor func = do
   (path, _) <- treeViewGetCursor locationView
@@ -193,7 +196,7 @@ newWindow browse = do
   browse order Nothing
 
 updateWindowTitle = do
-  loc <- getCurrentLocation
+  loc <- liftIO $ getCurrentLocation
   setWindowTitle $ case loc of
     [] -> "Vision location browser"
     _  -> loc ++ " - Vision location browser"
