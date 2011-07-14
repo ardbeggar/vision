@@ -28,10 +28,11 @@ module Properties.Order
   ) where
 
 import Control.Monad
+import Control.Monad.Trans
 
 import Graphics.UI.Gtk
 
-import UI
+import UIEnvIO
 import Editor
 import Properties.Property
 import Properties.View
@@ -40,11 +41,9 @@ import Properties.View
 type OrderDialog = EditorDialog (PropertyView Bool)
 
 
-showOrderDialog dialog getOrder setOrder =
-  runEditorDialog dialog
-  getOrder
-  setOrder
-  False window
+showOrderDialog dialog getOrder setOrder = do
+  window <- window
+  liftIO $ runEditorDialog dialog getOrder setOrder False window
 
 makeOrderDialog =
   makeEditorDialog [(stockApply, ResponseApply)] makeOrderView

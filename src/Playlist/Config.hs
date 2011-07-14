@@ -22,11 +22,13 @@ module Playlist.Config
   , showPlaylistConfigDialog
   ) where
 
+import Control.Monad.Trans
+
 import System.IO.Unsafe
 
 import Graphics.UI.Gtk
 
-import UI
+import UIEnvIO
 import Editor
 import Context
 import Compound
@@ -47,5 +49,6 @@ initPlaylistConfig = do
   return $ augmentContext
     Config { cDialog = dialog }
 
-showPlaylistConfigDialog =
-  runEditorDialog (cDialog context) getFormatDefs putFormatDefs False window
+showPlaylistConfigDialog = do
+  window <- window
+  liftIO $ runEditorDialog (cDialog context) getFormatDefs putFormatDefs False window

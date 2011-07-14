@@ -24,6 +24,8 @@ module UIEnvIO
   , contents
   , getWidget
   , windowGroup
+  , setWindowTitle
+  , informUser
 {-
   , window
   , contents
@@ -79,9 +81,13 @@ uiActionGroup = envsx Ix uActionGroup
 -}
 windowGroup   = envsx Ix uWindowGroup
 infoBar       = envsx Ix uInfoBar
---infoText      = envsx Ix uInfoText
+infoText      = envsx Ix uInfoText
+
+setWindowTitle title = do
+  window <- window
+  liftIO $ windowSetTitle window title
+
 {-
-setWindowTitle = windowSetTitle window
 addUIActions = actionGroupAddActions uiActionGroup
 insertActionGroup = uiManagerInsertActionGroup uiManager
 addUIFromFile = uiManagerAddUiFromFile uiManager . uiFilePath
@@ -127,7 +133,6 @@ makeUI = do
        , uInfoText    = infoText
        }
 
-{-
 informUser t m = do
   infoBar  <- infoBar
   infoText <- infoText
@@ -136,7 +141,7 @@ informUser t m = do
     labelSetMarkup infoText m
     widgetSetNoShowAll infoBar False
     widgetShowAll infoBar
--}
+
 makeInfoBar = do
   infoBar <- getObject castToInfoBar "info-bar"
   liftIO $ do

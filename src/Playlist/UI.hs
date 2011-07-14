@@ -42,7 +42,8 @@ import Graphics.UI.Gtk hiding (add, remove)
 
 import XMMS2.Client hiding (Data, playbackStatus)
 
-import UI
+import Builder
+import UIEnvIO
 import XMMS
 import Playback
 import Playtime
@@ -62,28 +63,28 @@ import Playlist.Config
 import Playlist.Control
 
 
-setupUI builder = do
+setupUI = do
   setupWindowTitle
 
   Just ptEnv  <- getEnv playtimeEnv
   Just volEnv <- getEnv volumeEnv
-  runIn (ptEnv :*: volEnv) $> setupPlaybar builder
+  runIn (ptEnv :*: volEnv :*: builderEnv) $> setupPlaybar
 
   Just env <- getEnv clipboardEnv
-  runIn (env :*: registryEnv) $> setupActions builder
+  runIn (env :*: registryEnv :*: builderEnv :*: uiEnv) $> setupActions
 
+  popup <- getWidget castToMenu "ui/playlist-popup"
+  liftIO $ setupTreeViewPopup playlistView popup
+
+  window <- window
   liftIO $ do
     playlistView `onRowActivated` \[n] _ ->
       playTrack n
-
-    popup <- getWidget castToMenu "ui/playlist-popup"
-    setupTreeViewPopup playlistView popup
-
     window `onDestroy` mainQuit
 
   return ()
 
-setupActions builder = do
+setupActions = do
   urlEntryDialog <- liftIO $ unsafeInterleaveIO $ makeURLEntryDialog
 
   orderDialog <- liftIO $ unsafeInterleaveIO $ makeOrderDialog $ \v -> do
@@ -98,7 +99,8 @@ setupActions builder = do
 
   W runR <- runIn registryEnv
   W runC <- runIn clipboardEnv
-  liftIO $ bindActions builder
+  W runU <- runIn uiEnv
+  bindActions
     [ ("play",               startPlayback False)
     , ("pause",              pausePlayback)
     , ("stop",               stopPlayback)
@@ -114,99 +116,102 @@ setupActions builder = do
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
     , ("browse-collection",  runR $ browseCollection Nothing)
-    , ("add-media",          runURLEntryDialog urlEntryDialog)
+    , ("add-media",          runU $ runURLEntryDialog urlEntryDialog)
     , ("clear-playlist",     clearPlaylist)
-    , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)
-    , ("configure-playlist", showPlaylistConfigDialog)
-    , ("edit-properties",    showPropertyEditor)
-    , ("export-properties",  showPropertyExport)
-    , ("import-properties",  showPropertyImport)
-    , ("manage-properties",  showPropertyManager)
+    , ("sort-by",            runU $ showOrderDialog orderDialog getOrder setOrder)
+    , ("configure-playlist", runU showPlaylistConfigDialog)
+    , ("edit-properties",    runU showPropertyEditor)
+    , ("export-properties",  runU showPropertyExport)
+    , ("import-properties",  runU showPropertyImport)
+    , ("manage-properties",  runU showPropertyManager)
     ]
 
-  setupServerActionGroup builder
-  setupPlaybackActions builder
-  setupTrackActions builder
-  setupSelectionActions builder
-  setupClipboardActions builder
+  setupServerActionGroup
+  setupPlaybackActions
+  setupTrackActions
+  setupSelectionActions
+  setupClipboardActions
 
   return ()
 
-setupServerActionGroup builder = liftIO $ do
-  ag <- builderGetObject builder castToActionGroup "server-actions"
-  cW <- atomically $ newTGWatch connectedV
-  forkIO $ forever $ do
-    c <- atomically $ watch cW
-    actionGroupSetSensitive ag c
+setupServerActionGroup = do
+  ag <- getObject castToActionGroup "server-actions"
+  liftIO $ do
+    cW <- atomically $ newTGWatch connectedV
+    forkIO $ forever $ do
+      c <- atomically $ watch cW
+      actionGroupSetSensitive ag c
 
-setupPlaybackActions builder = liftIO $ do
-  play  <- action builder "play"
-  pause <- action builder "pause"
-  stop  <- action builder "stop"
-  psW   <- atomically $ newEmptyTWatch playbackStatus
-  forkIO $ forever $ do
-    ps <- atomically $ watch psW
-    postGUISync $ do
-      let (ePlay, ePause, eStop) = case ps of
-            Just StatusPlay  -> (False, True, True)
-            Just StatusPause -> (True, False, True)
-            _                -> (True, False, False)
-      actionSetSensitive play ePlay
-      actionSetVisible play ePlay
-      actionSetSensitive pause ePause
-      actionSetVisible pause ePause
-      actionSetSensitive stop eStop
+setupPlaybackActions = do
+  play  <- action "play"
+  pause <- action "pause"
+  stop  <- action "stop"
+  liftIO $ do
+    psW   <- atomically $ newEmptyTWatch playbackStatus
+    forkIO $ forever $ do
+      ps <- atomically $ watch psW
+      postGUISync $ do
+        let (ePlay, ePause, eStop) = case ps of
+              Just StatusPlay  -> (False, True, True)
+              Just StatusPause -> (True, False, True)
+              _                -> (True, False, False)
+        actionSetSensitive play ePlay
+        actionSetVisible play ePlay
+        actionSetSensitive pause ePause
+        actionSetVisible pause ePause
+        actionSetSensitive stop eStop
 
-setupTrackActions builder = liftIO $ do
-  prev <- action builder "prev"
-  next <- action builder "next"
-  ctW  <- atomically $ newEmptyTWatch currentTrack
-  psW  <- atomically $ newEmptyTWatch playlistSize
-  forkIO $ forever $ do
-    atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
-    size <- getPlaylistSize
-    name <- getPlaylistName
-    cpos <- getCurrentTrack
-    let (ep, en) = case (name, cpos) of
-          (Just n, Just (ct, cn)) ->
-            (n == cn && ct > 0, n == cn && ct < size - 1)
-          _ ->
-            (False, False)
-    actionSetSensitive prev ep
-    actionSetSensitive next en
+setupTrackActions = do
+  prev <- action "prev"
+  next <- action "next"
+  liftIO $ do
+    ctW  <- atomically $ newEmptyTWatch currentTrack
+    psW  <- atomically $ newEmptyTWatch playlistSize
+    forkIO $ forever $ do
+      atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
+      size <- getPlaylistSize
+      name <- getPlaylistName
+      cpos <- getCurrentTrack
+      let (ep, en) = case (name, cpos) of
+            (Just n, Just (ct, cn)) ->
+              (n == cn && ct > 0, n == cn && ct < size - 1)
+            _ ->
+              (False, False)
+      actionSetSensitive prev ep
+      actionSetSensitive next en
 
-setupSelectionActions builder = liftIO $ do
-  acts <- mapM (action builder) ["cut", "copy", "delete", "edit-properties", "export-properties"]
-  playlistSel `onSelectionChanged` setup acts
-  postGUIAsync $ setup acts
+setupSelectionActions = do
+  acts <- actions ["cut", "copy", "delete", "edit-properties", "export-properties"]
+  liftIO $ do
+    playlistSel `onSelectionChanged` setup acts
+    postGUIAsync $ setup acts
   where setup acts = do
           n <- treeSelectionCountSelectedRows playlistSel
           mapM_ (`actionSetSensitive` (n /= 0)) acts
 
-setupClipboardActions builder =
+setupClipboardActions = do
+  acts <- actions ["paste", "append"]
   runIn clipboardEnv $> do
     ts <- clipboardTargets
     io $ \run -> do
-      acts <- mapM (action builder) ["paste", "append"]
       ctW <- atomically $ newEmptyTWatch ts
       forkIO $ forever $ do
         void $ atomically $ watch ctW
         en <- run editCheckClipboard
         mapM_ (`actionSetSensitive` en) acts
 
-setupWindowTitle = liftIO $ do
+setupWindowTitle = runIn uiEnv $> io $ \run -> do
   pnW <- atomically $ newEmptyTWatch playlistName
   forkIO $ forever $ do
     name <- atomically $ watch pnW
-    setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
+    run $ setWindowTitle $
+      maybe "Vision playlist" (++ " - Vision playlist") name
 
-setupPlaybar builder = do
+setupPlaybar = do
   seekView <- makeSeekControl
   volView  <- makeVolumeControl
-
+  playbar  <- getObject castToToolbar "playbar"
   liftIO $ do
-    playbar <- builderGetObject builder castToToolbar "playbar"
-
     sep <- separatorToolItemNew
     separatorToolItemSetDraw sep False
     toolbarInsert playbar sep (-1)
@@ -265,8 +270,10 @@ makeURLEntryDialog =
     windowSetTitle outerw "Add media"
     windowSetDefaultSize outerw 500 (-1)
 
-runURLEntryDialog dlg =
-  runEditorDialog dlg (return "")
-  (\str ->
-    insertURIs (map (encString False ok_url) $ lines str) Nothing)
-  False window
+runURLEntryDialog dlg = do
+  window <- window
+  liftIO $ runEditorDialog dlg
+    (return "")
+    (\str ->
+      insertURIs (map (encString False ok_url) $ lines str) Nothing)
+    False window

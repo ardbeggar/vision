@@ -25,7 +25,8 @@ module Playlist
 import Control.Monad.Trans
 import Graphics.UI.Gtk
 
-import UI
+import UIEnvIO
+import Builder
 
 import Playlist.Model
 import Playlist.Index
@@ -41,30 +42,28 @@ import Playlist.UI
 initPlaylist =
   initFormat
 
-showPlaylist = do
-  builder <- liftIO $ makeBuilder "playlist"
+showPlaylist = runBuilder $ do
+  addFromFile "playlist"
+  runUI $ do
+    context <- liftIO $ initModel
+    let ?context = context
 
-  context <- liftIO $ initUI builder
-  let ?context = context
+    context <- liftIO $ initIndex
+    let ?context = context
 
-  context <- liftIO $ initModel
-  let ?context = context
+    context <- initView
+    let ?context = context
 
-  context <- liftIO $ initIndex
-  let ?context = context
+    context <- liftIO $ initPlaylistConfig
+    let ?context = context
 
-  context <- liftIO $ initView builder
-  let ?context = context
+    context <- liftIO $ initUpdate
+    let ?context = context
 
-  context <- liftIO $ initPlaylistConfig
-  let ?context = context
+    liftIO $ setupSearch
+    liftIO $ setupDnD
+    setupUI
 
-  context <- liftIO $ initUpdate
-  let ?context = context
-
-  liftIO $ setupSearch
-  liftIO $ setupDnD
-  setupUI builder
-
-  liftIO $ widgetShowAll window
+    window <- window
+    liftIO $ widgetShowAll window
 

@@ -29,6 +29,7 @@ module Properties.Impex
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.ToIO
 import Control.Concurrent.MVar
 
 import Data.Char
@@ -49,7 +50,7 @@ import Graphics.UI.Gtk
 import XMMS2.Client hiding (Property)
 import qualified XMMS2.Client as X
 
-import UI
+import UIEnvIO
 import Context
 import Medialib
 import Utils
@@ -86,12 +87,12 @@ initContext = do
 makeExportDlg =
   makeChooser "Export properties" FileChooserActionSave stockSave
 
-exportProps ids file =
+exportProps ids file = io $ \run ->
   retrieveProperties ids $ either (const $ return ()) $ \list -> do
     let base = dropFileName $ decodeString file
         text = encodeStrict $ showJSON $ map (exConv base . snd) list
     writeFile file text `catch` \e ->
-      informUser MessageError $ "Property export failed: " ++
+      run $ informUser MessageError $ "Property export failed: " ++
       (decodeString file) ++ ": " ++ ioeGetErrorString e
 
 exConv base info = ((url', args), Map.difference info readOnlyProps)
@@ -113,13 +114,13 @@ readOnlyProps =
 makeImportDlg =
   makeChooser "Import properties" FileChooserActionOpen stockOpen
 
-importProps name =
-  importAll `catch` (erep . ioeGetErrorString)
-  where importAll = do
+importProps name = io $ \run ->
+  importAll run `catch` (run . erep . ioeGetErrorString)
+  where importAll run = do
           text <- readFile name
           case decodeStrict text of
             Ok recs -> mapM_ (importOne base) recs
-            Error _ -> erep "invalid file format"
+            Error _ -> run $ erep "invalid file format"
         base = dropFileName decn
         decn = decodeString name
         erep = informUser MessageError . (("Property import failed: " ++ decn ++ ": ") ++)
@@ -171,22 +172,24 @@ makeChooser title action stockId = do
                  }
 
 runChooser Chooser { cLock = lock, cChooser = chooser } onAccept = do
-  locked <- isJust <$> tryTakeMVar lock
-  when locked $ do
-    windowSetTransientFor chooser window
-    rec { cid <- chooser `onResponse` \resp -> do
-             signalDisconnect cid
-             case resp of
-               ResponseAccept -> do
-                 name <- fileChooserGetFilename chooser
-                 withJust name onAccept
-               _ ->
-                 return ()
-             widgetHide chooser
-             putMVar lock ()
-        }
-    return ()
-  windowPresent chooser
+  window <- window
+  io $ \run -> do
+    locked <- isJust <$> tryTakeMVar lock
+    when locked $ do
+      windowSetTransientFor chooser window
+      rec { cid <- chooser `onResponse` \resp -> do
+               signalDisconnect cid
+               case resp of
+                 ResponseAccept -> do
+                   name <- fileChooserGetFilename chooser
+                   withJust name $ run . onAccept
+                 _ ->
+                   return ()
+               widgetHide chooser
+               putMVar lock ()
+          }
+      return ()
+    windowPresent chooser
 
 
 instance JSON X.Property where

@@ -26,6 +26,7 @@ module Properties.Manager
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.Trans
 
 import Data.IORef
 import qualified Data.Map as Map
@@ -41,7 +42,7 @@ import Graphics.UI.Gtk
 import Utils
 import Compound
 import Context
-import UI
+import UIEnvIO
 import Editor
 import Properties.Property
 import Properties.Model
@@ -63,8 +64,9 @@ initPropertyManager = do
   return $ augmentContext
     Manager { pManager = manager }
 
-showPropertyManager =
-  runEditorDialog manager getProperties setProperties False window
+showPropertyManager = do
+  window <- window
+  liftIO $ runEditorDialog manager getProperties setProperties False window
 
 
 data PropertyManager
