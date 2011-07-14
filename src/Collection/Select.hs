@@ -24,13 +24,14 @@ module Collection.Select
   , mkSelect
   ) where
 
+import Control.Monad.EnvIO
+
 import Data.IORef
 
 import Graphics.UI.Gtk hiding (focus)
 
 import XMMS2.Client
 
-import Utils
 import Compound
 
 import Collection.Common
@@ -50,34 +51,31 @@ data Select
 instance ViewItem Select where
   nextVIRef = sNextRef
 
-mkSelect env coll = do
-  nextRef <- newIORef None
-  box     <- vBoxNew False 5
-  combo   <- mkCombo env
+mkSelect coll = do
+  nextRef <- liftIO $ newIORef None
+  box     <- liftIO $ vBoxNew False 5
+  combo   <- mkCombo
   let s = S { sCombo  = combo
             , sBox     = box
             , sColl    = coll
             , sNextRef = nextRef
             }
-
-  boxPackStart box combo PackNatural 0
-
-  let setup w = do
-        setNext s w
-        onCollBuilt env w $ mkSelect env
-        boxPackStartDefaults box $ outer w
-        widgetGrabFocus $ focus w
-
-  combo `on` changed $ do
-    iter <- comboBoxGetActiveIter combo
-    withJust iter $ \iter -> do
-      cur <- listStoreGetValue (eCModel env) $ listStoreIterToIndex iter
-      case cur of
-        CITracks    -> setup =<< mkTrackView env coll
-        CIProp pr   -> setup =<< mkPropFlt env pr coll
+      setup w = do
+          liftIO $ setNext s w
+          W run <- toIO
+          onCollBuilt w $ run . mkSelect
+          liftIO $ do
+            boxPackStartDefaults box $ outer w
+            widgetGrabFocus $ focus w
+  io $ \run -> do
+    boxPackStart box combo PackNatural 0
+    combo `on` changed $ run $
+      withSelectedView combo $ \cur -> case cur of
+        CITracks    -> setup =<< mkTrackView coll
+        CIProp pr   -> setup =<< mkPropFlt pr coll
         CISeparator -> return ()
+    widgetShowAll box
 
-  widgetShowAll box
   return s
 
 instance CompoundWidget Select where

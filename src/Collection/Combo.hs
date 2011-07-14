@@ -22,6 +22,8 @@ module Collection.Combo
   , ComboItem (..)
   ) where
 
+import Control.Monad.Trans
+
 import Data.IORef
 
 import Graphics.UI.Gtk
@@ -33,29 +35,29 @@ import Collection.Common
 import Collection.ComboModel
 
 
-mkCombo env = do
-  let abRef  = eABRef env
-      ae     = eAE env
-      cmodel = eCModel env
+mkCombo = do
+  abRef  <- coms eABRef
+  ae     <- coms eAE
+  cmodel <- coms eCModel
+  liftIO $ do
+    combo <- comboBoxNewWithModel cmodel
+    comboBoxSetRowSeparatorSource combo $ Just (cmodel, separator)
 
-  combo <- comboBoxNewWithModel cmodel
-  comboBoxSetRowSeparatorSource combo $ Just (cmodel, separator)
+    cell <- cellRendererTextNew
+    cellLayoutPackStart combo cell True
+    cellLayoutSetAttributes combo cell cmodel $ \p ->
+      case p of
+        CITracks    -> [ cellText := "Tracks" ]
+        CIProp p    -> [ cellText := propName p ]
+        CISeparator -> []
 
-  cell <- cellRendererTextNew
-  cellLayoutPackStart combo cell True
-  cellLayoutSetAttributes combo cell cmodel $ \p ->
-    case p of
-      CITracks    -> [ cellText := "Tracks" ]
-      CIProp p    -> [ cellText := propName p ]
-      CISeparator -> []
+    combo `on` setFocusChild $ \fc -> do
+      maybe (return ()) (const $ writeIORef abRef emptyAB) fc
+      aEnableSel ae False
+      aEnableRen ae False
+      aEnableDel ae False
 
-  combo `on` setFocusChild $ \fc -> do
-    maybe (return ()) (const $ writeIORef abRef emptyAB) fc
-    aEnableSel ae False
-    aEnableRen ae False
-    aEnableDel ae False
-
-  return combo
+    return combo
 
 separator CISeparator = True
 separator _           = False

@@ -71,60 +71,62 @@ instance CollBuilder TrackView where
       f ils
   treeViewSel tv = (tView tv, tSel tv)
 
-mkTrackView env coll = do
-  store   <- listStoreNewDND [] Nothing Nothing
-  index   <- makeIndex store return
-  view    <- treeViewNewWithModel store
-  sel     <- treeViewGetSelection view
-  nextRef <- newIORef None
-  scroll  <- scrolledWindowNew Nothing Nothing
-  scrolledWindowSetShadowType scroll ShadowIn
-  scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
-  containerAdd scroll view
-  let tv = TV { tStore   = store
+mkTrackView coll = do
+  tv <- liftIO $ do
+    store   <- listStoreNewDND [] Nothing Nothing
+    index   <- makeIndex store return
+    view    <- treeViewNewWithModel store
+    sel     <- treeViewGetSelection view
+    nextRef <- newIORef None
+    scroll  <- scrolledWindowNew Nothing Nothing
+    scrolledWindowSetShadowType scroll ShadowIn
+    scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
+    containerAdd scroll view
+    return TV { tStore   = store
               , tIndex   = index
               , tView    = view
               , tSel     = sel
               , tScroll  = scroll
               , tNextRef = nextRef
               }
-  setupView env tv
+  setupView tv
   loadTracks tv coll
   return tv
 
 instance ViewItem TrackView where
   nextVIRef = tNextRef
 
-setupView env tv = do
+setupView tv = do
   let view  = tView tv
       sel   = tSel tv
-      abRef = eABRef env
-      ae    = eAE env
+  abRef <- coms eABRef
+  ae    <- coms eAE
+  popup <- coms eVPopup
+  liftIO $ do
+    treeSelectionSetMode sel SelectionMultiple
+    treeViewSetRulesHint view True
+    setupTreeViewPopup view popup
 
-  treeSelectionSetMode sel SelectionMultiple
-  treeViewSetRulesHint view True
-  setupTreeViewPopup view $ eVPopup env
+    let aef = do
+          foc <- view `get` widgetHasFocus
+          when foc $ do
+            rows <- treeSelectionGetSelectedRows sel
+            aEnableSel ae $ not $ null rows
+            aEnableRen ae False
+            aEnableDel ae False
+    setupViewFocus abRef view aef
+      AB { aWithColl  = withBuiltColl tv
+         , aWithNames = const $ return ()
+         , aSelection = Just sel
+         }
+    sel `on` treeSelectionSelectionChanged $ aef
 
-  let aef = do
-        foc <- view `get` widgetHasFocus
-        when foc $ do
-          rows <- treeSelectionGetSelectedRows sel
-          aEnableSel ae $ not $ null rows
-          aEnableRen ae False
-          aEnableDel ae False
-  setupViewFocus abRef view aef
-    AB { aWithColl  = withBuiltColl tv
-       , aWithNames = const $ return ()
-       , aSelection = Just sel
-       }
-  sel `on` treeSelectionSelectionChanged $ aef
+    view `onDestroy` (killIndex $ tIndex tv)
 
-  view `onDestroy` (killIndex $ tIndex tv)
+    setColumns tv False =<< loadConfig
+    widgetShowAll $ tScroll tv
 
-  setColumns tv False =<< loadConfig
-  widgetShowAll $ tScroll tv
-
-loadTracks tv coll =
+loadTracks tv coll = liftIO $
   collQueryIds xmms coll [] 0 0 >>* do
     ids <- result
     liftIO $ populateModel tv ids

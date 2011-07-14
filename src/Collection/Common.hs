@@ -19,17 +19,21 @@
 
 module Collection.Common
   ( Com (..)
-  , mkCom
+  , commonEnv
+  , coms
+  , runCommon
   , comWithColl
   , comWithIds
   , comWithSel
   , comWithNames
   , addView
   , FocusChild (..)
+  , withSelectedView
   ) where
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.EnvIO
 
 import Data.IORef
 
@@ -37,15 +41,18 @@ import Graphics.UI.Gtk hiding (focus)
 
 import XMMS2.Client
 
-import UI
+import UI hiding (action, actions)
 import Utils
 import XMMS
 import Compound
+import Builder
 
 import Collection.Actions
 import Collection.ScrollBox
 import Collection.ComboModel
 
+
+data Ix = Ix
 
 data Com
   = Com { eABRef  :: IORef ActionBackend
@@ -58,81 +65,110 @@ data Com
         , eSAdj   :: Adjustment
         }
 
-mkCom builder = do
-  abRef <- newIORef emptyAB
-  selActs <- mapM (action builder)
-             [ "add-to-playlist"
-             , "replace-playlist"
-             , "copy"
-             , "edit-properties"
-             , "export-properties"
-             , "save-collection"
-             ]
-  renAct <- action builder "rename-collection"
-  delAct <- action builder "delete-collections"
+commonEnv :: Extract Ix Com
+commonEnv = Extract
+
+coms = envsx Ix
+
+runCommon f = do
+  abRef <- liftIO $ newIORef emptyAB
+
+  selActs <- actions [ "add-to-playlist"
+                     , "replace-playlist"
+                     , "copy"
+                     , "edit-properties"
+                     , "export-properties"
+                     , "save-collection"
+                     ]
+  renAct <- action "rename-collection"
+  delAct <- action "delete-collections"
   let ae = AE { aEnableSel = \en -> mapM_ (`actionSetSensitive` en) selActs
               , aEnableRen = actionSetSensitive renAct
               , aEnableDel = actionSetSensitive delAct
               }
-  sbox <- mkScrollBox
-  lpopup <- liftIO $ getWidget castToMenu "ui/list-popup"
-  vpopup <- liftIO $ getWidget castToMenu "ui/view-popup"
-  cmodel <- mkModel
 
-  scroll <- scrolledWindowNew Nothing Nothing
-  scrolledWindowSetShadowType scroll ShadowNone
-  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
-  adj <- scrolledWindowGetHAdjustment scroll
+  env <- liftIO $ do
+    sbox   <- mkScrollBox
+    lpopup <- getWidget castToMenu "ui/list-popup"
+    vpopup <- getWidget castToMenu "ui/view-popup"
+    cmodel <- mkModel
 
-  fcRef <- newIORef Nothing
+    scroll <- scrolledWindowNew Nothing Nothing
+    scrolledWindowSetShadowType scroll ShadowNone
+    scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
+    adj <- scrolledWindowGetHAdjustment scroll
 
-  let scrollIn mfc = void $ withJust mfc $ \fc ->
-        flip idleAdd priorityLow $ do
-          Rectangle x _ w _ <- widgetGetAllocation fc
-          adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
-          return False
+    fcRef <- newIORef Nothing
 
-  adj `afterAdjChanged` do
-    mfc <- readIORef fcRef
-    scrollIn mfc
+    let scrollIn mfc = void $ withJust mfc $ \fc ->
+          flip idleAdd priorityLow $ do
+            Rectangle x _ w _ <- widgetGetAllocation fc
+            adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
+            return False
 
-  (sBox sbox) `on` setFocusChild $ \mfc -> do
-    writeIORef fcRef mfc
-    scrollIn mfc
+    adj `afterAdjChanged` do
+      mfc <- readIORef fcRef
+      scrollIn mfc
 
-  containerAdd scroll $ outer sbox
+    (sBox sbox) `on` setFocusChild $ \mfc -> do
+      writeIORef fcRef mfc
+      scrollIn mfc
 
-  return Com { eABRef  = abRef
-             , eAE     = ae
-             , eSBox   = sbox
-             , eLPopup = lpopup
-             , eVPopup = vpopup
-             , eCModel = cmodel
-             , eScroll = scroll
-             , eSAdj   = adj
-             }
+    containerAdd scroll $ outer sbox
 
-comWithColl com f = do
-  ab <- readIORef $ eABRef com
-  aWithColl ab f
+    return $ mkEnv Ix
+      Com { eABRef  = abRef
+          , eAE     = ae
+          , eSBox   = sbox
+          , eLPopup = lpopup
+          , eVPopup = vpopup
+          , eCModel = cmodel
+          , eScroll = scroll
+          , eSAdj   = adj
+          }
 
-comWithIds com f = comWithColl com $ \coll ->
-  collQueryIds xmms coll [] 0 0 >>* do
-    ids <- result
-    liftIO $ f ids
+  runIn' (env :*:) $> f
 
-comWithSel com f = do
-  ab <- readIORef $ eABRef com
-  withJust (aSelection ab) f
 
-comWithNames com f = do
-  ab <- readIORef $ eABRef com
-  aWithNames ab f
+withABRef f = do
+  abRef <- coms eABRef
+  liftIO $ f abRef
 
-addView com w = do
-  scrollBoxAdd (eSBox com) $ outer w
-  widgetGrabFocus $ focus w
+comWithColl f =
+  withABRef $ \r -> do
+    ab <- readIORef r
+    aWithColl ab f
+
+comWithIds f =
+  comWithColl $ \coll ->
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ f ids
+
+comWithSel f =
+  withABRef $ \r -> do
+    ab <- readIORef r
+    withJust (aSelection ab) f
+
+comWithNames f =
+  withABRef $ \r -> do
+    ab <- readIORef r
+    aWithNames ab f
+
+addView w = do
+  sbox <- coms eSBox
+  liftIO $ do
+    scrollBoxAdd sbox $ outer w
+    widgetGrabFocus $ focus w
 
 class FocusChild f where
   type Focus f
   focus :: f -> Focus f
+
+withSelectedView combo f = do
+  store <- coms eCModel
+  io $ \run -> do
+    iter <- comboBoxGetActiveIter combo
+    withJust iter $ \iter -> do
+      v <- listStoreGetValue store $ listStoreIterToIndex iter
+      run $ f v

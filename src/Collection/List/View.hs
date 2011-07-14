@@ -60,7 +60,7 @@ data ListView
       , vScroll  :: ScrolledWindow
       }
 
-mkListView env = do
+mkListView = do
   me <- do
     maybeME <- getEnv modelEnv
     case maybeME of
@@ -68,18 +68,20 @@ mkListView env = do
       Nothing -> do
         initModel
         fromJust <$> getEnv modelEnv
-
   store <- runIn me $> store
+
+  abRef <- coms eABRef
+  ae    <- coms eAE
+  popup <- coms eLPopup
+
   liftIO $ do
-    let abRef = eABRef env
-        ae    = eAE env
     view <- treeViewNewWithModel store
     treeViewSetHeadersVisible view False
     treeViewSetRulesHint view True
 
     sel <- treeViewGetSelection view
     treeSelectionSetMode sel SelectionMultiple
-    setupTreeViewPopup view $ eLPopup env
+    setupTreeViewPopup view popup
 
     scroll <- scrolledWindowNew Nothing Nothing
     scrolledWindowSetShadowType scroll ShadowIn
