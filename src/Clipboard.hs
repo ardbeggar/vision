@@ -36,7 +36,6 @@ import Control.Monad.W
 
 import Data.Maybe
 import Data.Typeable
-import Data.Env hiding (Env)
 
 import Graphics.UI.Gtk
 
@@ -46,13 +45,12 @@ import Atoms (xmms2MlibIdTarget)
 
 data Ix = Ix deriving (Typeable)
 
-data Env
-  = Env { cTargets            :: TVar [TargetTag]
-        , cClipboard          :: Clipboard
-        }
-    deriving (Typeable)
+data C = C { cTargets   :: TVar [TargetTag]
+           , cClipboard :: Clipboard
+           }
+       deriving (Typeable)
 
-clipboardEnv :: Extract Ix Env
+clipboardEnv :: Extract Ix C
 clipboardEnv = Extract
 
 clipboard        = envsx Ix cClipboard
@@ -76,18 +74,18 @@ updateClipboardTargets ts = do
 
 
 initClipboard = do
-  env <- makeEnv
-  addEnv Ix env
-  runIn (mkEnv Ix env) $> do
+  c <- makeC
+  addEnv Ix c
+  runIn (mkEnv Ix c) $> do
     io $ \run -> timeoutAdd (run checkClipboard) 0
   return ()
 
-makeEnv = liftIO $ do
+makeC = liftIO $ do
   targets            <- newTVarIO []
   clipboard          <- clipboardGet selectionClipboard
-  return Env { cTargets            = targets
-             , cClipboard          = clipboard
-             }
+  return C { cTargets   = targets
+           , cClipboard = clipboard
+           }
 
 checkClipboard = do
   cb <- clipboard

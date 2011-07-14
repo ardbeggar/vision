@@ -49,6 +49,7 @@ import Graphics.UI.Gtk
 import Context
 import Environment
 import About
+import Builder ()
 
 
 data UI

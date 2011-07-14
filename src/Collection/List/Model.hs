@@ -36,7 +36,6 @@ import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
 import Data.Typeable
-import Data.Env
 
 import Graphics.UI.Gtk hiding (add)
 

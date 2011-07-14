@@ -23,7 +23,8 @@
              UndecidableInstances #-}
 
 module Control.Monad.EnvIO
-  ( EnvM (..)
+  ( module Data.Env
+  , EnvM (..)
   , envsx
   , EnvIO (..)
   , env

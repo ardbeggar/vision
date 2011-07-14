@@ -35,7 +35,6 @@ import Control.Concurrent.STM.TGVar
 
 import qualified Data.Map as Map
 import Data.Typeable
-import Data.Env
 
 import Graphics.UI.Gtk hiding (add, remove)
 

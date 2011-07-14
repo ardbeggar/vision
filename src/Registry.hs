@@ -46,7 +46,6 @@ import Control.Concurrent.STM
 
 import Data.Typeable
 import Data.Dynamic
-import Data.Env
 
 
 deriving instance Typeable2 Env

@@ -34,8 +34,6 @@ import Control.Concurrent.STM
 import Control.Concurrent.STM.TWatch
 import Control.Concurrent.STM.TGVar
 
-import Data.Env
-
 import System.IO.Unsafe
 
 import Network.URL
