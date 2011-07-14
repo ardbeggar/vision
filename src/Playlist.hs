@@ -27,6 +27,7 @@ import Graphics.UI.Gtk
 
 import UIEnvIO
 import Builder
+import Environment
 
 import Playlist.Model
 import Playlist.Index
@@ -43,7 +44,7 @@ initPlaylist =
   initFormat
 
 showPlaylist = runBuilder $ do
-  addFromFile "playlist"
+  addFromFile $ gladeFilePath "playlist"
   runUI $ do
     context <- liftIO $ initModel
     let ?context = context
