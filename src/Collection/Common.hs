@@ -18,12 +18,12 @@
 --
 
 module Collection.Common
-  ( Env (..)
-  , mkEnv
-  , envWithColl
-  , envWithIds
-  , envWithSel
-  , envWithNames
+  ( Com (..)
+  , mkCom
+  , comWithColl
+  , comWithIds
+  , comWithSel
+  , comWithNames
   , addView
   , FocusChild (..)
   ) where
@@ -47,8 +47,8 @@ import Collection.ScrollBox
 import Collection.ComboModel
 
 
-data Env
-  = Env { eABRef  :: IORef ActionBackend
+data Com
+  = Com { eABRef  :: IORef ActionBackend
         , eAE     :: ActionEnabler
         , eSBox   :: ScrollBox
         , eLPopup :: Menu
@@ -58,7 +58,7 @@ data Env
         , eSAdj   :: Adjustment
         }
 
-mkEnv builder = do
+mkCom builder = do
   abRef <- newIORef emptyAB
   selActs <- mapM (action builder)
              [ "add-to-playlist"
@@ -102,7 +102,7 @@ mkEnv builder = do
 
   containerAdd scroll $ outer sbox
 
-  return Env { eABRef  = abRef
+  return Com { eABRef  = abRef
              , eAE     = ae
              , eSBox   = sbox
              , eLPopup = lpopup
@@ -112,25 +112,25 @@ mkEnv builder = do
              , eSAdj   = adj
              }
 
-envWithColl env f = do
-  ab <- readIORef $ eABRef env
+comWithColl com f = do
+  ab <- readIORef $ eABRef com
   aWithColl ab f
 
-envWithIds env f = envWithColl env $ \coll ->
+comWithIds com f = comWithColl com $ \coll ->
   collQueryIds xmms coll [] 0 0 >>* do
     ids <- result
     liftIO $ f ids
 
-envWithSel env f = do
-  ab <- readIORef $ eABRef env
+comWithSel com f = do
+  ab <- readIORef $ eABRef com
   withJust (aSelection ab) f
 
-envWithNames env f = do
-  ab <- readIORef $ eABRef env
+comWithNames com f = do
+  ab <- readIORef $ eABRef com
   aWithNames ab f
 
-addView env w = do
-  scrollBoxAdd (eSBox env) $ outer w
+addView com w = do
+  scrollBoxAdd (eSBox com) $ outer w
   widgetGrabFocus $ focus w
 
 class FocusChild f where

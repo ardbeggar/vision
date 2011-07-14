@@ -52,23 +52,23 @@ browseCollection _maybeName = runBuilder $ do
   context <- liftIO $ initUI builder
   let ?context = context
 
-  env <- liftIO $ mkEnv builder
+  com <- liftIO $ mkCom builder
 
   Just ce <- getEnv clipboardEnv
   W runC  <- runIn ce $> toIO
   bindActions
-    [ ("add-to-playlist", envWithColl env $ addToPlaylist False)
-    , ("replace-playlist", envWithColl env $ addToPlaylist True)
-    , ("select-all", envWithSel env selectAll)
-    , ("invert-selection", envWithSel env invertSelection)
-    , ("copy", envWithIds env (runC . copyIds))
-    , ("edit-properties", envWithIds env showPropertyEditor)
-    , ("export-properties", envWithIds env showPropertyExport)
+    [ ("add-to-playlist", comWithColl com $ addToPlaylist False)
+    , ("replace-playlist", comWithColl com $ addToPlaylist True)
+    , ("select-all", comWithSel com selectAll)
+    , ("invert-selection", comWithSel com invertSelection)
+    , ("copy", comWithIds com (runC . copyIds))
+    , ("edit-properties", comWithIds com showPropertyEditor)
+    , ("export-properties", comWithIds com showPropertyExport)
     , ("import-properties", showPropertyImport)
     , ("manage-properties", showPropertyManager)
-    , ("save-collection", envWithColl env $ saveCollection)
-    , ("rename-collection", envWithNames env $ renameCollection)
-    , ("delete-collections", envWithNames env $ deleteCollections)
+    , ("save-collection", comWithColl com $ saveCollection)
+    , ("rename-collection", comWithNames com $ renameCollection)
+    , ("delete-collections", comWithNames com $ deleteCollections)
     ]
 
   ag <- getObject castToActionGroup "server-actions"
@@ -79,12 +79,12 @@ browseCollection _maybeName = runBuilder $ do
       postGUISync $ actionGroupSetSensitive ag conn
     window `onDestroy` (killThread tid)
 
-  lv  <- mkListView env
+  lv  <- mkListView com
   box <- getObject castToVBox "views"
   liftIO $ do
-    boxPackStartDefaults box $ eScroll env
-    addView env lv
-    onCollBuilt env lv $ mkSelect env
+    boxPackStartDefaults box $ eScroll com
+    addView com lv
+    onCollBuilt com lv $ mkSelect com
 
     widgetShowAll window
 
