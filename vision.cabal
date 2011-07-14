@@ -47,6 +47,7 @@ executable vision
                     Environment,
                     Medialib,
                     About,
+                    Builder,
                     UI,
                     Atoms,
                     DnD,
