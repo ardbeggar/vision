@@ -23,12 +23,15 @@ module Builder
   , builder
   , addFromFile
   , getObject
+  , getObjectRaw
   , action
   , actions
   , bindAction
   , bindActions
+  , maybeBindAction
   ) where
 
+import Control.Applicative
 import Control.Monad.EnvIO
 
 import Graphics.UI.Gtk
@@ -53,6 +56,10 @@ getObject cast name = do
   b <- builder
   liftIO $ builderGetObject b cast name
 
+getObjectRaw name = do
+  b <- builder
+  liftIO $ builderGetObjectRaw b name
+
 action = getObject castToAction
 
 actions = mapM action
@@ -63,3 +70,8 @@ bindAction name func = do
 
 bindActions = mapM $ uncurry bindAction
 
+maybeBindAction name func = do
+  ma <- getObjectRaw name
+  liftIO $ case ma of
+    Just a  -> Just <$> on (castToAction a) actionActivated func
+    Nothing -> return Nothing
