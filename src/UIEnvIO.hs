@@ -17,8 +17,6 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE RankNTypes #-}
-
 module UIEnvIO
   ( runUI
   , uiEnv
@@ -110,8 +108,7 @@ runUI f = do
       []       <- eventModifier
       "Escape" <- eventKeyName
       liftIO $ infoBarEmitResponse infoBar dismiss
-
-  f
+    f
 
 makeUI = do
   window              <- getObject castToWindow "main-window"
