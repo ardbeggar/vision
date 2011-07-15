@@ -25,14 +25,13 @@
              DeriveDataTypeable,
              UndecidableInstances,
              ImplicitParams,
-             StandaloneDeriving #-}
+             StandaloneDeriving,
+             RankNTypes #-}
 
 module Registry
   ( EnvM
   , runIn
-  , startRegistry
-  , registryEnv
-  , RegistryEnvOp
+  , withRegistry
   , addEnv
   , getEnv
   ) where
@@ -50,42 +49,30 @@ import Data.Dynamic
 
 deriving instance Typeable2 Env
 
-data Ix = Ix deriving Typeable
-
 type EnvMap = TVar (IntMap Dynamic)
 
-registryEnv :: Extract Ix EnvMap
-registryEnv = Extract
+newtype Wrap a = Wrap { unWrap :: ((?registry :: EnvMap) => a) }
 
-class    (EnvM Ix EnvMap m) => RegistryM m
-instance (EnvM Ix EnvMap m) => RegistryM m
+withRegistry    = withRegistry' . Wrap
+withRegistry' w = do
+  registry <- liftIO $ newTVarIO $ IntMap.empty
+  let ?registry = registry in unWrap w
 
-startRegistry f = do
-  v <- newTVarIO $ IntMap.empty
-  runEnvIO (addEnv Ix v >> f) $ build () $ mkEnv Ix v
-
-class    (RegistryM m, Typeable ix, Typeable a) => RegistryEnvOp ix a m
-instance (RegistryM m, Typeable ix, Typeable a) => RegistryEnvOp ix a m
-
-addEnv :: RegistryEnvOp ix a m => ix -> a -> m ()
-addEnv ix r = do
+addEnv :: (?registry :: EnvMap, MonadIO m, Typeable ix, Typeable r) => ix -> r -> m ()
+addEnv ix r = liftIO $ do
   let val = mkEnv ix r
-  var <- envx Ix
-  liftIO $ do
-    key <- typeRepKey $ typeOf val
-    atomically $ do
-      map <- readTVar var
-      writeTVar var $ IntMap.insert key (toDyn val) map
+  key <- typeRepKey $ typeOf val
+  atomically $ do
+    map <- readTVar ?registry
+    writeTVar ?registry $ IntMap.insert key (toDyn val) map
 
-getEnv :: RegistryEnvOp ix a m => Extract ix a -> m (Maybe (Env ix a))
-getEnv spec = do
-  var <- envx Ix
-  liftIO $ do
-    key <- typeRepKey $ typeOf $ env spec
-    atomically $ do
-      map <- readTVar var
-      case IntMap.lookup key map of
-        Nothing -> return Nothing
-        Just dv -> return $ fromDynamic dv
+getEnv :: (?registry :: EnvMap, MonadIO m, Typeable ix, Typeable r) => Extract ix r -> m (Maybe (Env ix r))
+getEnv spec = liftIO $ do
+  key <- typeRepKey $ typeOf $ env spec
+  atomically $ do
+    map <- readTVar ?registry
+    case IntMap.lookup key map of
+      Nothing -> return Nothing
+      Just dv -> return $ fromDynamic dv
   where env :: Extract ix a -> Env ix a
         env = const undefined

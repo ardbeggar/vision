@@ -22,6 +22,7 @@ module Main
 
 import Control.Concurrent
 import Control.Monad.Trans
+import Control.Monad.EnvIO
 
 import Graphics.UI.Gtk
 
@@ -43,7 +44,7 @@ main = do
 
   timeoutAdd (yield >> return True) 100
 
-  startRegistry $ do
+  flip runEnvIO () $ withRegistry $ do
     context <- liftIO $ initEnvironment
     let ?context = context
 

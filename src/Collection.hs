@@ -29,6 +29,7 @@ import Control.Monad
 import Control.Monad.ToIO
 import Control.Monad.Trans
 import Control.Monad.W
+import Control.Monad.EnvIO
 
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
@@ -46,7 +47,7 @@ import Collection.Select
 import Collection.Utils
 
 
-browseCollection _maybeName = withBuilder $ do
+browseCollection _maybeName = flip runEnvIO () $ withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
   withUI $ runCommon $ do
     Just cb <- getEnv clipboardEnv

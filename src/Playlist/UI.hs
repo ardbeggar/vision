@@ -71,7 +71,7 @@ setupUI = do
   runIn (ptEnv :*: volEnv) $> setupPlaybar
 
   Just env <- getEnv clipboardEnv
-  runIn (env :*: registryEnv) $> setupActions
+  runIn env $> setupActions
 
   popup <- getWidget castToMenu "ui/playlist-popup"
   liftIO $ setupTreeViewPopup playlistView popup
@@ -96,7 +96,6 @@ setupActions = do
         "Sort playlist" ++ maybe "" (": " ++) name
     outerw `onDestroy` (killThread tid)
 
-  W runR <- runIn registryEnv
   W runC <- runIn clipboardEnv
   bindActions
     [ ("play",               startPlayback False)
@@ -113,7 +112,7 @@ setupActions = do
     , ("select-all",         editSelectAll)
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
-    , ("browse-collection",  runR $ browseCollection Nothing)
+    , ("browse-collection",  browseCollection Nothing)
     , ("add-media",          runURLEntryDialog urlEntryDialog)
     , ("clear-playlist",     clearPlaylist)
     , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)
