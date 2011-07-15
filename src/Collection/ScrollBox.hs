@@ -42,7 +42,10 @@ mkScrollBox = do
   vAdj     <- adjustmentNew 0 0 0 0 0 0
   viewport <- viewportNew hAdj vAdj
   viewportSetShadowType viewport ShadowNone
-  containerSetBorderWidth box 5
+  containerSetBorderWidth box 0
+  ph <- hBoxNew False 0
+  ph `set` [ widgetWidthRequest := 5 ]
+  boxPackStart box ph PackNatural 0
   containerAdd viewport box
   return SB { sBox      = box
             , sViewport = viewport
@@ -53,7 +56,7 @@ scrollBoxAdd sb widget = do
   eb <- eventBoxNew
   containerAdd eb vs
   eventBoxSetVisibleWindow eb False
-  widgetSetSizeRequest eb 11 (-1)
+  widgetSetSizeRequest eb 9 (-1)
   widgetShowAll eb
   setupResize eb widget
   boxPackStart (sBox sb) widget PackNatural 0
