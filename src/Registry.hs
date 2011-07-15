@@ -51,7 +51,7 @@ deriving instance Typeable2 Env
 
 type EnvMap = TVar (IntMap Dynamic)
 
-newtype Wrap a = Wrap { unWrap :: ((?registry :: EnvMap) => a) }
+newtype Wrap a = Wrap { unWrap :: (?registry :: EnvMap) => a }
 
 withRegistry    = withRegistry' . Wrap
 withRegistry' w = do

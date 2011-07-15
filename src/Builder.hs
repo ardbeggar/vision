@@ -38,7 +38,7 @@ import Control.Monad.EnvIO
 import Graphics.UI.Gtk
 
 
-newtype Wrap a = Wrap { unWrap :: ((?builder :: Builder) => a) }
+newtype Wrap a = Wrap { unWrap :: (?builder :: Builder) => a }
 
 withBuilder    = withBuilder' . Wrap
 withBuilder' w = do

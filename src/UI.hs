@@ -67,7 +67,7 @@ getWidget cast name =
   fromJust <$> maybeGetWidget cast name
 
 
-newtype Wrap a = Wrap { unWrap :: ((?ui :: UI) => a) }
+newtype Wrap a = Wrap { unWrap :: (?ui :: UI) => a }
 
 withUI    = withUI' . Wrap
 withUI' w = do
