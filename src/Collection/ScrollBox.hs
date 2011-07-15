@@ -23,6 +23,9 @@ module Collection.ScrollBox
   , scrollBoxAdd
   ) where
 
+import Control.Monad.Fix
+import Control.Monad.Trans
+
 import Graphics.UI.Gtk
 
 import Compound
@@ -34,7 +37,7 @@ data ScrollBox
        }
 
 mkScrollBox = do
-  box      <- hBoxNew False 5
+  box      <- hBoxNew False 0
   hAdj     <- adjustmentNew 0 0 0 0 0 0
   vAdj     <- adjustmentNew 0 0 0 0 0 0
   viewport <- viewportNew hAdj vAdj
@@ -45,8 +48,42 @@ mkScrollBox = do
             , sViewport = viewport
             }
 
-scrollBoxAdd sb widget =
+scrollBoxAdd sb widget = do
+  vs <- vSeparatorNew
+  eb <- eventBoxNew
+  containerAdd eb vs
+  eventBoxSetVisibleWindow eb False
+  widgetSetSizeRequest eb 11 (-1)
+  widgetShowAll eb
+  setupResize eb widget
   boxPackStart (sBox sb) widget PackNatural 0
+  boxPackStart (sBox sb) eb PackNatural 0
+
+setupResize eb widget = do
+  widget `onDestroy` widgetDestroy eb
+  widgetAddEvents eb [ButtonPressMask, ButtonReleaseMask,
+                      Button1MotionMask, PointerMotionHintMask]
+  eb `set` [ widgetCanFocus := True ]
+  eb `on` buttonPressEvent $ tryEvent $ do
+    LeftButton <- eventButton
+    (x, _)     <- eventCoordinates
+    liftIO $ do
+      widgetGrabFocus eb
+      top <- widgetGetToplevel eb
+      Just (wr, _) <- widgetTranslateCoordinates eb widget 0 0
+      Just (tx, _) <- widgetTranslateCoordinates eb top (round x) 0
+      cid <- eb `on` motionNotifyEvent $ do
+        (x', _) <- eventCoordinates
+        liftIO $ do
+          Just (tx', _) <- widgetTranslateCoordinates eb top (round x') 0
+          widget `set` [ widgetWidthRequest := max 50 $ wr + tx' - tx ]
+        return True
+      mfix $ \cid2 -> do
+        eb `on` buttonReleaseEvent $ liftIO $ do
+          signalDisconnect cid
+          signalDisconnect cid2
+          return True
+      return ()
 
 instance CompoundWidget ScrollBox where
   type Outer ScrollBox = Viewport
