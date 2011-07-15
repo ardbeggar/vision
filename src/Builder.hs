@@ -38,13 +38,14 @@ import Control.Monad.EnvIO
 import Graphics.UI.Gtk
 
 
-withBuilder :: MonadIO m => ((?builder :: Builder) => m a) -> m a
-withBuilder f = do
+newtype Wrap a = Wrap { unWrap :: ((?builder :: Builder) => a) }
+
+withBuilder    = withBuilder' . Wrap
+withBuilder' w = do
   builder <- liftIO $ builderNew
-  let ?builder = builder in f
+  let ?builder = builder in unWrap w
 
 builder = ?builder
-
 
 addFromFile file =
   liftIO $ builderAddFromFile builder file

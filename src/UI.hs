@@ -67,10 +67,9 @@ getWidget cast name =
   fromJust <$> maybeGetWidget cast name
 
 
-newtype WrapUI a = WrapUI { unWrapUI :: ((?ui :: UI) => a) }
+newtype Wrap a = Wrap { unWrap :: ((?ui :: UI) => a) }
 
-withUI = withUI' . WrapUI
-
+withUI    = withUI' . Wrap
 withUI' w = do
   ui <- makeUI
   let ?ui = ui
@@ -86,7 +85,8 @@ withUI' w = do
     "Escape" <- eventKeyName
     liftIO $ infoBarEmitResponse infoBar dismiss
 
-  unWrapUI w
+  unWrap w
+
 
 makeUI = do
   window              <- getObject castToWindow "main-window"
