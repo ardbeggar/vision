@@ -17,9 +17,10 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module Builder
-  ( builderEnv
-  , runBuilder
+  ( withBuilder
   , builder
   , addFromFile
   , getObject
@@ -37,28 +38,22 @@ import Control.Monad.EnvIO
 import Graphics.UI.Gtk
 
 
-data Ix = Ix
+withBuilder :: MonadIO m => ((?builder :: Builder) => m a) -> m a
+withBuilder f = do
+  builder <- liftIO $ builderNew
+  let ?builder = builder in f
 
-builderEnv :: Extract Ix Builder
-builderEnv = Extract
+builder = ?builder
 
-runBuilder f = do
-  builder <- liftIO builderNew
-  runIn' (mkEnv Ix builder :*:) $> f
 
-builder = envx Ix
+addFromFile file =
+  liftIO $ builderAddFromFile builder file
 
-addFromFile file = do
-  b <- builder
-  liftIO $ builderAddFromFile b file
+getObject cast name =
+  liftIO $ builderGetObject builder cast name
 
-getObject cast name = do
-  b <- builder
-  liftIO $ builderGetObject b cast name
-
-getObjectRaw name = do
-  b <- builder
-  liftIO $ builderGetObjectRaw b name
+getObjectRaw name =
+  liftIO $ builderGetObjectRaw builder name
 
 action = getObject castToAction
 

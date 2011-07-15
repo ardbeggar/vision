@@ -46,7 +46,7 @@ import Collection.Select
 import Collection.Utils
 
 
-browseCollection _maybeName = runBuilder $ do
+browseCollection _maybeName = withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
   runUI $ runCommon $ do
     Just cb <- getEnv clipboardEnv

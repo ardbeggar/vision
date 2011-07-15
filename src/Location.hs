@@ -40,7 +40,7 @@ import Location.UI
 browseLocation order maybeURL = do
   let f = browseLocation
 
-  flip runEnvIO () $ runBuilder $ do
+  flip runEnvIO () $ withBuilder $ do
     addFromFile $ gladeFilePath "location-browser"
 
     context <- liftIO $ initModel order

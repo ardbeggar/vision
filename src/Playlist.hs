@@ -43,7 +43,7 @@ import Playlist.UI
 initPlaylist =
   initFormat
 
-showPlaylist = runBuilder $ do
+showPlaylist = withBuilder $ do
   addFromFile $ gladeFilePath "playlist"
   runUI $ do
     context <- liftIO $ initModel

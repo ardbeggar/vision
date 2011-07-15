@@ -68,10 +68,10 @@ setupUI = do
 
   Just ptEnv  <- getEnv playtimeEnv
   Just volEnv <- getEnv volumeEnv
-  runIn (ptEnv :*: volEnv :*: builderEnv) $> setupPlaybar
+  runIn (ptEnv :*: volEnv) $> setupPlaybar
 
   Just env <- getEnv clipboardEnv
-  runIn (env :*: registryEnv :*: builderEnv :*: uiEnv) $> setupActions
+  runIn (env :*: registryEnv :*: uiEnv) $> setupActions
 
   popup <- getWidget castToMenu "ui/playlist-popup"
   liftIO $ setupTreeViewPopup playlistView popup
