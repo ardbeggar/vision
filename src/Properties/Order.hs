@@ -42,7 +42,6 @@ type OrderDialog = EditorDialog (PropertyView Bool)
 
 
 showOrderDialog dialog getOrder setOrder = do
-  window <- window
   liftIO $ runEditorDialog dialog getOrder setOrder False window
 
 makeOrderDialog =

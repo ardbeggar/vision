@@ -50,5 +50,4 @@ initPlaylistConfig = do
     Config { cDialog = dialog }
 
 showPlaylistConfigDialog = do
-  window <- window
   liftIO $ runEditorDialog (cDialog context) getFormatDefs putFormatDefs False window

@@ -48,19 +48,18 @@ setupUI browse = do
   setupConnection
 
 setupActions browse = do
-  W runUI <- runIn uiEnv
   bindActions
     [ ("new-window"           , newWindow browse                        )
     , ("open-location"        , openLocation                            )
-    , ("load"                 , runUI loadCurrentLocation               )
-    , ("down"                 , loadAtCursor (runUI . loadLocation . Go))
+    , ("load"                 , loadCurrentLocation               )
+    , ("down"                 , loadAtCursor (loadLocation . Go))
     , ("browse-in-new-window" , browseInNewWindow browse                )
     , ("add-to-playlist"      , addToPlaylist                           )
     , ("replace-playlist"     , replacePlaylist                         )
-    , ("back"                 , runUI $ loadLocation Back               )
-    , ("forward"              , runUI $ loadLocation Forward            )
-    , ("up"                   , runUI $ loadLocation Up                 )
-    , ("refresh"              , runUI $ loadLocation Refresh            )
+    , ("back"                 , loadLocation Back               )
+    , ("forward"              , loadLocation Forward            )
+    , ("up"                   , loadLocation Up                 )
+    , ("refresh"              , loadLocation Refresh            )
     ]
 
   down    <- action "down"

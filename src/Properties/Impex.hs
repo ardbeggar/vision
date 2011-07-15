@@ -172,7 +172,6 @@ makeChooser title action stockId = do
                  }
 
 runChooser Chooser { cLock = lock, cChooser = chooser } onAccept = do
-  window <- window
   io $ \run -> do
     locked <- isJust <$> tryTakeMVar lock
     when locked $ do

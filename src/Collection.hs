@@ -48,27 +48,24 @@ import Collection.Utils
 
 browseCollection _maybeName = withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
-  runUI $ runCommon $ do
+  withUI $ runCommon $ do
     Just cb <- getEnv clipboardEnv
     W runCB <- runIn cb $> toIO
     W runCM <- runIn commonEnv $> toIO
-    W runUI <- runIn uiEnv $> toIO
     bindActions
       [ ("add-to-playlist", runCM $ comWithColl $ addToPlaylist False)
       , ("replace-playlist", runCM $ comWithColl $ addToPlaylist True)
       , ("select-all", runCM $ comWithSel selectAll)
       , ("invert-selection", runCM $ comWithSel invertSelection)
       , ("copy", runCM $ comWithIds (runCB . copyIds))
-      , ("edit-properties", runCM $ comWithIds $ runUI . showPropertyEditor)
-      , ("export-properties", runCM $ comWithIds $ runUI . showPropertyExport)
-      , ("import-properties", runUI showPropertyImport)
-      , ("manage-properties", runUI showPropertyManager)
-      , ("save-collection", runCM $ comWithColl $ runUI . saveCollection)
-      , ("rename-collection", runCM $ comWithNames $ runUI . renameCollection)
+      , ("edit-properties", runCM $ comWithIds $ showPropertyEditor)
+      , ("export-properties", runCM $ comWithIds $ showPropertyExport)
+      , ("import-properties", showPropertyImport)
+      , ("manage-properties", showPropertyManager)
+      , ("save-collection", runCM $ comWithColl $ saveCollection)
+      , ("rename-collection", runCM $ comWithNames $ renameCollection)
       , ("delete-collections", runCM $ comWithNames $ deleteCollections)
       ]
-
-    window <- window
 
     ag <- getObject castToActionGroup "server-actions"
     liftIO $ do

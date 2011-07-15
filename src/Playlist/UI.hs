@@ -71,12 +71,11 @@ setupUI = do
   runIn (ptEnv :*: volEnv) $> setupPlaybar
 
   Just env <- getEnv clipboardEnv
-  runIn (env :*: registryEnv :*: uiEnv) $> setupActions
+  runIn (env :*: registryEnv) $> setupActions
 
   popup <- getWidget castToMenu "ui/playlist-popup"
   liftIO $ setupTreeViewPopup playlistView popup
 
-  window <- window
   liftIO $ do
     playlistView `onRowActivated` \[n] _ ->
       playTrack n
@@ -99,7 +98,6 @@ setupActions = do
 
   W runR <- runIn registryEnv
   W runC <- runIn clipboardEnv
-  W runU <- runIn uiEnv
   bindActions
     [ ("play",               startPlayback False)
     , ("pause",              pausePlayback)
@@ -116,14 +114,14 @@ setupActions = do
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
     , ("browse-collection",  runR $ browseCollection Nothing)
-    , ("add-media",          runU $ runURLEntryDialog urlEntryDialog)
+    , ("add-media",          runURLEntryDialog urlEntryDialog)
     , ("clear-playlist",     clearPlaylist)
-    , ("sort-by",            runU $ showOrderDialog orderDialog getOrder setOrder)
-    , ("configure-playlist", runU showPlaylistConfigDialog)
-    , ("edit-properties",    runU showPropertyEditor)
-    , ("export-properties",  runU showPropertyExport)
-    , ("import-properties",  runU showPropertyImport)
-    , ("manage-properties",  runU showPropertyManager)
+    , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)
+    , ("configure-playlist", showPlaylistConfigDialog)
+    , ("edit-properties",    showPropertyEditor)
+    , ("export-properties",  showPropertyExport)
+    , ("import-properties",  showPropertyImport)
+    , ("manage-properties",  showPropertyManager)
     ]
 
   setupServerActionGroup
@@ -200,7 +198,7 @@ setupClipboardActions = do
         en <- run editCheckClipboard
         mapM_ (`actionSetSensitive` en) acts
 
-setupWindowTitle = runIn uiEnv $> io $ \run -> do
+setupWindowTitle = io $ \run -> do
   pnW <- atomically $ newEmptyTWatch playlistName
   forkIO $ forever $ do
     name <- atomically $ watch pnW
@@ -234,6 +232,7 @@ setupPlaybar = do
     toolbarInsert playbar volumeItem (-1)
 
   return ()
+
 
 
 data URLEntry =
@@ -271,7 +270,6 @@ makeURLEntryDialog =
     windowSetDefaultSize outerw 500 (-1)
 
 runURLEntryDialog dlg = do
-  window <- window
   liftIO $ runEditorDialog dlg
     (return "")
     (\str ->

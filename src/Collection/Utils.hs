@@ -92,8 +92,6 @@ deleteCollections =
   mapM_ (\name -> collRemove xmms name "Collections")
 
 runDlg title enable isOk init = do
-  window      <- window
-  windowGroup <- windowGroup
   liftIO $ do
     dialog <- dialogNew
     windowSetTitle dialog title

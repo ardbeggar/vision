@@ -45,7 +45,7 @@ initPlaylist =
 
 showPlaylist = withBuilder $ do
   addFromFile $ gladeFilePath "playlist"
-  runUI $ do
+  withUI $ do
     context <- liftIO $ initModel
     let ?context = context
 
@@ -65,6 +65,5 @@ showPlaylist = withBuilder $ do
     liftIO $ setupDnD
     setupUI
 
-    window <- window
     liftIO $ widgetShowAll window
 

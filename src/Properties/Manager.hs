@@ -65,7 +65,6 @@ initPropertyManager = do
     Manager { pManager = manager }
 
 showPropertyManager = do
-  window <- window
   liftIO $ runEditorDialog manager getProperties setProperties False window
 
 

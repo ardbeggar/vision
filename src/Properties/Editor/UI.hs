@@ -178,7 +178,6 @@ updateTitle m r = do
     _        -> "Edit properties"
 
 showPropertyEditor ids = do
-  window <- window
   liftIO $ do
     retr <- liftIO $ tryLock $ do
       dialogSetResponseSensitive dialog ResponseApply False

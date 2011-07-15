@@ -17,9 +17,10 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module UI
-  ( runUI
-  , uiEnv
+  ( withUI
   , window
   , contents
   , getWidget
@@ -30,7 +31,6 @@ module UI
 
 import Control.Applicative
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Data.Maybe
 
@@ -39,8 +39,6 @@ import Graphics.UI.Gtk
 import About
 import Builder
 
-
-data Ix = Ix
 
 data UI
   = UI { uWindow      :: Window
@@ -52,42 +50,43 @@ data UI
        , uInfoText    :: Label
        }
 
-uiEnv :: Extract Ix UI
-uiEnv = Extract
+window        = uWindow ?ui
+contents      = uContents ?ui
+uiManager     = uManager ?ui
+windowGroup   = uWindowGroup ?ui
+infoBar       = uInfoBar ?ui
+infoText      = uInfoText ?ui
 
-window        = envsx Ix uWindow
-contents      = envsx Ix uContents
-uiManager     = envsx Ix uManager
-windowGroup   = envsx Ix uWindowGroup
-infoBar       = envsx Ix uInfoBar
-infoText      = envsx Ix uInfoText
-
-setWindowTitle title = do
-  window <- window
+setWindowTitle title =
   liftIO $ windowSetTitle window title
 
-maybeGetWidget cast name = do
-  uiManager <- uiManager
+maybeGetWidget cast name =
   liftIO $ fmap cast <$> uiManagerGetWidget uiManager name
 
 getWidget cast name =
   fromJust <$> maybeGetWidget cast name
 
-runUI f = do
-  env <- makeUI
-  runIn' (env :*:) $> do
-    window <- window
-    mapM_ (uncurry maybeBindAction)
-      [ ("close", liftIO $ widgetDestroy window)
-      , ("quit",  liftIO $ mainQuit)
-      , ("about", liftIO $ showAbout window)
-      ]
-    infoBar <- infoBar
-    liftIO $ window `on` keyPressEvent $ tryEvent $ do
-      []       <- eventModifier
-      "Escape" <- eventKeyName
-      liftIO $ infoBarEmitResponse infoBar dismiss
-    f
+
+newtype WrapUI a = WrapUI { unWrapUI :: ((?ui :: UI) => a) }
+
+withUI = withUI' . WrapUI
+
+withUI' w = do
+  ui <- makeUI
+  let ?ui = ui
+
+  mapM_ (uncurry maybeBindAction)
+    [ ("close", widgetDestroy window)
+    , ("quit",  mainQuit)
+    , ("about", showAbout window)
+    ]
+
+  liftIO $ window `on` keyPressEvent $ tryEvent $ do
+    []       <- eventModifier
+    "Escape" <- eventKeyName
+    liftIO $ infoBarEmitResponse infoBar dismiss
+
+  unWrapUI w
 
 makeUI = do
   window              <- getObject castToWindow "main-window"
@@ -96,40 +95,36 @@ makeUI = do
   uiActionGroup       <- getObject castToActionGroup "ui-actions"
   windowGroup         <- liftIO $ windowGroupNew
   (infoBar, infoText) <- makeInfoBar
-  return $ mkEnv Ix
-    UI { uWindow      = window
-       , uContents    = contents
-       , uManager     = uiManager
-       , uActionGroup = uiActionGroup
-       , uWindowGroup = windowGroup
-       , uInfoBar     = infoBar
-       , uInfoText    = infoText
-       }
+  return UI { uWindow      = window
+            , uContents    = contents
+            , uManager     = uiManager
+            , uActionGroup = uiActionGroup
+            , uWindowGroup = windowGroup
+            , uInfoBar     = infoBar
+            , uInfoText    = infoText
+            }
 
-informUser t m = do
-  infoBar  <- infoBar
-  infoText <- infoText
-  liftIO $ do
-    infoBar `set` [ infoBarMessageType := t ]
-    labelSetMarkup infoText m
-    widgetSetNoShowAll infoBar False
-    widgetShowAll infoBar
+informUser t m = liftIO $ do
+  infoBar `set` [ infoBarMessageType := t ]
+  labelSetMarkup infoText m
+  widgetSetNoShowAll infoBar False
+  widgetShowAll infoBar
 
-makeInfoBar = do
+makeInfoBar = liftIO $ do
   infoBar <- getObject castToInfoBar "info-bar"
-  liftIO $ do
-    widgetSetNoShowAll infoBar True
-    infoBarAddButton infoBar "Dismiss" dismiss
-    infoBarSetDefaultResponse infoBar dismiss
-    infoBar `on` infoBarResponse $ const $ widgetHide infoBar
-    infoBar `on` infoBarClose $ widgetHide infoBar
 
-    infoText <- labelNew Nothing
-    miscSetAlignment infoText 0.0 0.5
-    labelSetUseMarkup infoText True
-    boxPackStartDefaults infoBar infoText
-    boxReorderChild infoBar infoText 0
+  widgetSetNoShowAll infoBar True
+  infoBarAddButton infoBar "Dismiss" dismiss
+  infoBarSetDefaultResponse infoBar dismiss
+  infoBar `on` infoBarResponse $ const $ widgetHide infoBar
+  infoBar `on` infoBarClose $ widgetHide infoBar
 
-    return (infoBar, infoText)
+  infoText <- labelNew Nothing
+  miscSetAlignment infoText 0.0 0.5
+  labelSetUseMarkup infoText True
+  boxPackStartDefaults infoBar infoText
+  boxReorderChild infoBar infoText 0
+
+  return (infoBar, infoText)
 
 dismiss = 0

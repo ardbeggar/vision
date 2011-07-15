@@ -49,11 +49,10 @@ browseLocation order maybeURL = do
     context <- initView
     let ?context = context
 
-    runUI $ do
+    withUI $ do
       setupUI f
       liftIO $ setupDnD
 
-      window <- window
       liftIO $ widgetShowAll window
 
       case maybeURL of
