@@ -25,8 +25,6 @@ module Playlist.UI
 
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.W
-import Control.Monad.EnvIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -53,7 +51,6 @@ import Location
 import Collection
 import Compound
 import Editor
-import Registry
 import Properties hiding (showPropertyEditor, showPropertyExport)
 import Playlist.Model
 import Playlist.View
@@ -65,8 +62,7 @@ import Playlist.Control
 setupUI = do
   liftIO $ setupWindowTitle
 
-  Just volEnv <- getEnv volumeEnv
-  runIn (volEnv) $> withPlaytime setupPlaybar
+  withVolume $ withPlaytime $ liftIO setupPlaybar
 
   withClipboard $ liftIO setupActions
 
@@ -193,30 +189,30 @@ setupWindowTitle = do
     setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
 
 setupPlaybar = do
-  seekView <- liftIO makeSeekControl
-  volView  <- makeVolumeControl
   playbar  <- getObject castToToolbar "playbar"
-  liftIO $ do
-    sep <- separatorToolItemNew
-    separatorToolItemSetDraw sep False
-    toolbarInsert playbar sep (-1)
 
-    seekItem <- toolItemNew
-    toolItemSetHomogeneous seekItem False
-    toolItemSetExpand seekItem True
-    containerAdd seekItem seekView
-    toolbarInsert playbar seekItem (-1)
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
 
-    sep <- separatorToolItemNew
-    separatorToolItemSetDraw sep False
-    toolbarInsert playbar sep (-1)
+  seekView <- liftIO makeSeekControl
+  seekItem <- toolItemNew
+  toolItemSetHomogeneous seekItem False
+  toolItemSetExpand seekItem True
+  containerAdd seekItem seekView
+  toolbarInsert playbar seekItem (-1)
 
-    volumeItem <- toolItemNew
-    toolItemSetHomogeneous volumeItem False
-    toolItemSetExpand volumeItem False
-    widgetSetSizeRequest volumeItem 100 (-1)
-    containerAdd volumeItem volView
-    toolbarInsert playbar volumeItem (-1)
+  sep <- separatorToolItemNew
+  separatorToolItemSetDraw sep False
+  toolbarInsert playbar sep (-1)
+
+  volView  <- makeVolumeControl
+  volumeItem <- toolItemNew
+  toolItemSetHomogeneous volumeItem False
+  toolItemSetExpand volumeItem False
+  widgetSetSizeRequest volumeItem 100 (-1)
+  containerAdd volumeItem volView
+  toolbarInsert playbar volumeItem (-1)
 
   return ()
 

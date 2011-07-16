@@ -17,11 +17,12 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, RankNTypes #-}
 
 module Volume
   ( initVolume
   , volumeEnv
+  , withVolume
   , makeVolumeControl
   ) where
 
@@ -52,43 +53,47 @@ volumeEnv :: Extract Ix Adjustment
 volumeEnv = Extract
 
 initVolume = do
-  adj <- liftIO $ adjustmentNew 0 0 100 5 5 0
+  adj <- adjustmentNew 0 0 100 5 5 0
   addEnv Ix adj
 
-  liftIO $ do
-    cId <- adj `onValueChanged` do
-      vol <- adjustmentGetValue adj
-      setVolume $ round vol
+  cId <- adj `onValueChanged` do
+    vol <- adjustmentGetValue adj
+    setVolume $ round vol
 
-    xcW <- atomically $ newTGWatch connectedV
-    forkIO $ forever $ do
-      conn <- atomically $ watch xcW
-      if conn
-        then do
-        playbackVolumeGet xmms >>* do
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    if conn
+      then do
+      playbackVolumeGet xmms >>* do
+        handleVolume adj cId
+        liftIO $ broadcastPlaybackVolumeChanged xmms >>* do
           handleVolume adj cId
-          liftIO $ broadcastPlaybackVolumeChanged xmms >>* do
-            handleVolume adj cId
-            persist
-        else withoutVolumeChange cId $ adjustmentSetValue adj 0
+          persist
+      else withoutVolumeChange cId $ adjustmentSetValue adj 0
 
   return ()
 
+newtype Wrap a = Wrap { unWrap :: (?volume :: Adjustment) => a }
+
+withVolume    = withVolume' . Wrap
+withVolume' w = do
+  Just (Env v) <- getEnv volumeEnv
+  let ?volume = v in unWrap w
+
 makeVolumeControl = do
-  adj <- envx Ix
-  liftIO $ do
-    view <- hScaleNew adj
-    scaleSetDrawValue view False
-    rangeSetUpdatePolicy view UpdateContinuous
-    widgetSetCanFocus view False
+  view <- hScaleNew ?volume
+  scaleSetDrawValue view False
+  rangeSetUpdatePolicy view UpdateContinuous
+  widgetSetCanFocus view False
 
-    xcW <- atomically $ newTGWatch connectedV
-    tid <- forkIO $ forever $ do
-      conn <- atomically $ watch xcW
-      widgetSetSensitive view conn
-    view `onDestroy` killThread tid
+  xcW <- atomically $ newTGWatch connectedV
+  tid <- forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    widgetSetSensitive view conn
+  view `onDestroy` killThread tid
 
-    return view
+  return view
 
 handleVolume adj cId = do
   vol <- catchResult 0 (maximum . Map.elems)

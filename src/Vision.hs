@@ -63,7 +63,7 @@ main = do
     context <- liftIO initPlayback
     let ?context = context
 
-    initVolume
+    liftIO initVolume
     liftIO initPlaytime
     liftIO initClipboard
 
