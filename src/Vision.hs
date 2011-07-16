@@ -21,8 +21,6 @@ module Main
   where
 
 import Control.Concurrent
-import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Graphics.UI.Gtk
 
@@ -44,30 +42,30 @@ main = do
 
   timeoutAdd (yield >> return True) 100
 
-  flip runEnvIO () $ withRegistry $ do
-    context <- liftIO initEnvironment
+  withRegistry $ do
+    context <- initEnvironment
     let ?context = context
 
-    context <- liftIO initAbout
+    context <- initAbout
     let ?context = context
 
-    context <- liftIO initXMMS
+    context <- initXMMS
     let ?context = context
 
-    context <- liftIO initMedialib
+    context <- initMedialib
     let ?context = context
 
-    context <- liftIO initProperties
+    context <- initProperties
     let ?context = context
 
-    context <- liftIO initPlayback
+    context <- initPlayback
     let ?context = context
 
-    liftIO initVolume
-    liftIO initPlaytime
-    liftIO initClipboard
+    initVolume
+    initPlaytime
+    initClipboard
 
-    context <- liftIO initPlaylist
+    context <- initPlaylist
     let ?context = context
 
     showPlaylist
