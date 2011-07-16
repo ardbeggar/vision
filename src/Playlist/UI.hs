@@ -65,9 +65,8 @@ import Playlist.Control
 setupUI = do
   liftIO $ setupWindowTitle
 
-  Just ptEnv  <- getEnv playtimeEnv
   Just volEnv <- getEnv volumeEnv
-  runIn (ptEnv :*: volEnv) $> setupPlaybar
+  runIn (volEnv) $> withPlaytime setupPlaybar
 
   withClipboard $ liftIO setupActions
 
@@ -194,7 +193,7 @@ setupWindowTitle = do
     setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
 
 setupPlaybar = do
-  seekView <- makeSeekControl
+  seekView <- liftIO makeSeekControl
   volView  <- makeVolumeControl
   playbar  <- getObject castToToolbar "playbar"
   liftIO $ do

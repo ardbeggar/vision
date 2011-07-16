@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 22 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -17,12 +17,12 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DeriveDataTypeable, UndecidableInstances #-}
+{-# LANGUAGE DeriveDataTypeable, RankNTypes #-}
 
 module Playtime
   ( initPlaytime
+  , withPlaytime
   , makeSeekControl
-  , PlaytimeM
   , playtimeEnv
   ) where
 
@@ -47,38 +47,34 @@ import XMMS2.Client hiding (playbackStatus)
 
 import XMMS
 import Medialib
-import Context hiding (makeContext)
 import Utils
 import Playback
 import Registry
 
 
 data Playtime
-  = Playtime { pAdj        :: Adjustment
-             , pCurrentIdV :: TVar (Maybe MediaId)
-             , pPlaytimeV  :: TVar Int
-             , pSeekCountV :: TVar (Maybe Int)
+  = Playtime { _adj        :: Adjustment
+             , _currentIdV :: TVar (Maybe MediaId)
+             , _playtimeV  :: TVar Int
+             , _seekCountV :: TVar (Maybe Int)
              }
     deriving (Typeable)
 
-adj        = pAdj context
-currentIdV = pCurrentIdV context
-playtimeV  = pPlaytimeV context
-seekCountV = pSeekCountV context
+adj        = _adj ?playtime
+currentIdV = _currentIdV ?playtime
+playtimeV  = _playtimeV ?playtime
+seekCountV = _seekCountV ?playtime
 
 
 data Ix = Ix deriving (Typeable)
-
-class    (EnvM Ix Playtime m) => PlaytimeM m
-instance (EnvM Ix Playtime m) => PlaytimeM m
 
 playtimeEnv :: Extract Ix Playtime
 playtimeEnv = Extract
 
 initPlaytime = do
-  pt <- liftIO $ makeContext
-  let ?context = augmentContext pt
+  pt <- makePlaytime
   addEnv Ix pt
+  let ?playtime = pt
 
   liftIO $ do
     cId <- setupSeek
@@ -100,15 +96,22 @@ initPlaytime = do
   return ()
 
 
-makeContext = do
+newtype Wrap a = Wrap { unWrap :: (?playtime :: Playtime) => a }
+
+withPlaytime    = withPlaytime' . Wrap
+withPlaytime' w = do
+  Just (Env pt) <- getEnv playtimeEnv
+  let ?playtime = pt in unWrap w
+
+makePlaytime = do
   adj        <- adjustmentNew 0 0 0 5000 5000 0
   currentIdV <- newTVarIO Nothing
   playtimeV  <- newTVarIO 0
   seekCountV <- newTVarIO Nothing
-  return $ Playtime { pAdj        = adj
-                    , pCurrentIdV = currentIdV
-                    , pPlaytimeV  = playtimeV
-                    , pSeekCountV = seekCountV
+  return $ Playtime { _adj        = adj
+                    , _currentIdV = currentIdV
+                    , _playtimeV  = playtimeV
+                    , _seekCountV = seekCountV
                     }
 
 requestPlaytime = forever $ do
@@ -140,21 +143,18 @@ setupSeek =  adj `onValueChanged` do
     liftIO $ modSeekCount $ \n -> n - 1
 
 makeSeekControl = do
-  adj <- envsx Ix pAdj
-  liftIO $ do
-    view <- hScaleNew adj
-    scaleSetDrawValue view False
-    rangeSetUpdatePolicy view UpdateContinuous
-    widgetSetCanFocus view False
+  view <- hScaleNew adj
+  scaleSetDrawValue view False
+  rangeSetUpdatePolicy view UpdateContinuous
+  widgetSetCanFocus view False
 
-    w <- atomically $ newEmptyTWatch playbackStatus
-    t <- forkIO $ forever $ do
-      s <- atomically $ watch w
-      widgetSetSensitive view $ s == (Just StatusPlay)
+  w <- atomically $ newEmptyTWatch playbackStatus
+  t <- forkIO $ forever $ do
+    s <- atomically $ watch w
+    widgetSetSensitive view $ s == (Just StatusPlay)
+  view `onDestroy` (killThread t)
 
-    view `onDestroy` (killThread t)
-
-    return view
+  return view
 
 
 data S =
