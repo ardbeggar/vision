@@ -26,7 +26,6 @@ module Playlist.UI
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.W
-import Control.Monad.ToIO
 import Control.Monad.EnvIO
 
 import Control.Concurrent
@@ -64,14 +63,13 @@ import Playlist.Control
 
 
 setupUI = do
-  setupWindowTitle
+  liftIO $ setupWindowTitle
 
   Just ptEnv  <- getEnv playtimeEnv
   Just volEnv <- getEnv volumeEnv
   runIn (ptEnv :*: volEnv) $> setupPlaybar
 
-  Just env <- getEnv clipboardEnv
-  runIn env $> setupActions
+  withClipboard $ liftIO setupActions
 
   popup <- getWidget castToMenu "ui/playlist-popup"
   liftIO $ setupTreeViewPopup playlistView popup
@@ -84,9 +82,9 @@ setupUI = do
   return ()
 
 setupActions = do
-  urlEntryDialog <- liftIO $ unsafeInterleaveIO $ makeURLEntryDialog
+  urlEntryDialog <- unsafeInterleaveIO $ makeURLEntryDialog
 
-  orderDialog <- liftIO $ unsafeInterleaveIO $ makeOrderDialog $ \v -> do
+  orderDialog <- unsafeInterleaveIO $ makeOrderDialog $ \v -> do
     let outerw = outer v
     windowSetDefaultSize outerw 500 400
     nw  <- atomically $ newEmptyTWatch playlistName
@@ -96,7 +94,6 @@ setupActions = do
         "Sort playlist" ++ maybe "" (": " ++) name
     outerw `onDestroy` (killThread tid)
 
-  W runC <- runIn clipboardEnv
   bindActions
     [ ("play",               startPlayback False)
     , ("pause",              pausePlayback)
@@ -104,11 +101,11 @@ setupActions = do
     , ("prev",               prevTrack)
     , ("next",               nextTrack)
     , ("quit",               mainQuit)
-    , ("cut",                runC $ editDelete True)
-    , ("copy",               runC $ editCopy)
-    , ("paste",              runC $ editPaste False)
-    , ("append",             runC $ editPaste True)
-    , ("delete",             runC $ editDelete False)
+    , ("cut",                editDelete True)
+    , ("copy",               editCopy)
+    , ("paste",              editPaste False)
+    , ("append",             editPaste True)
+    , ("delete",             editDelete False)
     , ("select-all",         editSelectAll)
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
@@ -133,76 +130,68 @@ setupActions = do
 
 setupServerActionGroup = do
   ag <- getObject castToActionGroup "server-actions"
-  liftIO $ do
-    cW <- atomically $ newTGWatch connectedV
-    forkIO $ forever $ do
-      c <- atomically $ watch cW
-      actionGroupSetSensitive ag c
+  cW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    c <- atomically $ watch cW
+    actionGroupSetSensitive ag c
 
 setupPlaybackActions = do
   play  <- action "play"
   pause <- action "pause"
   stop  <- action "stop"
-  liftIO $ do
-    psW   <- atomically $ newEmptyTWatch playbackStatus
-    forkIO $ forever $ do
-      ps <- atomically $ watch psW
-      postGUISync $ do
-        let (ePlay, ePause, eStop) = case ps of
-              Just StatusPlay  -> (False, True, True)
-              Just StatusPause -> (True, False, True)
-              _                -> (True, False, False)
-        actionSetSensitive play ePlay
-        actionSetVisible play ePlay
-        actionSetSensitive pause ePause
-        actionSetVisible pause ePause
-        actionSetSensitive stop eStop
+  psW   <- atomically $ newEmptyTWatch playbackStatus
+  forkIO $ forever $ do
+    ps <- atomically $ watch psW
+    postGUISync $ do
+      let (ePlay, ePause, eStop) = case ps of
+            Just StatusPlay  -> (False, True, True)
+            Just StatusPause -> (True, False, True)
+            _                -> (True, False, False)
+      actionSetSensitive play ePlay
+      actionSetVisible play ePlay
+      actionSetSensitive pause ePause
+      actionSetVisible pause ePause
+      actionSetSensitive stop eStop
 
 setupTrackActions = do
   prev <- action "prev"
   next <- action "next"
-  liftIO $ do
-    ctW  <- atomically $ newEmptyTWatch currentTrack
-    psW  <- atomically $ newEmptyTWatch playlistSize
-    forkIO $ forever $ do
-      atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
-      size <- getPlaylistSize
-      name <- getPlaylistName
-      cpos <- getCurrentTrack
-      let (ep, en) = case (name, cpos) of
-            (Just n, Just (ct, cn)) ->
-              (n == cn && ct > 0, n == cn && ct < size - 1)
-            _ ->
-              (False, False)
-      actionSetSensitive prev ep
-      actionSetSensitive next en
+  ctW  <- atomically $ newEmptyTWatch currentTrack
+  psW  <- atomically $ newEmptyTWatch playlistSize
+  forkIO $ forever $ do
+    atomically $ (void $ watch ctW) `mplus` (void $ watch psW)
+    size <- getPlaylistSize
+    name <- getPlaylistName
+    cpos <- getCurrentTrack
+    let (ep, en) = case (name, cpos) of
+          (Just n, Just (ct, cn)) ->
+            (n == cn && ct > 0, n == cn && ct < size - 1)
+          _ ->
+            (False, False)
+    actionSetSensitive prev ep
+    actionSetSensitive next en
 
 setupSelectionActions = do
   acts <- actions ["cut", "copy", "delete", "edit-properties", "export-properties"]
-  liftIO $ do
-    playlistSel `onSelectionChanged` setup acts
-    postGUIAsync $ setup acts
+  playlistSel `onSelectionChanged` setup acts
+  postGUIAsync $ setup acts
   where setup acts = do
           n <- treeSelectionCountSelectedRows playlistSel
           mapM_ (`actionSetSensitive` (n /= 0)) acts
 
 setupClipboardActions = do
   acts <- actions ["paste", "append"]
-  runIn clipboardEnv $> do
-    ts <- clipboardTargets
-    io $ \run -> do
-      ctW <- atomically $ newEmptyTWatch ts
-      forkIO $ forever $ do
-        void $ atomically $ watch ctW
-        en <- run editCheckClipboard
-        mapM_ (`actionSetSensitive` en) acts
+  ctW <- atomically $ newEmptyTWatch clipboardTargets
+  forkIO $ forever $ do
+    void $ atomically $ watch ctW
+    en <- editCheckClipboard
+    mapM_ (`actionSetSensitive` en) acts
 
-setupWindowTitle = io $ \run -> do
+setupWindowTitle = do
   pnW <- atomically $ newEmptyTWatch playlistName
   forkIO $ forever $ do
     name <- atomically $ watch pnW
-    run $ setWindowTitle $
-      maybe "Vision playlist" (++ " - Vision playlist") name
+    setWindowTitle $ maybe "Vision playlist" (++ " - Vision playlist") name
 
 setupPlaybar = do
   seekView <- makeSeekControl

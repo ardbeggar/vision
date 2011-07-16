@@ -17,11 +17,11 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DeriveDataTypeable, UndecidableInstances #-}
+{-# LANGUAGE DeriveDataTypeable, RankNTypes #-}
 
 module Clipboard
   ( initClipboard
-  , clipboardEnv
+  , withClipboard
   , clipboard
   , clipboardTargets
   , getClipboardTargets
@@ -30,7 +30,6 @@ module Clipboard
 
 import Control.Concurrent.STM
 import Control.Monad.Trans
-import Control.Monad.ToIO
 import Control.Monad.EnvIO
 
 import Data.Maybe
@@ -41,56 +40,56 @@ import Graphics.UI.Gtk
 import Registry
 import Atoms (xmms2MlibIdTarget)
 
-
 data Ix = Ix deriving (Typeable)
 
-data C = C { cTargets   :: TVar [TargetTag]
-           , cClipboard :: Clipboard
+data C = C { _targets   :: TVar [TargetTag]
+           , _clipboard :: Clipboard
            }
        deriving (Typeable)
 
 clipboardEnv :: Extract Ix C
 clipboardEnv = Extract
 
-clipboard        = envsx Ix cClipboard
-clipboardTargets = envsx Ix cTargets
+clipboard        = _clipboard ?clipboard
+clipboardTargets = _targets ?clipboard
 
 getClipboardTargets =
-  clipboardTargets >>= liftIO . readTVarIO
+  liftIO $ readTVarIO clipboardTargets
 
-copyIds ids = do
-  clipboard <- clipboard
-  liftIO $ do
-    clipboardSetWithData clipboard
-      [(xmms2MlibIdTarget, 0)]
-      (const $ selectionDataSet selectionTypeInteger ids)
-      (return ())
-    return ()
+copyIds ids = liftIO $ do
+  clipboardSetWithData clipboard
+    [(xmms2MlibIdTarget, 0)]
+    (const $ selectionDataSet selectionTypeInteger ids)
+    (return ())
+  return ()
 
-updateClipboardTargets ts = do
-  targets <- clipboardTargets
-  liftIO $ atomically $ writeTVar targets $ fromMaybe [] ts
-
+updateClipboardTargets ts =
+  liftIO $ atomically $ writeTVar clipboardTargets $ fromMaybe [] ts
 
 initClipboard = do
   c <- makeC
   addEnv Ix c
-  runIn (mkEnv Ix c) $> do
-    io $ \run -> timeoutAdd (run checkClipboard) 0
+  let ?clipboard = c
+  liftIO $ timeoutAdd checkClipboard 0
   return ()
 
+newtype Wrap a = Wrap { unWrap :: (?clipboard :: C) => a }
+
+withClipboard    = withClipboard' . Wrap
+withClipboard' w = do
+  Just (Env c) <- getEnv clipboardEnv
+  let ?clipboard = c in unWrap w
+
 makeC = liftIO $ do
-  targets            <- newTVarIO []
-  clipboard          <- clipboardGet selectionClipboard
-  return C { cTargets   = targets
-           , cClipboard = clipboard
+  targets   <- newTVarIO []
+  clipboard <- clipboardGet selectionClipboard
+  return C { _targets   = targets
+           , _clipboard = clipboard
            }
 
-checkClipboard = do
-  cb <- clipboard
-  io $ \run ->
-    clipboardRequestTargets cb $ \targets -> run $ do
-      updateClipboardTargets targets
-      liftIO $ timeoutAdd (run checkClipboard) 250
-      return ()
+checkClipboard = liftIO $ do
+  clipboardRequestTargets clipboard $ \targets -> do
+    updateClipboardTargets targets
+    liftIO $ timeoutAdd checkClipboard 250
+    return ()
   return False

@@ -35,7 +35,6 @@ import Graphics.UI.Gtk hiding (selectAll, focus)
 
 import UI
 import Clipboard
-import Registry
 import XMMS
 import Properties
 import Builder
@@ -49,16 +48,14 @@ import Collection.Utils
 
 browseCollection _maybeName = flip runEnvIO () $ withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
-  withUI $ runCommon $ do
-    Just cb <- getEnv clipboardEnv
-    W runCB <- runIn cb $> toIO
+  withUI $ runCommon $ withClipboard $ do
     W runCM <- runIn commonEnv $> toIO
     bindActions
       [ ("add-to-playlist", runCM $ comWithColl $ addToPlaylist False)
       , ("replace-playlist", runCM $ comWithColl $ addToPlaylist True)
       , ("select-all", runCM $ comWithSel selectAll)
       , ("invert-selection", runCM $ comWithSel invertSelection)
-      , ("copy", runCM $ comWithIds (runCB . copyIds))
+      , ("copy", runCM $ comWithIds copyIds)
       , ("edit-properties", runCM $ comWithIds $ showPropertyEditor)
       , ("export-properties", runCM $ comWithIds $ showPropertyExport)
       , ("import-properties", showPropertyImport)

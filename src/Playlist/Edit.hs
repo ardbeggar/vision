@@ -55,19 +55,18 @@ editCopy =
   copyIds =<< liftIO (playlistGetIds =<< getSelectedTracks)
 
 editPaste append = do
-  clipboard <- clipboard
-  targets   <- getClipboardTargets
-  liftIO $ paste clipboard targets
-  where paste clipboard targets
+  targets <- getClipboardTargets
+  liftIO $ paste targets
+  where paste targets
           | xmms2MlibIdTarget `elem` targets =
-            p clipboard xmms2MlibIdTarget (selectionDataGet selectionTypeInteger) insertIds
+            p xmms2MlibIdTarget (selectionDataGet selectionTypeInteger) insertIds
           | uriListTarget `elem` targets =
-            p clipboard uriListTarget selectionDataGetURIs insertURIs
+            p uriListTarget selectionDataGetURIs insertURIs
           | stringTarget `elem` targets =
-            p clipboard stringTarget selectionDataGetText $ insertURIs . lines
+            p stringTarget selectionDataGetText $ insertURIs . lines
           | otherwise =
             return ()
-        p clipboard target get put =
+        p target get put =
           clipboardRequestContents clipboard target $ do
             maybeContents <- get
             withJust maybeContents $ \contents -> liftIO $ do
