@@ -45,29 +45,29 @@ main = do
   timeoutAdd (yield >> return True) 100
 
   flip runEnvIO () $ withRegistry $ do
-    context <- liftIO $ initEnvironment
+    context <- liftIO initEnvironment
     let ?context = context
 
-    context <- liftIO $ initAbout
+    context <- liftIO initAbout
     let ?context = context
 
-    context <- liftIO $ initXMMS
+    context <- liftIO initXMMS
     let ?context = context
 
-    context <- liftIO $ initMedialib
+    context <- liftIO initMedialib
     let ?context = context
 
-    context <- liftIO $ initProperties
+    context <- liftIO initProperties
     let ?context = context
 
-    context <- liftIO $ initPlayback
+    context <- liftIO initPlayback
     let ?context = context
 
     initVolume
-    liftIO $ initPlaytime
-    initClipboard
+    liftIO initPlaytime
+    liftIO initClipboard
 
-    context <- liftIO $ initPlaylist
+    context <- liftIO initPlaylist
     let ?context = context
 
     showPlaylist

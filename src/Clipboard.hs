@@ -70,7 +70,7 @@ initClipboard = do
   c <- makeC
   addEnv Ix c
   let ?clipboard = c
-  liftIO $ timeoutAdd checkClipboard 0
+  timeoutAdd checkClipboard 0
   return ()
 
 newtype Wrap a = Wrap { unWrap :: (?clipboard :: C) => a }
