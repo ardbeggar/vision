@@ -47,10 +47,7 @@ initPlaylist =
 showPlaylist =
   withXMMS $ withPlayback $ withBuilder $ do
     addFromFile $ gladeFilePath "playlist"
-    withUI $ do
-      context <- initModel
-      let ?context = context
-
+    withUI $ withModel $ do
       context <- initIndex
       let ?context = context
 

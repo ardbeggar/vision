@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -17,8 +17,10 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module Playlist.Model
-  ( initModel
+  ( withModel
   , clearModel
   , playlistStore
   , playlistName
@@ -37,18 +39,16 @@ import Data.Int
 
 import Graphics.UI.Gtk
 
-import Context
-
 
 data Model
-  = Model { mStore               :: ListStore Int32
-          , mPlaylistName        :: TVar (Maybe String)
-          , mPlaylistSize        :: TVar Int
+  = Model { _store        :: ListStore Int32
+          , _playlistName :: TVar (Maybe String)
+          , _playlistSize :: TVar Int
           }
 
-playlistStore = mStore context
-playlistName  = mPlaylistName context
-playlistSize  = mPlaylistSize context
+playlistStore = _store ?_Playlist_Model
+playlistName  = _playlistName ?_Playlist_Model
+playlistSize  = _playlistSize ?_Playlist_Model
 
 getPlaylistName = readTVarIO playlistName
 setPlaylistName = atomically . writeTVar playlistName
@@ -66,22 +66,21 @@ playlistGetIds =
   mapM (listStoreGetValue playlistStore)
 
 
-initModel = do
-  context <- initContext
-  let ?context = context
+newtype Wrap a = Wrap { unWrap :: (?_Playlist_Model :: Model) => a }
 
-  return ?context
+withModel    = withModel' . Wrap
+withModel' w = do
+  model <- mkModel
+  let ?_Playlist_Model = model in unWrap w
 
 clearModel =
   listStoreClear playlistStore
 
-
-initContext = do
-  store               <- listStoreNewDND [] Nothing Nothing
-  playlistName        <- newTVarIO Nothing
-  playlistSize        <- newTVarIO 0
-  return $ augmentContext
-    Model { mStore               = store
-          , mPlaylistName        = playlistName
-          , mPlaylistSize        = playlistSize
-          }
+mkModel = do
+  store        <- listStoreNewDND [] Nothing Nothing
+  playlistName <- newTVarIO Nothing
+  playlistSize <- newTVarIO 0
+  return Model { _store        = store
+               , _playlistName = playlistName
+               , _playlistSize = playlistSize
+               }
