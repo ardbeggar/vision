@@ -49,12 +49,9 @@ showPlaylist =
     addFromFile $ gladeFilePath "playlist"
     withUI $ withModel $ withIndex $ withView $
       withPlaylistConfig $ do
-        context <- initUpdate
-        let ?context = context
-
+        initUpdate
         setupSearch
         setupDnD
         setupUI
-
         widgetShowAll window
 
