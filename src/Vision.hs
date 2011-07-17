@@ -57,9 +57,7 @@ main = do
     context <- initProperties
     let ?context = context
 
-    context <- initPlayback
-    let ?context = context
-
+    initPlayback
     initVolume
     initPlaytime
     initClipboard
@@ -68,5 +66,7 @@ main = do
     let ?context = context
 
     showPlaylist
+
+    return ()
 
   mainGUI

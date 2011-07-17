@@ -17,10 +17,11 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DeriveDataTypeable, RankNTypes #-}
 
 module Playback
   ( initPlayback
+  , withPlayback
   , currentTrack
   , getPlaybackStatus
   , playbackStatus
@@ -32,7 +33,6 @@ module Playback
   , prevTrack
   , nextTrack
   , requestCurrentTrack
-  , PlaybackCC
   ) where
 
 import Control.Concurrent
@@ -43,24 +43,27 @@ import Control.Arrow
 import Control.Monad
 import Control.Monad.Trans
 
+import Data.Typeable
+import Data.Env
+
 import XMMS2.Client hiding (playbackStatus)
 import qualified XMMS2.Client as XC
 
 import XMMS
-import Context
+import Registry
 import Utils
 
 
-class    ContextClass Playback c => PlaybackCC c
-instance ContextClass Playback c => PlaybackCC c
+data Ix = Ix deriving (Typeable)
 
 data Playback
-  = Playback { pPlaybackStatus   :: TVar (Maybe PlaybackStatus)
-             , pCurrentTrack     :: TVar (Maybe (Int, String))
+  = Playback { _playbackStatus :: TVar (Maybe PlaybackStatus)
+             , _currentTrack   :: TVar (Maybe (Int, String))
              }
+    deriving (Typeable)
 
-playbackStatus = pPlaybackStatus context
-currentTrack   = pCurrentTrack context
+playbackStatus = _playbackStatus ?_Playback
+currentTrack   = _currentTrack ?_Playback
 
 getPlaybackStatus =
   atomically $ readTVar playbackStatus
@@ -70,8 +73,9 @@ getCurrentTrack =
 
 
 initPlayback = withXMMS $ do
-  context <- initContext
-  let ?context = context
+  playback <- mkPlayback
+  addEnv Ix playback
+  let ?_Playback = playback
 
   xcW <- atomically $ newTGWatch connectedV
   forkIO $ forever $ do
@@ -90,13 +94,19 @@ initPlayback = withXMMS $ do
   return ?context
 
 
-initContext = do
-  playbackStatus   <- atomically $ newTVar Nothing
-  currentTrack     <- atomically $ newTVar Nothing
-  return $ augmentContext
-    Playback { pPlaybackStatus   = playbackStatus
-             , pCurrentTrack     = currentTrack
-             }
+newtype Wrap a = Wrap { unWrap :: (?_Playback :: Playback) => a }
+
+withPlayback    = withPlayback' . Wrap
+withPlayback' w = do
+  Just (Env playback) <- getEnv (Extract :: Extract Ix Playback)
+  let ?_Playback = playback in unWrap w
+
+mkPlayback = do
+  playbackStatus <- atomically $ newTVar Nothing
+  currentTrack   <- atomically $ newTVar Nothing
+  return Playback { _playbackStatus = playbackStatus
+                  , _currentTrack   = currentTrack
+                  }
 
 resetState = atomically $ do
   writeTVar playbackStatus Nothing

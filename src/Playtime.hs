@@ -71,7 +71,7 @@ data Ix = Ix deriving (Typeable)
 playtimeEnv :: Extract Ix Playtime
 playtimeEnv = Extract
 
-initPlaytime = withXMMS $ do
+initPlaytime = withXMMS $ withPlayback $ do
   pt <- makePlaytime
   addEnv Ix pt
   let ?playtime = pt

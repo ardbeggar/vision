@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -28,6 +28,7 @@ import UI
 import Builder
 import Environment
 import XMMS
+import Playback
 
 import Playlist.Model
 import Playlist.Index
@@ -43,27 +44,28 @@ import Playlist.UI
 initPlaylist =
   initFormat
 
-showPlaylist = withXMMS $ withBuilder $ do
-  addFromFile $ gladeFilePath "playlist"
-  withUI $ do
-    context <- initModel
-    let ?context = context
+showPlaylist =
+  withXMMS $ withPlayback $ withBuilder $ do
+    addFromFile $ gladeFilePath "playlist"
+    withUI $ do
+      context <- initModel
+      let ?context = context
 
-    context <- initIndex
-    let ?context = context
+      context <- initIndex
+      let ?context = context
 
-    context <- initView
-    let ?context = context
+      context <- initView
+      let ?context = context
 
-    context <- initPlaylistConfig
-    let ?context = context
+      context <- initPlaylistConfig
+      let ?context = context
 
-    context <- initUpdate
-    let ?context = context
+      context <- initUpdate
+      let ?context = context
 
-    setupSearch
-    setupDnD
-    setupUI
+      setupSearch
+      setupDnD
+      setupUI
 
-    widgetShowAll window
+      widgetShowAll window
 
