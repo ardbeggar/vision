@@ -30,8 +30,8 @@ module Clipboard
 
 import Control.Concurrent.STM
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
+import Data.Env
 import Data.Maybe
 import Data.Typeable
 
@@ -54,9 +54,9 @@ clipboard        = _clipboard ?clipboard
 clipboardTargets = _targets ?clipboard
 
 getClipboardTargets =
-  liftIO $ readTVarIO clipboardTargets
+  readTVarIO clipboardTargets
 
-copyIds ids = liftIO $ do
+copyIds ids = do
   clipboardSetWithData clipboard
     [(xmms2MlibIdTarget, 0)]
     (const $ selectionDataSet selectionTypeInteger ids)
@@ -87,7 +87,7 @@ makeC = liftIO $ do
            , _clipboard = clipboard
            }
 
-checkClipboard = liftIO $ do
+checkClipboard = do
   clipboardRequestTargets clipboard $ \targets -> do
     updateClipboardTargets targets
     liftIO $ timeoutAdd checkClipboard 250
