@@ -52,7 +52,7 @@ deriving instance Typeable Adjustment
 volumeEnv :: Extract Ix Adjustment
 volumeEnv = Extract
 
-initVolume = do
+initVolume = withXMMS $ do
   adj <- adjustmentNew 0 0 100 5 5 0
   addEnv Ix adj
 

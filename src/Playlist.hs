@@ -27,6 +27,7 @@ import Graphics.UI.Gtk
 import UI
 import Builder
 import Environment
+import XMMS
 
 import Playlist.Model
 import Playlist.Index
@@ -42,7 +43,7 @@ import Playlist.UI
 initPlaylist =
   initFormat
 
-showPlaylist = withBuilder $ do
+showPlaylist = withXMMS $ withBuilder $ do
   addFromFile $ gladeFilePath "playlist"
   withUI $ do
     context <- initModel

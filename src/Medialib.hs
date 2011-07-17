@@ -85,7 +85,7 @@ cache         = mCache context
 reqQ          = mReqQ context
 mediaInfoChan = mMediaInfoChan context
 
-initMedialib = do
+initMedialib = withXMMS $ do
   context <- initContext
   let ?context = context
 

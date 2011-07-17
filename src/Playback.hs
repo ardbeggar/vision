@@ -69,7 +69,7 @@ getCurrentTrack =
   atomically $ readTVar currentTrack
 
 
-initPlayback = do
+initPlayback = withXMMS $ do
   context <- initContext
   let ?context = context
 

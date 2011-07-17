@@ -36,6 +36,8 @@ module Properties
 
 import Prelude hiding (lookup)
 
+import XMMS
+
 import Properties.Property
 import Properties.Model
 import Properties.View
@@ -45,7 +47,7 @@ import Properties.Impex
 import Properties.Order
 
 
-initProperties = do
+initProperties = withXMMS $ do
   context <- initModel
   let ?context = context
 

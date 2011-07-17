@@ -17,19 +17,22 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE RankNTypes, DeriveDataTypeable #-}
 
 module XMMS
-  ( xmms
-  , initXMMS
+  ( initXMMS
+  , withXMMS
+  , xmms
   , connected
   , connectedV
-  , XMMSCC
   ) where
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
+
+import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk
 
@@ -37,39 +40,45 @@ import XMMS2.Client
 import XMMS2.Client.Glib
 
 import Environment
-import Context
+import Registry
 
+
+data Ix = Ix deriving (Typeable)
 
 data XMMS
-  = XMMS { xXMMS      :: Connection
-         , xConnected :: TGVar Bool
+  = XMMS { _xmms      :: Connection
+         , _connected :: TGVar Bool
          }
+    deriving (Typeable)
 
-class    ContextClass XMMS c => XMMSCC c
-instance ContextClass XMMS c => XMMSCC c
-
-xmms       = xXMMS context
-connectedV = xConnected context
+xmms       = _xmms ?xmms
+connectedV = _connected ?xmms
 connected  = readTGVarIO connectedV
 
 initXMMS = do
-  context <- initContext
-  let ?context = context
-
+  xmms <- mkXMMS
+  addEnv Ix xmms
+  let ?xmms = xmms
   scheduleTryConnect 100
+  return ()
 
-  return ?context
+newtype Wrap a = Wrap { unWrap :: (?xmms :: XMMS) => a }
 
+withXMMS    = withXMMS' . Wrap
+withXMMS' w = do
+  Just (Env xmms) <- getEnv (Extract :: Extract Ix XMMS)
+  let ?xmms = xmms
+  unWrap w
 
-initContext = do
+mkXMMS = do
   xmms      <- XMMS2.Client.init "Vision"
   connected <- atomically $ newTGVar False
-  return $ augmentContext
-    XMMS { xXMMS      = xmms
-         , xConnected = connected
-         }
+  return XMMS { _xmms      = xmms
+              , _connected = connected
+              }
 
-scheduleTryConnect = timeoutAdd tryConnect
+scheduleTryConnect =
+  timeoutAdd tryConnect
 
 tryConnect = do
   success <- connect xmms xmmsPath
@@ -90,4 +99,5 @@ disconnectCallback = do
   scheduleTryConnect 1000
   return ()
 
-setConnected = atomically . writeTGVar connectedV
+setConnected =
+  atomically . writeTGVar connectedV
