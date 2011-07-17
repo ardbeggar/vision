@@ -17,11 +17,12 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module Collection.Common
   ( Com (..)
-  , commonEnv
   , coms
-  , runCommon
+  , withCommon
   , comWithColl
   , comWithIds
   , comWithSel
@@ -33,7 +34,6 @@ module Collection.Common
 
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Data.IORef
 
@@ -52,8 +52,6 @@ import Collection.ScrollBox
 import Collection.ComboModel
 
 
-data Ix = Ix
-
 data Com
   = Com { eABRef  :: IORef ActionBackend
         , eAE     :: ActionEnabler
@@ -65,13 +63,13 @@ data Com
         , eSAdj   :: Adjustment
         }
 
-commonEnv :: Extract Ix Com
-commonEnv = Extract
+coms = ($ ?collectionCommon)
 
-coms = envsx Ix
+newtype Wrap a = Wrap { unWrap :: (?collectionCommon :: Com) => a }
 
-runCommon f = do
-  abRef <- liftIO $ newIORef emptyAB
+withCommon    = withCommon' . Wrap
+withCommon' w = do
+  abRef <- newIORef emptyAB
 
   selActs <- actions [ "add-to-playlist"
                      , "replace-playlist"
@@ -90,55 +88,49 @@ runCommon f = do
   lpopup <- getWidget castToMenu "ui/list-popup"
   vpopup <- getWidget castToMenu "ui/view-popup"
 
-  env <- liftIO $ do
-    sbox   <- mkScrollBox
-    cmodel <- mkModel
+  sbox   <- mkScrollBox
+  cmodel <- mkModel
 
-    scroll <- scrolledWindowNew Nothing Nothing
-    scrolledWindowSetShadowType scroll ShadowNone
-    scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
-    adj <- scrolledWindowGetHAdjustment scroll
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetShadowType scroll ShadowNone
+  scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
+  adj <- scrolledWindowGetHAdjustment scroll
 
-    fcRef <- newIORef Nothing
+  fcRef <- newIORef Nothing
 
-    let scrollIn mfc = void $ withJust mfc $ \fc ->
-          flip idleAdd priorityLow $ do
-            Rectangle x _ w _ <- widgetGetAllocation fc
-            adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
-            return False
+  let scrollIn mfc = void $ withJust mfc $ \fc ->
+        flip idleAdd priorityLow $ do
+          Rectangle x _ w _ <- widgetGetAllocation fc
+          adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
+          return False
 
-    adj `afterAdjChanged` do
-      mfc <- readIORef fcRef
-      scrollIn mfc
+  adj `afterAdjChanged` do
+    mfc <- readIORef fcRef
+    scrollIn mfc
 
-    (sBox sbox) `on` setFocusChild $ \mfc -> do
-      writeIORef fcRef mfc
-      scrollIn mfc
+  (sBox sbox) `on` setFocusChild $ \mfc -> do
+    writeIORef fcRef mfc
+    scrollIn mfc
 
-    containerAdd scroll $ outer sbox
+  containerAdd scroll $ outer sbox
 
-    return $ mkEnv Ix
-      Com { eABRef  = abRef
-          , eAE     = ae
-          , eSBox   = sbox
-          , eLPopup = lpopup
-          , eVPopup = vpopup
-          , eCModel = cmodel
-          , eScroll = scroll
-          , eSAdj   = adj
-          }
+  let ?collectionCommon =
+        Com { eABRef  = abRef
+            , eAE     = ae
+            , eSBox   = sbox
+            , eLPopup = lpopup
+            , eVPopup = vpopup
+            , eCModel = cmodel
+            , eScroll = scroll
+            , eSAdj   = adj
+            }
 
-  runIn' (env :*:) $> f
+  unWrap w
 
 
-withABRef f = do
-  abRef <- coms eABRef
-  liftIO $ f abRef
-
-comWithColl f =
-  withABRef $ \r -> do
-    ab <- readIORef r
-    aWithColl ab f
+comWithColl f = do
+  ab <- readIORef $ coms eABRef
+  aWithColl ab f
 
 comWithIds f =
   comWithColl $ \coll ->
@@ -146,30 +138,24 @@ comWithIds f =
       ids <- result
       liftIO $ f ids
 
-comWithSel f =
-  withABRef $ \r -> do
-    ab <- readIORef r
-    withJust (aSelection ab) f
+comWithSel f = do
+  ab <- readIORef $ coms eABRef
+  withJust (aSelection ab) f
 
-comWithNames f =
-  withABRef $ \r -> do
-    ab <- readIORef r
-    aWithNames ab f
+comWithNames f = do
+  ab <- readIORef $ coms eABRef
+  aWithNames ab f
 
 addView w = do
-  sbox <- coms eSBox
-  liftIO $ do
-    scrollBoxAdd sbox $ outer w
-    widgetGrabFocus $ focus w
+  scrollBoxAdd (coms eSBox) $ outer w
+  widgetGrabFocus $ focus w
 
 class FocusChild f where
   type Focus f
   focus :: f -> Focus f
 
 withSelectedView combo f = do
-  store <- coms eCModel
-  io $ \run -> do
-    iter <- comboBoxGetActiveIter combo
-    withJust iter $ \iter -> do
-      v <- listStoreGetValue store $ listStoreIterToIndex iter
-      run $ f v
+  iter <- comboBoxGetActiveIter combo
+  withJust iter $ \iter -> do
+    v <- listStoreGetValue (coms eCModel) $ listStoreIterToIndex iter
+    f v

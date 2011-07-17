@@ -29,7 +29,6 @@ import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Trans
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
@@ -59,77 +58,75 @@ data ListView
       }
 
 mkListView = withModel $ do
-  abRef <- coms eABRef
-  ae    <- coms eAE
-  popup <- coms eLPopup
+  let abRef = coms eABRef
+      ae    = coms eAE
+      popup = coms eLPopup
 
-  liftIO $ do
-    view <- treeViewNewWithModel store
-    treeViewSetHeadersVisible view False
-    treeViewSetRulesHint view True
+  view <- treeViewNewWithModel store
+  treeViewSetHeadersVisible view False
+  treeViewSetRulesHint view True
 
-    sel <- treeViewGetSelection view
-    treeSelectionSetMode sel SelectionMultiple
-    setupTreeViewPopup view popup
+  sel <- treeViewGetSelection view
+  treeSelectionSetMode sel SelectionMultiple
+  setupTreeViewPopup view popup
 
-    scroll <- scrolledWindowNew Nothing Nothing
-    scrolledWindowSetShadowType scroll ShadowIn
-    scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
-    containerAdd scroll view
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetShadowType scroll ShadowIn
+  scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
+  containerAdd scroll view
 
-    column <- treeViewColumnNew
-    treeViewAppendColumn view column
-    cell <- cellRendererTextNew
-    treeViewColumnPackStart column cell True
-    cellLayoutSetAttributes column cell store $ \n ->
-      case n of
-        Nothing ->
-          [ cellText := "All Media", cellTextWeight := 800 ]
-        Just cn ->
-          [ cellText := fst cn, cellTextWeightSet := False ]
+  column <- treeViewColumnNew
+  treeViewAppendColumn view column
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributes column cell store $ \n ->
+    case n of
+      Nothing ->
+        [ cellText := "All Media", cellTextWeight := 800 ]
+      Just cn ->
+        [ cellText := fst cn, cellTextWeightSet := False ]
 
-    treeViewSetEnableSearch view True
-    treeViewSetSearchEqualFunc view . Just $ \str iter ->
-      maybe False (isInfixOf (map toLower str) . map toLower . fst) <$>
-      (listStoreGetValue store $ listStoreIterToIndex iter)
+  treeViewSetEnableSearch view True
+  treeViewSetSearchEqualFunc view . Just $ \str iter ->
+    maybe False (isInfixOf (map toLower str) . map toLower . fst) <$>
+    (listStoreGetValue store $ listStoreIterToIndex iter)
 
-    nextRef <- newIORef None
+  nextRef <- newIORef None
 
-    let v = V { vView    = view
-              , vSel     = sel
-              , vNextRef = nextRef
-              , vStore   = store
-              , vScroll  = scroll
-              }
+  let v = V { vView    = view
+            , vSel     = sel
+            , vNextRef = nextRef
+            , vStore   = store
+            , vScroll  = scroll
+            }
+      aef = do
+        foc <- view `get` widgetHasFocus
+        when foc $ do
+          rows <- treeSelectionGetSelectedRows sel
+          aEnableSel ae $ not $ null rows
+          aEnableDel ae $ case rows of
+            []      -> False
+            [0] : _ -> False
+            _       -> True
+          aEnableRen ae $ case rows of
+            [[0]] -> False
+            [_]   -> True
+            _     -> False
+  setupViewFocus abRef view aef
+    AB { aWithColl  = withBuiltColl v
+       , aWithNames = \f -> withColls v (f . map fst . catMaybes)
+       , aSelection = Just sel
+       }
+  sel `on` treeSelectionSelectionChanged $ aef
 
-    let aef = do
-          foc <- view `get` widgetHasFocus
-          when foc $ do
-            rows <- treeSelectionGetSelectedRows sel
-            aEnableSel ae $ not $ null rows
-            aEnableDel ae $ case rows of
-              []      -> False
-              [0] : _ -> False
-              _       -> True
-            aEnableRen ae $ case rows of
-              [[0]] -> False
-              [_]   -> True
-              _     -> False
-    setupViewFocus abRef view aef
-      AB { aWithColl  = withBuiltColl v
-         , aWithNames = \f -> withColls v (f . map fst . catMaybes)
-         , aSelection = Just sel
-         }
-    sel `on` treeSelectionSelectionChanged $ aef
+  xcW <- atomically $ newTGWatch connectedV
+  tid <- forkIO $ forever $ do
+    void $ atomically $ watch xcW
+    postGUISync $ killNext v
+  view `onDestroy` (killThread tid)
 
-    xcW <- atomically $ newTGWatch connectedV
-    tid <- forkIO $ forever $ do
-      void $ atomically $ watch xcW
-      postGUISync $ killNext v
-    view `onDestroy` (killThread tid)
-
-    widgetShowAll scroll
-    return v
+  widgetShowAll scroll
+  return v
 
 instance CollBuilder ListView where
   withBuiltColl lv f = withColls lv $ withColl f

@@ -99,32 +99,32 @@ instance ViewItem TrackView where
 setupView tv = do
   let view  = tView tv
       sel   = tSel tv
-  abRef <- coms eABRef
-  ae    <- coms eAE
-  popup <- coms eVPopup
-  liftIO $ do
-    treeSelectionSetMode sel SelectionMultiple
-    treeViewSetRulesHint view True
-    setupTreeViewPopup view popup
+      abRef = coms eABRef
+      ae    = coms eAE
+      popup = coms eVPopup
 
-    let aef = do
-          foc <- view `get` widgetHasFocus
-          when foc $ do
-            rows <- treeSelectionGetSelectedRows sel
-            aEnableSel ae $ not $ null rows
-            aEnableRen ae False
-            aEnableDel ae False
-    setupViewFocus abRef view aef
-      AB { aWithColl  = withBuiltColl tv
-         , aWithNames = const $ return ()
-         , aSelection = Just sel
-         }
-    sel `on` treeSelectionSelectionChanged $ aef
+  treeSelectionSetMode sel SelectionMultiple
+  treeViewSetRulesHint view True
+  setupTreeViewPopup view popup
 
-    view `onDestroy` (killIndex $ tIndex tv)
+  let aef = do
+        foc <- view `get` widgetHasFocus
+        when foc $ do
+          rows <- treeSelectionGetSelectedRows sel
+          aEnableSel ae $ not $ null rows
+          aEnableRen ae False
+          aEnableDel ae False
+  setupViewFocus abRef view aef
+    AB { aWithColl  = withBuiltColl tv
+       , aWithNames = const $ return ()
+       , aSelection = Just sel
+       }
+  sel `on` treeSelectionSelectionChanged $ aef
 
-    setColumns tv False =<< loadConfig
-    widgetShowAll $ tScroll tv
+  view `onDestroy` (killIndex $ tIndex tv)
+
+  setColumns tv False =<< loadConfig
+  widgetShowAll $ tScroll tv
 
 loadTracks tv coll = liftIO $
   collQueryIds xmms coll [] 0 0 >>* do

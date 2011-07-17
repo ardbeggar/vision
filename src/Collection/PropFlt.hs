@@ -62,87 +62,87 @@ instance ViewItem PropFlt where
   nextVIRef = pNextRef
 
 mkPropFlt prop coll = do
-  abRef <- coms eABRef
-  ae    <- coms eAE
-  popup <- coms eVPopup
-  liftIO $ do
-    store <- listStoreNewDND [] Nothing Nothing
-    view  <- treeViewNewWithModel store
-    treeViewSetHeadersVisible view False
+  let abRef = coms eABRef
+      ae    = coms eAE
+      popup = coms eVPopup
 
-    sel <- treeViewGetSelection view
-    treeSelectionSetMode sel SelectionMultiple
+  store <- listStoreNewDND [] Nothing Nothing
+  view  <- treeViewNewWithModel store
+  treeViewSetHeadersVisible view False
 
-    treeViewSetRulesHint view True
-    setupTreeViewPopup view popup
+  sel <- treeViewGetSelection view
+  treeSelectionSetMode sel SelectionMultiple
 
-    column <- treeViewColumnNew
-    treeViewAppendColumn view column
-    cell <- cellRendererTextNew
-    treeViewColumnPackStart column cell True
-    cellLayoutSetAttributes column cell store $ \p ->
-      [ cellText := showValue prop p ]
+  treeViewSetRulesHint view True
+  setupTreeViewPopup view popup
 
-    scroll <- scrolledWindowNew Nothing Nothing
-    scrolledWindowSetShadowType scroll ShadowIn
-    scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
-    containerAdd scroll view
-    widgetShowAll scroll
+  column <- treeViewColumnNew
+  treeViewAppendColumn view column
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributes column cell store $ \p ->
+    [ cellText := showValue prop p ]
 
-    treeViewSetEnableSearch view True
-    treeViewSetSearchEqualFunc view . Just $ \str iter ->
-      (isInfixOf (map toLower str) . map toLower . showValue prop) <$>
-      (listStoreGetValue store $ listStoreIterToIndex iter)
+  scroll <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetShadowType scroll ShadowIn
+  scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
+  containerAdd scroll view
+  widgetShowAll scroll
 
-    fcoll <- collNew TypeIntersection
-    collAddOperand fcoll coll
-    flt <- collParse $ "NOT " ++ propKey prop ++ ":''"
-    collAddOperand fcoll flt
+  treeViewSetEnableSearch view True
+  treeViewSetSearchEqualFunc view . Just $ \str iter ->
+    (isInfixOf (map toLower str) . map toLower . showValue prop) <$>
+    (listStoreGetValue store $ listStoreIterToIndex iter)
 
-    let key = propKey prop
-        addLine v [] = return v
-        addLine v (p : ps) =
-          case lookup key p of
-            Just s | v == s    -> addLine v ps
-                   | otherwise -> do
-                     listStoreAppend store s
-                     addLine s ps
-            Nothing -> addLine v ps
-        getInfos s v =
-          collQueryInfos xmms fcoll [key] s 100 [key] [key] >>* do
-            lst <- result
-            len <- resultLength
-            liftIO $ do
-              v' <- addLine v lst
-              when (len == 100) $
-                getInfos (s + 100) v'
-    getInfos 0 (PropString "")
+  fcoll <- collNew TypeIntersection
+  collAddOperand fcoll coll
+  flt <- collParse $ "NOT " ++ propKey prop ++ ":''"
+  collAddOperand fcoll flt
 
-    nextRef <- newIORef None
+  let key = propKey prop
+      addLine v [] = return v
+      addLine v (p : ps) =
+        case lookup key p of
+          Just s | v == s    -> addLine v ps
+                 | otherwise -> do
+                   listStoreAppend store s
+                   addLine s ps
+          Nothing -> addLine v ps
+      getInfos s v =
+        collQueryInfos xmms fcoll [key] s 100 [key] [key] >>* do
+          lst <- result
+          len <- resultLength
+          liftIO $ do
+            v' <- addLine v lst
+            when (len == 100) $
+              getInfos (s + 100) v'
+  getInfos 0 (PropString "")
 
-    let pf = PF { pStore   = store
-                , pView    = view
-                , pSel     = sel
-                , pScroll  = scroll
-                , pColl    = fcoll
-                , pProp    = prop
-                , pNextRef = nextRef
-                }
-        aef = do
-          foc <- view `get` widgetHasFocus
-          when foc $ do
-            rows <- treeSelectionGetSelectedRows sel
-            aEnableSel ae $ not $ null rows
-            aEnableRen ae False
-            aEnableDel ae False
-    setupViewFocus abRef view aef
-      AB { aWithColl  = withBuiltColl pf
-         , aWithNames = const $ return ()
-         , aSelection = Just sel
-         }
-    sel `on` treeSelectionSelectionChanged $ aef
+  nextRef <- newIORef None
 
-    return pf
+  let pf = PF { pStore   = store
+              , pView    = view
+              , pSel     = sel
+              , pScroll  = scroll
+              , pColl    = fcoll
+              , pProp    = prop
+              , pNextRef = nextRef
+              }
+      aef = do
+        foc <- view `get` widgetHasFocus
+        when foc $ do
+          rows <- treeSelectionGetSelectedRows sel
+          aEnableSel ae $ not $ null rows
+          aEnableRen ae False
+          aEnableDel ae False
+  setupViewFocus abRef view aef
+    AB { aWithColl  = withBuiltColl pf
+       , aWithNames = const $ return ()
+       , aSelection = Just sel
+       }
+  sel `on` treeSelectionSelectionChanged $ aef
+
+  return pf
 
 instance CollBuilder PropFlt where
   withBuiltColl pf f = do

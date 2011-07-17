@@ -26,10 +26,6 @@ import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
 import Control.Monad
-import Control.Monad.ToIO
-import Control.Monad.Trans
-import Control.Monad.W
-import Control.Monad.EnvIO
 
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
@@ -46,42 +42,38 @@ import Collection.Select
 import Collection.Utils
 
 
-browseCollection _maybeName = flip runEnvIO () $ withBuilder $ do
+browseCollection _maybeName = withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
-  withUI $ runCommon $ withClipboard $ do
-    W runCM <- runIn commonEnv $> toIO
+  withUI $ withCommon $ withClipboard $ do
     bindActions
-      [ ("add-to-playlist", runCM $ comWithColl $ addToPlaylist False)
-      , ("replace-playlist", runCM $ comWithColl $ addToPlaylist True)
-      , ("select-all", runCM $ comWithSel selectAll)
-      , ("invert-selection", runCM $ comWithSel invertSelection)
-      , ("copy", runCM $ comWithIds copyIds)
-      , ("edit-properties", runCM $ comWithIds $ showPropertyEditor)
-      , ("export-properties", runCM $ comWithIds $ showPropertyExport)
+      [ ("add-to-playlist", comWithColl $ addToPlaylist False)
+      , ("replace-playlist", comWithColl $ addToPlaylist True)
+      , ("select-all", comWithSel selectAll)
+      , ("invert-selection", comWithSel invertSelection)
+      , ("copy", comWithIds copyIds)
+      , ("edit-properties", comWithIds $ showPropertyEditor)
+      , ("export-properties", comWithIds $ showPropertyExport)
       , ("import-properties", showPropertyImport)
       , ("manage-properties", showPropertyManager)
-      , ("save-collection", runCM $ comWithColl $ saveCollection)
-      , ("rename-collection", runCM $ comWithNames $ renameCollection)
-      , ("delete-collections", runCM $ comWithNames $ deleteCollections)
+      , ("save-collection", comWithColl $ saveCollection)
+      , ("rename-collection", comWithNames $ renameCollection)
+      , ("delete-collections", comWithNames $ deleteCollections)
       ]
 
     ag <- getObject castToActionGroup "server-actions"
-    liftIO $ do
-      xcW <- atomically $ newTGWatch connectedV
-      tid <- forkIO $ forever $ do
-        conn <- atomically $ watch xcW
-        postGUISync $ actionGroupSetSensitive ag conn
-      window `onDestroy` (killThread tid)
+    xcW <- atomically $ newTGWatch connectedV
+    tid <- forkIO $ forever $ do
+      conn <- atomically $ watch xcW
+      postGUISync $ actionGroupSetSensitive ag conn
+    window `onDestroy` (killThread tid)
 
-    lv     <- mkListView
-    box    <- getObject castToVBox "views"
-    scroll <- coms eScroll
-    liftIO $ boxPackStartDefaults box scroll
+    lv  <- mkListView
+    box <- getObject castToVBox "views"
+    boxPackStartDefaults box $ coms eScroll
 
     addView lv
 
-    W run <- toIO
-    onCollBuilt lv $ run . mkSelect
+    onCollBuilt lv mkSelect
 
-    liftIO $ widgetShowAll window
+    widgetShowAll window
 
