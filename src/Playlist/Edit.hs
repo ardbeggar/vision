@@ -43,16 +43,15 @@ import Playlist.Control
 
 
 editDelete cut = do
-  tracks <- liftIO $ getSelectedTracks
-  when cut $ (copyIds =<< liftIO (playlistGetIds tracks))
-  liftIO $ do
-    removeTracks tracks
-    maybeTrack <- currentTrackThisPlaylist
-    withJust maybeTrack $ \t ->
-      when (t `elem` tracks) restartPlayback
+  tracks <- getSelectedTracks
+  when cut $ (copyIds =<< playlistGetIds tracks)
+  removeTracks tracks
+  maybeTrack <- currentTrackThisPlaylist
+  withJust maybeTrack $ \t ->
+    when (t `elem` tracks) restartPlayback
 
 editCopy =
-  copyIds =<< liftIO (playlistGetIds =<< getSelectedTracks)
+  copyIds =<< playlistGetIds =<< getSelectedTracks
 
 editPaste append = do
   targets <- getClipboardTargets

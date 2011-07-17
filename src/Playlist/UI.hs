@@ -24,7 +24,6 @@ module Playlist.UI
   ) where
 
 import Control.Monad
-import Control.Monad.Trans
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -60,19 +59,16 @@ import Playlist.Control
 
 
 setupUI = do
-  liftIO $ setupWindowTitle
-
-  withVolume $ withPlaytime $ liftIO setupPlaybar
-
-  withClipboard $ liftIO setupActions
+  setupWindowTitle
+  withVolume $ withPlaytime setupPlaybar
+  withClipboard  setupActions
 
   popup <- getWidget castToMenu "ui/playlist-popup"
-  liftIO $ setupTreeViewPopup playlistView popup
+  setupTreeViewPopup playlistView popup
 
-  liftIO $ do
-    playlistView `onRowActivated` \[n] _ ->
-      playTrack n
-    window `onDestroy` mainQuit
+  playlistView `onRowActivated` \[n] _ ->
+    playTrack n
+  window `onDestroy` mainQuit
 
   return ()
 
@@ -195,7 +191,7 @@ setupPlaybar = do
   separatorToolItemSetDraw sep False
   toolbarInsert playbar sep (-1)
 
-  seekView <- liftIO makeSeekControl
+  seekView <- makeSeekControl
   seekItem <- toolItemNew
   toolItemSetHomogeneous seekItem False
   toolItemSetExpand seekItem True
@@ -252,8 +248,8 @@ makeURLEntryDialog =
     windowSetTitle outerw "Add media"
     windowSetDefaultSize outerw 500 (-1)
 
-runURLEntryDialog dlg = do
-  liftIO $ runEditorDialog dlg
+runURLEntryDialog dlg =
+  runEditorDialog dlg
     (return "")
     (\str ->
       insertURIs (map (encString False ok_url) $ lines str) Nothing)

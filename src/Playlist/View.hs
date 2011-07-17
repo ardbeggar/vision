@@ -28,7 +28,6 @@ module Playlist.View
   ) where
 
 import Control.Applicative
-import Control.Monad.Trans
 
 import Data.Maybe
 import Data.IORef
@@ -61,63 +60,62 @@ initView = do
   context <- initContext
   let ?context = context
 
-  liftIO $ do
-    treeViewSetModel playlistView playlistStore
+  treeViewSetModel playlistView playlistStore
 
-    treeViewSetRulesHint playlistView True
-    treeViewSetReorderable playlistView True
-    treeViewSetHeadersVisible playlistView False
+  treeViewSetRulesHint playlistView True
+  treeViewSetReorderable playlistView True
+  treeViewSetHeadersVisible playlistView False
 
-    treeSelectionSetMode playlistSel SelectionMultiple
+  treeSelectionSetMode playlistSel SelectionMultiple
 
-    column <- treeViewColumnNew
-    treeViewInsertColumn playlistView column 0
+  column <- treeViewColumnNew
+  treeViewInsertColumn playlistView column 0
 
-    cell <- cellRendererPixbufNew
-    cell `set` [ cellWidth := 30 ]
-    treeViewColumnPackStart column cell False
-    cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
-      [n] <- treeModelGetPath playlistStore iter
-      maybeCT <- getCurrentTrack
-      name <- fromMaybe "" <$> getPlaylistName
-      cell `set` [ cellPixbufStockId :=>
-                   case maybeCT of
-                     Just (cp, cname) | cp == n && cname == name -> do
-                       maybeStatus <- getPlaybackStatus
-                       case maybeStatus of
-                         Just StatusPlay  -> return stockMediaPlay
-                         Just StatusPause -> return stockMediaPause
-                         Just StatusStop  -> return stockMediaStop
-                         _                -> return ""
-                     _ ->
-                       return ""
-                 ]
+  cell <- cellRendererPixbufNew
+  cell `set` [ cellWidth := 30 ]
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
+    [n] <- treeModelGetPath playlistStore iter
+    maybeCT <- getCurrentTrack
+    name <- fromMaybe "" <$> getPlaylistName
+    cell `set` [ cellPixbufStockId :=>
+                 case maybeCT of
+                   Just (cp, cname) | cp == n && cname == name -> do
+                     maybeStatus <- getPlaybackStatus
+                     case maybeStatus of
+                       Just StatusPlay  -> return stockMediaPlay
+                       Just StatusPause -> return stockMediaPause
+                       Just StatusStop  -> return stockMediaStop
+                       _                -> return ""
+                   _ ->
+                     return ""
+               ]
 
-    cell <- cellRendererTextNew
-    treeViewColumnPackStart column cell True
-    cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
-      info <- getInfoIfNeeded iter
-      cell `set` trackInfoAttrs info
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
+    info <- getInfoIfNeeded iter
+    cell `set` trackInfoAttrs info
 
-    cell <- cellRendererTextNew
-    treeViewColumnPackStart column cell False
-    cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
-      info <- getInfoIfNeeded iter
-      cell `set` [ cellText := trackInfoDuration info ]
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributeFunc column cell playlistStore $ \iter -> do
+    info <- getInfoIfNeeded iter
+    cell `set` [ cellText := trackInfoDuration info ]
 
-    playlistView `on` cursorChanged $ do
-      cur <- treeViewGetCursor playlistView
-      writeIORef playlistCur cur
+  playlistView `on` cursorChanged $ do
+    cur <- treeViewGetCursor playlistView
+    writeIORef playlistCur cur
 
-    playlistStore `on` rowDeleted $ \[d] -> do
-      cur <- readIORef playlistCur
-      case cur of
-        ([n], c) | n >= d -> do
-          s <- getPlaylistSize
-          let n' = if n < s && n == d then n else max (n - 1) 0
-              c' = maybe Nothing (Just . (, False)) c
-          treeViewSetCursor playlistView [n'] c'
-        _ -> return ()
+  playlistStore `on` rowDeleted $ \[d] -> do
+    cur <- readIORef playlistCur
+    case cur of
+      ([n], c) | n >= d -> do
+        s <- getPlaylistSize
+        let n' = if n < s && n == d then n else max (n - 1) 0
+            c' = maybe Nothing (Just . (, False)) c
+        treeViewSetCursor playlistView [n'] c'
+      _ -> return ()
 
   return ?context
 
@@ -133,8 +131,8 @@ getInfoIfNeeded iter = do
 
 initContext = do
   view <- getObject castToTreeView "playlist-view"
-  sel  <- liftIO $ treeViewGetSelection view
-  cur  <- liftIO $ newIORef ([], Nothing)
+  sel  <- treeViewGetSelection view
+  cur  <- newIORef ([], Nothing)
   return $ augmentContext
     View { vView = view
          , vSel  = sel

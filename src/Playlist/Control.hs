@@ -85,8 +85,8 @@ showPropertyEditor = withSelectedIds P.showPropertyEditor
 showPropertyExport = withSelectedIds P.showPropertyExport
 
 withSelectedIds f = do
-  trs <- liftIO $ getSelectedTracks
-  ids <- liftIO $ playlistGetIds trs
+  trs <- getSelectedTracks
+  ids <- playlistGetIds trs
   f ids
 
 getOrder =

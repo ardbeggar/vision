@@ -64,7 +64,7 @@ copyIds ids = do
   return ()
 
 updateClipboardTargets ts =
-  liftIO $ atomically $ writeTVar clipboardTargets $ fromMaybe [] ts
+  atomically $ writeTVar clipboardTargets $ fromMaybe [] ts
 
 initClipboard = do
   c <- makeC
@@ -80,7 +80,7 @@ withClipboard' w = do
   Just (Env c) <- getEnv clipboardEnv
   let ?clipboard = c in unWrap w
 
-makeC = liftIO $ do
+makeC = do
   targets   <- newTVarIO []
   clipboard <- clipboardGet selectionClipboard
   return C { _targets   = targets

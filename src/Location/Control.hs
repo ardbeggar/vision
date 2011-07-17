@@ -101,6 +101,6 @@ addOne p = do
              return ()))
       return ()
 
-openLocation = liftIO $ do
+openLocation = do
   widgetGrabFocus locationEntry
   editableSelectRegion locationEntry 0 (-1)

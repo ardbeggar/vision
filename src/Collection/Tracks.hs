@@ -72,17 +72,16 @@ instance CollBuilder TrackView where
   treeViewSel tv = (tView tv, tSel tv)
 
 mkTrackView coll = do
-  tv <- liftIO $ do
-    store   <- listStoreNewDND [] Nothing Nothing
-    index   <- makeIndex store return
-    view    <- treeViewNewWithModel store
-    sel     <- treeViewGetSelection view
-    nextRef <- newIORef None
-    scroll  <- scrolledWindowNew Nothing Nothing
-    scrolledWindowSetShadowType scroll ShadowIn
-    scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
-    containerAdd scroll view
-    return TV { tStore   = store
+  store   <- listStoreNewDND [] Nothing Nothing
+  index   <- makeIndex store return
+  view    <- treeViewNewWithModel store
+  sel     <- treeViewGetSelection view
+  nextRef <- newIORef None
+  scroll  <- scrolledWindowNew Nothing Nothing
+  scrolledWindowSetShadowType scroll ShadowIn
+  scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
+  containerAdd scroll view
+  let tv = TV { tStore   = store
               , tIndex   = index
               , tView    = view
               , tSel     = sel
@@ -126,7 +125,7 @@ setupView tv = do
   setColumns tv False =<< loadConfig
   widgetShowAll $ tScroll tv
 
-loadTracks tv coll = liftIO $
+loadTracks tv coll =
   collQueryIds xmms coll [] 0 0 >>* do
     ids <- result
     liftIO $ populateModel tv ids
