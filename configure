@@ -607,6 +607,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_compiler
+with_gcc
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1655,6 +1656,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 # Check whether --with-compiler was given.
 if test "${with_compiler+set}" = set; then :
   withval=$with_compiler;
+fi
+
+
+# Check whether --with-gcc was given.
+if test "${with_gcc+set}" = set; then :
+  withval=$with_gcc;
 fi
 
 
