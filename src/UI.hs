@@ -58,10 +58,10 @@ infoBar       = uInfoBar ?ui
 infoText      = uInfoText ?ui
 
 setWindowTitle title =
-  liftIO $ windowSetTitle window title
+  windowSetTitle window title
 
 maybeGetWidget cast name =
-  liftIO $ fmap cast <$> uiManagerGetWidget uiManager name
+  fmap cast <$> uiManagerGetWidget uiManager name
 
 getWidget cast name =
   fromJust <$> maybeGetWidget cast name
@@ -80,7 +80,7 @@ withUI' w = do
     , ("about", showAbout window)
     ]
 
-  liftIO $ window `on` keyPressEvent $ tryEvent $ do
+  window `on` keyPressEvent $ tryEvent $ do
     []       <- eventModifier
     "Escape" <- eventKeyName
     liftIO $ infoBarEmitResponse infoBar dismiss
@@ -93,7 +93,7 @@ makeUI = do
   contents            <- getObject castToVBox "contents"
   uiManager           <- getObject castToUIManager "ui-manager"
   uiActionGroup       <- getObject castToActionGroup "ui-actions"
-  windowGroup         <- liftIO $ windowGroupNew
+  windowGroup         <- windowGroupNew
   (infoBar, infoText) <- makeInfoBar
   return UI { uWindow      = window
             , uContents    = contents
@@ -104,13 +104,13 @@ makeUI = do
             , uInfoText    = infoText
             }
 
-informUser t m = liftIO $ do
+informUser t m = do
   infoBar `set` [ infoBarMessageType := t ]
   labelSetMarkup infoText m
   widgetSetNoShowAll infoBar False
   widgetShowAll infoBar
 
-makeInfoBar = liftIO $ do
+makeInfoBar = do
   infoBar <- getObject castToInfoBar "info-bar"
 
   widgetSetNoShowAll infoBar True
