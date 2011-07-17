@@ -29,22 +29,18 @@
              RankNTypes #-}
 
 module Registry
-  ( EnvM
-  , runIn
-  , withRegistry
+  ( withRegistry
   , addEnv
   , getEnv
   ) where
 
-import Control.Monad.Trans
-import Control.Monad.EnvIO
+import Control.Concurrent.STM
 
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
-import Control.Concurrent.STM
-
 import Data.Typeable
 import Data.Dynamic
+import Data.Env
 
 
 deriving instance Typeable2 Env
@@ -55,19 +51,19 @@ newtype Wrap a = Wrap { unWrap :: (?registry :: EnvMap) => a }
 
 withRegistry    = withRegistry' . Wrap
 withRegistry' w = do
-  registry <- liftIO $ newTVarIO $ IntMap.empty
+  registry <- newTVarIO IntMap.empty
   let ?registry = registry in unWrap w
 
-addEnv :: (?registry :: EnvMap, MonadIO m, Typeable ix, Typeable r) => ix -> r -> m ()
-addEnv ix r = liftIO $ do
+addEnv :: (?registry :: EnvMap, Typeable ix, Typeable r) => ix -> r -> IO ()
+addEnv ix r = do
   let val = mkEnv ix r
   key <- typeRepKey $ typeOf val
   atomically $ do
     map <- readTVar ?registry
     writeTVar ?registry $ IntMap.insert key (toDyn val) map
 
-getEnv :: (?registry :: EnvMap, MonadIO m, Typeable ix, Typeable r) => Extract ix r -> m (Maybe (Env ix r))
-getEnv spec = liftIO $ do
+getEnv :: (?registry :: EnvMap, Typeable ix, Typeable r) => Extract ix r -> IO (Maybe (Env ix r))
+getEnv spec = do
   key <- typeRepKey $ typeOf $ env spec
   atomically $ do
     map <- readTVar ?registry
