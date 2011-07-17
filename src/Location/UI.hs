@@ -22,8 +22,9 @@ module Location.UI
   ) where
 
 import Control.Applicative
+
 import Control.Monad
-import Control.Monad.EnvIO
+import Control.Monad.Trans
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -90,82 +91,77 @@ setupActions browse = do
         actionSetSensitive up eu
         actionSetSensitive refresh er
 
-  io $ \run -> do
-    lW <- atomically $ newTGWatch location
-    forkIO $ forever $ do
-      void $ atomically $ watch lW
-      postGUISync $ do
-        updateN
-        run updateWindowTitle
+  lW <- atomically $ newTGWatch location
+  forkIO $ forever $ do
+    void $ atomically $ watch lW
+    postGUISync $ do
+      updateN
+      updateWindowTitle
 
-    locationSel `onSelectionChanged` updateB
-    postGUIAsync updateB
+  locationSel `onSelectionChanged` updateB
+  postGUIAsync updateB
 
   return ()
 
 setupToolbar = do
   toolbar <- getObject castToToolbar "toolbar"
 
-  liftIO $ do
-    item <- separatorToolItemNew
-    separatorToolItemSetDraw item False
-    toolbarInsert toolbar item 4
+  item <- separatorToolItemNew
+  separatorToolItemSetDraw item False
+  toolbarInsert toolbar item 4
 
-    item <- toolItemNew
-    toolItemSetHomogeneous item False
-    toolItemSetExpand item True
-    containerAdd item locationEntry
-    toolbarInsert toolbar item 5
+  item <- toolItemNew
+  toolItemSetHomogeneous item False
+  toolItemSetExpand item True
+  containerAdd item locationEntry
+  toolbarInsert toolbar item 5
 
-    item <- separatorToolItemNew
-    separatorToolItemSetDraw item False
-    toolbarInsert toolbar item 6
+  item <- separatorToolItemNew
+  separatorToolItemSetDraw item False
+  toolbarInsert toolbar item 6
 
 setupLocationEntry = do
   load <- action "load"
-  liftIO $ do
-    locationEntry `onEntryActivate` actionActivate load
-    locationEntry `onIconPress` \icon ->
-      case icon of
-        PrimaryIcon   -> entrySetText locationEntry ""
-        SecondaryIcon -> actionActivate load
+  locationEntry `onEntryActivate` actionActivate load
+  locationEntry `onIconPress` \icon ->
+    case icon of
+      PrimaryIcon   -> entrySetText locationEntry ""
+      SecondaryIcon -> actionActivate load
   return ()
 
 setupLocationView = do
   popup <- getWidget castToMenu "ui/location-popup"
+  setupTreeViewPopup locationView popup
+
   down  <- action "down"
+  locationView `onRowActivated` \_ _ ->
+    actionActivate down
+
   binw  <- action "browse-in-new-window"
-  liftIO $ do
-    setupTreeViewPopup locationView popup
-
-    locationView `onRowActivated` \_ _ ->
-      actionActivate down
-
-    locationView `on` buttonPressEvent $ tryEvent $ do
-      MiddleButton <- eventButton
-      SingleClick  <- eventClick
-      (x, y)       <- eventCoordinates
-      liftIO $ do
-        maybePath <- treeViewGetPathAtPos locationView (round x, round y)
-        case maybePath of
-          Just (path, _, _) -> do
-            treeViewSetCursor locationView path Nothing
-            actionActivate binw
-          Nothing           ->
-            return ()
+  locationView `on` buttonPressEvent $ tryEvent $ do
+    MiddleButton <- eventButton
+    SingleClick  <- eventClick
+    (x, y)       <- eventCoordinates
+    liftIO $ do
+      maybePath <- treeViewGetPathAtPos locationView (round x, round y)
+      case maybePath of
+        Just (path, _, _) -> do
+          treeViewSetCursor locationView path Nothing
+          actionActivate binw
+        Nothing           ->
+          return ()
 
   return ()
 
 setupConnection = do
   ag <- getObject castToActionGroup "server-actions"
-  liftIO $ do
-    xcW <- atomically $ newTGWatch connectedV
-    forkIO $ forever $ do
-      conn <- atomically $ watch xcW
-      actionGroupSetSensitive ag conn
-      locationEntry `set` [secondaryIconSensitive := conn]
+  xcW <- atomically $ newTGWatch connectedV
+  forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    actionGroupSetSensitive ag conn
+    locationEntry `set` [secondaryIconSensitive := conn]
 
-loadCurrentLocation = io $ \run -> do
+loadCurrentLocation = do
   text <- trim <$> entryGetText locationEntry
   case text of
     [] -> do
@@ -175,7 +171,7 @@ loadCurrentLocation = io $ \run -> do
         _  -> do
           entrySetText locationEntry cur
           widgetGrabFocus locationView
-    _  -> run $ loadLocation . Go $ makeURL text
+    _  -> loadLocation . Go $ makeURL text
 
 loadAtCursor func = do
   (path, _) <- treeViewGetCursor locationView
@@ -195,7 +191,7 @@ newWindow browse = do
   browse order Nothing
 
 updateWindowTitle = do
-  loc <- liftIO $ getCurrentLocation
+  loc <- getCurrentLocation
   setWindowTitle $ case loc of
     [] -> "Vision location browser"
     _  -> loc ++ " - Vision location browser"

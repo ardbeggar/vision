@@ -28,7 +28,6 @@ module Location.Control
 import Prelude hiding (catch)
 import Control.Monad.CatchIO
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Data.Maybe
 import Data.List
@@ -45,23 +44,23 @@ import Location.View
 import Location.PathComp
 
 
-loadLocation location = io $ \run -> do
+loadLocation location = do
   listStoreClear locationStore
   maybeURL <- updateLocation location
   case maybeURL of
     Just url -> do
       clearPathComp locationComp
       entrySetText locationEntry url
-      xformMediaBrowse xmms url >>* handleBrowse run url
+      xformMediaBrowse xmms url >>* handleBrowse url
     Nothing ->
       return ()
 
-handleBrowse run url =
+handleBrowse url =
   handleBrowse' `catch` \(e :: XMMSException) -> do
     let t = case e of
           XMMSError s -> s
           _           -> "Unknown error"
-    liftIO $ run $ informUser MessageError $ escapeMarkup url ++ ": <b>" ++ escapeMarkup t ++ "</b>"
+    liftIO $ informUser MessageError $ escapeMarkup url ++ ": <b>" ++ escapeMarkup t ++ "</b>"
   where handleBrowse' = do
           r <- result
           liftIO $ do
