@@ -84,7 +84,7 @@ initUpdate = do
         monCT new
   forkIO $ monCT Nothing
 
-  return ?context
+  return ()
 
 setupPlaylist = do
   name <- result
