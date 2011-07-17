@@ -30,7 +30,6 @@ import Control.Concurrent.STM.TGVar
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
@@ -41,7 +40,6 @@ import Graphics.UI.Gtk
 
 import XMMS2.Client
 
-import Registry
 import XMMS
 import Utils
 import Compound
@@ -60,16 +58,7 @@ data ListView
       , vScroll  :: ScrolledWindow
       }
 
-mkListView = do
-  me <- do
-    maybeME <- getEnv modelEnv
-    case maybeME of
-      Just me -> return me
-      Nothing -> do
-        initModel
-        fromJust <$> getEnv modelEnv
-  store <- runIn me $> store
-
+mkListView = withModel $ do
   abRef <- coms eABRef
   ae    <- coms eAE
   popup <- coms eLPopup

@@ -17,23 +17,25 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, RankNTypes #-}
 
 module Collection.List.Model
   ( initModel
+  , withModel
   , store
   , modelEnv
   ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.ToIO
 import Control.Monad.EnvIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
+import Data.Maybe
 import Data.Typeable
 
 import Graphics.UI.Gtk hiding (add)
@@ -45,7 +47,7 @@ import XMMS
 
 
 data Model
-  = Model { mStore :: ListStore (Maybe (String, Coll)) }
+  = Model { _store :: ListStore (Maybe (String, Coll)) }
     deriving (Typeable)
 
 data Ix = Ix deriving (Typeable)
@@ -55,44 +57,56 @@ modelEnv = Extract
 
 initModel = do
   model <- mkModel
-  runIn (mkEnv Ix model) $> setupModel
+  let ?collectionListModel = model
+  setupModel
   addEnv Ix model
 
-mkModel = liftIO $ do
-  store <- listStoreNewDND [] Nothing Nothing
-  return Model { mStore = store }
+newtype Wrap a = Wrap { unWrap :: (?collectionListModel :: Model) => a }
 
-setupModel = io $ \run -> do
+withModel    = withModel' . Wrap
+withModel' w = do
+  Env model <- liftIO $ do
+    maybeME <- getEnv modelEnv
+    case maybeME of
+      Just me -> return me
+      Nothing -> do
+        initModel
+        fromJust <$> getEnv modelEnv
+  let ?collectionListModel = model in unWrap w
+
+
+mkModel = do
+  store <- listStoreNewDND [] Nothing Nothing
+  return Model { _store = store }
+
+setupModel = do
   xcW <- atomically $ newTGWatch connectedV
   forkIO $ forever $ do
     conn <- atomically $ watch xcW
-    postGUISync $ run clearStore
+    postGUISync clearStore
     when conn $ do
       broadcastCollectionChanged xmms >>* do
         change <- result
         when (namespace change == "Collections") $
-          liftIO $ run listCollections
+          liftIO listCollections
         persist
-      run listCollections
+      listCollections
 
-listCollections = io $ \run ->
+listCollections =
   collList xmms "Collections" >>* do
     names <- result
-    liftIO $ run $ do
+    liftIO $ do
       clearStore
       fillStore names
 
-store = envsx Ix mStore
+store = _store ?collectionListModel
 
-clearStore = do
-  store <- store
-  liftIO $ listStoreClear store
+clearStore =
+  listStoreClear store
 
 fillStore names = do
-  store <- store
-  liftIO $ do
-    listStoreAppend store Nothing
-    forM_ names $ \name ->
-      collGet xmms name "Collections" >>* do
-        coll <- result
-        liftIO $ listStoreAppend store $ Just (name, coll)
+  listStoreAppend store Nothing
+  forM_ names $ \name ->
+    collGet xmms name "Collections" >>* do
+      coll <- result
+      liftIO $ listStoreAppend store $ Just (name, coll)
