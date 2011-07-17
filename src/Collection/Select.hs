@@ -24,8 +24,6 @@ module Collection.Select
   , mkSelect
   ) where
 
-import Control.Monad.EnvIO
-
 import Data.IORef
 
 import Graphics.UI.Gtk hiding (focus)
@@ -52,8 +50,8 @@ instance ViewItem Select where
   nextVIRef = sNextRef
 
 mkSelect coll = do
-  nextRef <- liftIO $ newIORef None
-  box     <- liftIO $ vBoxNew False 5
+  nextRef <- newIORef None
+  box     <- vBoxNew False 5
   combo   <- mkCombo
   let s = S { sCombo  = combo
             , sBox     = box
@@ -61,20 +59,18 @@ mkSelect coll = do
             , sNextRef = nextRef
             }
       setup w = do
-          liftIO $ setNext s w
-          W run <- toIO
-          onCollBuilt w $ run . mkSelect
-          liftIO $ do
-            boxPackStartDefaults box $ outer w
-            widgetGrabFocus $ focus w
-  io $ \run -> do
-    boxPackStart box combo PackNatural 0
-    combo `on` changed $ run $
-      withSelectedView combo $ \cur -> case cur of
-        CITracks    -> setup =<< mkTrackView coll
-        CIProp pr   -> setup =<< mkPropFlt pr coll
-        CISeparator -> return ()
-    widgetShowAll box
+          setNext s w
+          onCollBuilt w mkSelect
+          boxPackStartDefaults box $ outer w
+          widgetGrabFocus $ focus w
+
+  boxPackStart box combo PackNatural 0
+  combo `on` changed $
+    withSelectedView combo $ \cur -> case cur of
+      CITracks    -> setup =<< mkTrackView coll
+      CIProp pr   -> setup =<< mkPropFlt pr coll
+      CISeparator -> return ()
+  widgetShowAll box
 
   return s
 

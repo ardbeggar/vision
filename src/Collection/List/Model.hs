@@ -29,7 +29,6 @@ module Collection.List.Model
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -37,6 +36,7 @@ import Control.Concurrent.STM.TGVar
 
 import Data.Maybe
 import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -65,7 +65,7 @@ newtype Wrap a = Wrap { unWrap :: (?collectionListModel :: Model) => a }
 
 withModel    = withModel' . Wrap
 withModel' w = do
-  Env model <- liftIO $ do
+  Env model <- do
     maybeME <- getEnv modelEnv
     case maybeME of
       Just me -> return me

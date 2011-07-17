@@ -40,7 +40,6 @@ module Collection.Utils
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Data.IORef
 
@@ -142,12 +141,12 @@ class CollBuilder b where
   withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
 
-onCollBuilt b f = io $ \run -> do
+onCollBuilt b f = do
   let (view, sel) = treeViewSel b
       doit = withBuiltColl b $ \c -> do
         n <- f c
         setNext b n
-        run $ addView n
+        addView n
   view `on` keyPressEvent $ tryEvent $ do
     "Return" <- eventKeyName
     []       <- eventModifier
