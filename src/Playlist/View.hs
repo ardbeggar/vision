@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jun. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -17,11 +17,11 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, RankNTypes #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Playlist.View
-  ( initView
+  ( withView
   , playlistView
   , playlistSel
   , getSelectedTracks
@@ -36,7 +36,6 @@ import Graphics.UI.Gtk hiding (add)
 
 import XMMS2.Client
 
-import Context
 import Medialib
 import Playback
 import Builder
@@ -46,19 +45,22 @@ import Playlist.Format
 
 
 data View
-  = View { vView :: TreeView
-         , vSel  :: TreeSelection
-         , vCur  :: IORef (TreePath, Maybe TreeViewColumn)
+  = View { _view :: TreeView
+         , _sel  :: TreeSelection
+         , _cur  :: IORef (TreePath, Maybe TreeViewColumn)
          }
 
-playlistView = vView context
-playlistSel  = vSel context
-playlistCur  = vCur context
+playlistView = _view ?_Playlist_View
+playlistSel  = _sel ?_Playlist_View
+playlistCur  = _cur ?_Playlist_View
 
 
-initView = do
-  context <- initContext
-  let ?context = context
+newtype Wrap a = Wrap { unWrap :: (?_Playlist_View :: View) => a }
+
+withView    = withView' . Wrap
+withView' w = do
+  view <- mkView
+  let ?_Playlist_View = view
 
   treeViewSetModel playlistView playlistStore
 
@@ -117,7 +119,7 @@ initView = do
         treeViewSetCursor playlistView [n'] c'
       _ -> return ()
 
-  return ?context
+  unWrap w
 
 
 getInfoIfNeeded iter = do
@@ -129,15 +131,14 @@ getInfoIfNeeded iter = do
     _                             -> Background
 
 
-initContext = do
+mkView = do
   view <- getObject castToTreeView "playlist-view"
   sel  <- treeViewGetSelection view
   cur  <- newIORef ([], Nothing)
-  return $ augmentContext
-    View { vView = view
-         , vSel  = sel
-         , vCur  = cur
-         }
+  return View { _view = view
+              , _sel  = sel
+              , _cur  = cur
+              }
 
 
 getSelectedTracks =
