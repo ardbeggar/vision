@@ -35,11 +35,11 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.State
-import Control.Monad.EnvIO
 
 import Data.Maybe
 import qualified Data.Map as Map
 import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk hiding (add, remove, get)
 
@@ -76,22 +76,21 @@ initPlaytime = do
   addEnv Ix pt
   let ?playtime = pt
 
-  liftIO $ do
-    cId <- setupSeek
-    xcW <- atomically $ newTGWatch connectedV
-    let mon xc
-          | xc = do
-            rt <- forkIO requestPlaytime
-            ct <- forkIO $ evalPTM cId dispatch
-            xc <- atomically $ watch xcW
-            killThread rt
-            killThread ct
-            atomically $ writeTVar seekCountV Nothing
-            mon xc
-          | otherwise = do
-            xc <- atomically $ watch xcW
-            mon xc
-    forkIO $ mon False
+  cId <- setupSeek
+  xcW <- atomically $ newTGWatch connectedV
+  let mon xc
+        | xc = do
+          rt <- forkIO requestPlaytime
+          ct <- forkIO $ evalPTM cId dispatch
+          xc <- atomically $ watch xcW
+          killThread rt
+          killThread ct
+          atomically $ writeTVar seekCountV Nothing
+          mon xc
+        | otherwise = do
+          xc <- atomically $ watch xcW
+          mon xc
+  forkIO $ mon False
 
   return ()
 
