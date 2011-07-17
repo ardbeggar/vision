@@ -33,7 +33,6 @@ module Builder
   ) where
 
 import Control.Applicative
-import Control.Monad.EnvIO
 
 import Graphics.UI.Gtk
 
@@ -42,19 +41,19 @@ newtype Wrap a = Wrap { unWrap :: (?builder :: Builder) => a }
 
 withBuilder    = withBuilder' . Wrap
 withBuilder' w = do
-  builder <- liftIO $ builderNew
+  builder <- builderNew
   let ?builder = builder in unWrap w
 
 builder = ?builder
 
 addFromFile file =
-  liftIO $ builderAddFromFile builder file
+  builderAddFromFile builder file
 
 getObject cast name =
-  liftIO $ builderGetObject builder cast name
+  builderGetObject builder cast name
 
 getObjectRaw name =
-  liftIO $ builderGetObjectRaw builder name
+  builderGetObjectRaw builder name
 
 action = getObject castToAction
 
@@ -62,12 +61,12 @@ actions = mapM action
 
 bindAction name func = do
   a <- action name
-  liftIO $ a `on` actionActivated $ func
+  a `on` actionActivated $ func
 
 bindActions = mapM $ uncurry bindAction
 
 maybeBindAction name func = do
   ma <- getObjectRaw name
-  liftIO $ case ma of
+  case ma of
     Just a  -> Just <$> on (castToAction a) actionActivated func
     Nothing -> return Nothing
