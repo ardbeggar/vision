@@ -60,72 +60,71 @@ initView = do
   context <- initContext
   let ?context = context
 
-  liftIO $ do
-    treeViewSetModel locationView sortModel
+  treeViewSetModel locationView sortModel
 
-    treeSelectionSetMode locationSel SelectionMultiple
+  treeSelectionSetMode locationSel SelectionMultiple
 
-    column <- treeViewColumnNew
-    treeViewAppendColumn locationView column
-    treeViewColumnSetTitle column "Name"
-    treeViewColumnSetSortOrder column =<< getSortOrder
-    treeViewColumnSetSortIndicator column True
-    treeViewColumnSetClickable column True
-    column `onColClicked` do
-      order <- treeViewColumnGetSortOrder column
-      let order' = case order of
-            SortAscending  -> SortDescending
-            SortDescending -> SortAscending
-      treeViewColumnSetSortOrder column order'
-      setSortOrder order'
+  column <- treeViewColumnNew
+  treeViewAppendColumn locationView column
+  treeViewColumnSetTitle column "Name"
+  treeViewColumnSetSortOrder column =<< getSortOrder
+  treeViewColumnSetSortIndicator column True
+  treeViewColumnSetClickable column True
+  column `onColClicked` do
+    order <- treeViewColumnGetSortOrder column
+    let order' = case order of
+          SortAscending  -> SortDescending
+          SortDescending -> SortAscending
+    treeViewColumnSetSortOrder column order'
+    setSortOrder order'
 
-    cell <- cellRendererPixbufNew
-    treeViewColumnPackStart column cell False
-    cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
-      item <- itemByIter iter
-      cell `set` [ cellPixbufStockId :=
-                   if iIsDir item
-                   then stockDirectory
-                   else stockFile ]
+  cell <- cellRendererPixbufNew
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
+    item <- itemByIter iter
+    cell `set` [ cellPixbufStockId :=
+                 if iIsDir item
+                 then stockDirectory
+                 else stockFile ]
 
-    cell <- cellRendererTextNew
-    treeViewColumnPackStart column cell True
-    cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
-      item <- itemByIter iter
-      cell `set` [ cellText := iName item ]
+  cell <- cellRendererTextNew
+  treeViewColumnPackStart column cell True
+  cellLayoutSetAttributeFunc column cell sortModel $ \iter -> do
+    item <- itemByIter iter
+    cell `set` [ cellText := iName item ]
 
-    treeViewSetEnableSearch locationView True
-    treeViewSetSearchEqualFunc locationView $ Just $ \str iter -> do
-      item <- itemByIter iter
-      return $ isInfixOf (map toLower str) (map toLower $ iName item)
+  treeViewSetEnableSearch locationView True
+  treeViewSetSearchEqualFunc locationView $ Just $ \str iter -> do
+    item <- itemByIter iter
+    return $ isInfixOf (map toLower str) (map toLower $ iName item)
 
-    entrySetCompletion locationEntry $ pathComp locationComp
+  entrySetCompletion locationEntry $ pathComp locationComp
 
-    locationEntry `onEditableChanged` do
-      url <- entryGetText locationEntry
+  locationEntry `onEditableChanged` do
+    url <- entryGetText locationEntry
+    updatePathComp locationComp url
+
+  locationEntry `on` keyPressEvent $ tryEvent $ do
+    []    <- eventModifier
+    "Tab" <- eventKeyName
+    liftIO $ do
+      (url, modify, ofs) <- makeURL <$> entryGetText locationEntry
+      when modify $ do
+        pos <- editableGetPosition locationEntry
+        entrySetText locationEntry url
+        editableSetPosition locationEntry $ pos + ofs
       updatePathComp locationComp url
-
-    locationEntry `on` keyPressEvent $ tryEvent $ do
-      []    <- eventModifier
-      "Tab" <- eventKeyName
-      liftIO $ do
-        (url, modify, ofs) <- makeURL <$> entryGetText locationEntry
-        when modify $ do
-          pos <- editableGetPosition locationEntry
-          entrySetText locationEntry url
-          editableSetPosition locationEntry $ pos + ofs
-        updatePathComp locationComp url
-        entryCompletionInsertPrefix $ pathComp locationComp
-        entryCompletionComplete $ pathComp locationComp
+      entryCompletionInsertPrefix $ pathComp locationComp
+      entryCompletionComplete $ pathComp locationComp
 
   return ?context
 
 
 initContext = do
   view  <- getObject castToTreeView "location-view"
-  sel   <- liftIO $ treeViewGetSelection view
+  sel   <- treeViewGetSelection view
   entry <- getObject castToEntry "location-entry"
-  comp  <- liftIO $ makePathComp
+  comp  <- makePathComp
   return $ augmentContext
     View { vView  = view
          , vSel   = sel
