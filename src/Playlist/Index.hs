@@ -17,10 +17,11 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Playlist.Index
-  ( initIndex
+  ( withIndex
   , getInfo
   , addToIndex
   ) where
@@ -38,7 +39,6 @@ import qualified Data.IntMap as IntMap
 import Graphics.UI.Gtk hiding (add)
 
 import Medialib
-import Context
 import Playlist.Model
 import Playlist.Format
 
@@ -49,14 +49,17 @@ data IndexEntry
   | IEReady Stamp MediaInfo TrackInfo
 
 data Index
-  = Index { iTable :: MVar (IntMap (IndexEntry, [TreeRowReference])) }
+  = Index { _table :: MVar (IntMap (IndexEntry, [TreeRowReference])) }
 
-index = iTable context
+index = _table ?_Playlist_Index
 
 
-initIndex = do
-  context <- initContext
-  let ?context = context
+newtype Wrap a = Wrap { unWrap :: (?_Playlist_Index :: Index) => a }
+
+withIndex    = withIndex' . Wrap
+withIndex' w = do
+  index <- mkIndex
+  let ?_Playlist_Index = index
 
   (atomically $ dupTChan mediaInfoChan) >>= forkIO . handleInfo
   fW <- atomically $ newTWatch formatsGeneration 0
@@ -64,13 +67,12 @@ initIndex = do
     void $ atomically $ watch fW
     postGUISync handleFormats
 
-  return ?context
+  unWrap w
 
 
-initContext = do
+mkIndex = do
   table <- newMVar IntMap.empty
-  return $ augmentContext
-    Index { iTable = table }
+  return Index { _table = table }
 
 handleInfo chan = forever $ do
   (id, stamp, info) <- atomically $ readTChan chan
