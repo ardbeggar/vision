@@ -26,7 +26,6 @@ module Properties.Manager
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Trans
 
 import Data.IORef
 import qualified Data.Map as Map
@@ -65,7 +64,7 @@ initPropertyManager = do
     Manager { pManager = manager }
 
 showPropertyManager = do
-  liftIO $ runEditorDialog manager getProperties setProperties False window
+  runEditorDialog manager getProperties setProperties False window
 
 
 data PropertyManager
