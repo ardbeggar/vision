@@ -28,7 +28,6 @@ module Volume
 
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.EnvIO
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -36,6 +35,7 @@ import Control.Concurrent.STM.TGVar
 
 import qualified Data.Map as Map
 import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk hiding (add, remove)
 
