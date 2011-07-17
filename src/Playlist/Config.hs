@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 1 Jul. 2010
 --
---  Copyright (C) 2010 Oleg Belozeorov
+--  Copyright (C) 2010, 2011 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -17,8 +17,10 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module Playlist.Config
-  ( initPlaylistConfig
+  ( withPlaylistConfig
   , showPlaylistConfigDialog
   ) where
 
@@ -28,24 +30,28 @@ import Graphics.UI.Gtk
 
 import UI
 import Editor
-import Context
 import Compound
 import Playlist.Format
 import Playlist.Format.Config
 
 
 data Config
-  = Config { cDialog :: EditorDialog FormatView }
+  = Config { _dialog :: EditorDialog FormatView }
 
-initPlaylistConfig = do
+newtype Wrap a = Wrap { unWrap :: (?_Playlist_Config :: Config) => a }
+
+withPlaylistConfig    = withPlaylistConfig' . Wrap
+withPlaylistConfig' w = do
   dialog <- unsafeInterleaveIO $ makeEditorDialog
             [(stockApply, ResponseApply)]
             makePlaylistFormatView $ \m -> do
     let outerw = outer m
     windowSetTitle outerw "Configure playlist"
     windowSetDefaultSize outerw 500 400
-  return $ augmentContext
-    Config { cDialog = dialog }
+
+  let ?_Playlist_Config = Config { _dialog = dialog }
+  unWrap w
 
 showPlaylistConfigDialog =
-  runEditorDialog (cDialog context) getFormatDefs putFormatDefs False window
+  runEditorDialog (_dialog ?_Playlist_Config)
+  getFormatDefs putFormatDefs False window
