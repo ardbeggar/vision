@@ -61,9 +61,7 @@ main = do
     initVolume
     initPlaytime
     initClipboard
-
-    context <- initPlaylist
-    let ?context = context
+    initPlaylist
 
     showPlaylist
 

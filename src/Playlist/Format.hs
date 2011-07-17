@@ -17,10 +17,11 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, DeriveDataTypeable, RankNTypes #-}
 
 module Playlist.Format
   ( initFormat
+  , withFormat
   , makeTrackInfo
   , getFormatDefs
   , putFormatDefs
@@ -44,6 +45,8 @@ import Data.IORef
 import Data.Maybe
 import Data.Either
 import Data.Char (toLower)
+import Data.Env
+import Data.Typeable
 
 import Graphics.UI.Gtk hiding (add)
 import System.Glib.GError
@@ -52,7 +55,7 @@ import Medialib
 import Properties
 import Config
 import Utils
-import Context
+import Registry
 import Playlist.Format.Format
 import Playlist.Format.Parser
 
@@ -72,33 +75,37 @@ trackInfoDuration Nothing  = ""
 trackInfoDuration (Just i) = tDuration i
 
 
+data Ix = Ix deriving (Typeable)
+
 data Format
-  = Format { fMakeInfoRef      :: IORef (MediaInfo -> IO ([AttrOp CellRendererText], String))
-           , fFormatDefsRef    :: IORef [String]
-           , fLookupDuration   :: MediaInfo -> String
-           , fLookupURL        :: MediaInfo -> String
-           , fGeneration       :: TVar Integer
+  = Format { _makeInfoRef      :: IORef (MediaInfo -> IO ([AttrOp CellRendererText], String))
+           , _formatDefsRef    :: IORef [String]
+           , _lookupDuration   :: MediaInfo -> String
+           , _lookupURL        :: MediaInfo -> String
+           , _generation       :: TVar Integer
            }
+    deriving (Typeable)
 
-getMakeInfo = readIORef (fMakeInfoRef context)
-putMakeInfo = writeIORef (fMakeInfoRef context)
+getMakeInfo = readIORef (_makeInfoRef ?_Playlist_Format)
+putMakeInfo = writeIORef (_makeInfoRef ?_Playlist_Format)
 
-getFormatDefs  = readIORef (fFormatDefsRef context)
-putFormatDefs' = writeIORef (fFormatDefsRef context)
+getFormatDefs  = readIORef (_formatDefsRef ?_Playlist_Format)
+putFormatDefs' = writeIORef (_formatDefsRef ?_Playlist_Format)
 putFormatDefs defs = do
   putFormatDefs' defs
   saveFormatDefs
   updateFormats True
 
-lookupDuration = fLookupDuration context
-lookupURL      = fLookupURL context
+lookupDuration = _lookupDuration ?_Playlist_Format
+lookupURL      = _lookupURL ?_Playlist_Format
 
-formatsGeneration = fGeneration context
+formatsGeneration = _generation ?_Playlist_Format
 
 
 initFormat = do
-  context <- initContext
-  let ?context = context
+  format <- mkFormat
+  addEnv Ix format
+  let ?_Playlist_Format = format
 
   loadFormatDefs
 
@@ -107,21 +114,28 @@ initFormat = do
     void $ atomically $ watch prW
     postGUISync $ updateFormats True
 
-  return ?context
+  return ()
 
-initContext = do
-  formatDefsRef    <- newIORef []
-  makeInfoRef      <- newIORef $ const $ return ([], "")
-  duration         <- fromJust <$> property "Duration"
-  url              <- fromJust <$> property "URL"
-  generation       <- newTVarIO 0
-  return $ augmentContext
-    Format { fMakeInfoRef      = makeInfoRef
-           , fFormatDefsRef    = formatDefsRef
-           , fLookupDuration   = maybe "" escapeMarkup . lookup duration
-           , fLookupURL        = maybe "" escapeMarkup . lookup url
-           , fGeneration       = generation
-           }
+newtype Wrap a = Wrap { unWrap :: (?_Playlist_Format :: Format) => a }
+
+withFormat    = withFormat' . Wrap
+withFormat' w = do
+  Just (Env format) <- getEnv (Extract :: Extract Ix Format)
+  let ?_Playlist_Format = format in unWrap w
+
+
+mkFormat = do
+  formatDefsRef <- newIORef []
+  makeInfoRef   <- newIORef $ const $ return ([], "")
+  duration      <- fromJust <$> property "Duration"
+  url           <- fromJust <$> property "URL"
+  generation    <- newTVarIO 0
+  return Format { _makeInfoRef    = makeInfoRef
+                , _formatDefsRef  = formatDefsRef
+                , _lookupDuration = maybe "" escapeMarkup . lookup duration
+                , _lookupURL      = maybe "" escapeMarkup . lookup url
+                , _generation     = generation
+                }
 
 
 loadFormatDefs = do

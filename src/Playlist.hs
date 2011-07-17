@@ -47,8 +47,8 @@ initPlaylist =
 showPlaylist =
   withXMMS $ withPlayback $ withBuilder $ do
     addFromFile $ gladeFilePath "playlist"
-    withUI $ withModel $ withIndex $ withView $
-      withPlaylistConfig $ do
+    withUI $ withModel $ withFormat $ withIndex $
+      withView $ withPlaylistConfig $ do
         initUpdate
         setupSearch
         setupDnD
