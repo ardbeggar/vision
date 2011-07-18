@@ -30,9 +30,5 @@ import Properties.Editor.UI
 initPropertyEditor = do
   context <- initEditorModel
   let ?context = context
-
-  context <- initEditorView
-  let ?context = context
-
-  initEditorUI
+  withEditorView initEditorUI
 

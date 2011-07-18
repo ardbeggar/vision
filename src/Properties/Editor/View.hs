@@ -17,8 +17,10 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module Properties.Editor.View
-  ( initEditorView
+  ( withEditorView
   , view
   , resetView
   , onPropertyEdited
@@ -26,21 +28,20 @@ module Properties.Editor.View
 
 import Graphics.UI.Gtk
 
-import Context
 import XMMS
 import Properties.Property
 import Properties.Editor.Model
 
 
 data View
-  = View { vView    :: TreeView
-         , vValCol  :: TreeViewColumn
-         , vValCell :: CellRendererText
+  = View { _view    :: TreeView
+         , _valCol  :: TreeViewColumn
+         , _valCell :: CellRendererText
          }
 
-view    = vView context
-valCol  = vValCol context
-valCell = vValCell context
+view    = _view ?_Properties_Editor_View
+valCol  = _valCol ?_Properties_Editor_View
+valCell = _valCell ?_Properties_Editor_View
 
 onPropertyEdited = valCell `on` edited
 
@@ -48,10 +49,12 @@ resetView = do
   treeViewSetCursor view [0] $ Just (valCol, False)
   widgetGrabFocus view
 
+newtype Wrap a = Wrap { unWrap :: (?_Properties_Editor_View :: View) => a }
 
-initEditorView = do
-  context <- initContext
-  let ?context = context
+withEditorView    = withEditorView' . Wrap
+withEditorView' w = do
+  ev <- mkView
+  let ?_Properties_Editor_View = ev
 
   treeViewSetRulesHint view True
   treeViewSetHeadersVisible view False
@@ -75,14 +78,13 @@ initEditorView = do
       return $ c && not (propReadOnly prop)
     ]
 
-  return ?context
+  unWrap w
 
-initContext = do
+mkView = do
   view    <- treeViewNewWithModel store
   valCol  <- treeViewColumnNew
   valCell <- cellRendererTextNew
-  return $ augmentContext
-    View { vView    = view
-         , vValCol  = valCol
-         , vValCell = valCell
-         }
+  return View { _view    = view
+              , _valCol  = valCol
+              , _valCell = valCell
+              }
