@@ -69,7 +69,13 @@ instance CollBuilder TrackView where
       ids <- mapM (listStoreGetValue store . head) rows
       ils <- collNewIdlist ids
       f ils
-  treeViewSel tv = (tView tv, tSel tv)
+  treeViewSel tv    = (tView tv, tSel tv)
+  actionBackend tv  =
+    AB { aWithColl  = withBuiltColl tv
+       , aWithNames = const $ return ()
+       , aSelection = Just $ tSel tv
+       }
+
 
 mkTrackView coll = do
   store   <- listStoreNewDND [] Nothing Nothing
@@ -98,7 +104,6 @@ instance ViewItem TrackView where
 setupView tv = do
   let view  = tView tv
       sel   = tSel tv
-      abRef = coms eABRef
       ae    = coms eAE
       popup = coms eVPopup
 
@@ -113,11 +118,7 @@ setupView tv = do
           aEnableSel ae $ not $ null rows
           aEnableRen ae False
           aEnableDel ae False
-  setupViewFocus abRef view aef
-    AB { aWithColl  = withBuiltColl tv
-       , aWithNames = const $ return ()
-       , aSelection = Just sel
-       }
+  setupViewFocus tv aef
   sel `on` treeSelectionSelectionChanged $ aef
 
   view `onDestroy` (killIndex $ tIndex tv)

@@ -62,8 +62,7 @@ instance ViewItem PropFlt where
   nextVIRef = pNextRef
 
 mkPropFlt prop coll = do
-  let abRef = coms eABRef
-      ae    = coms eAE
+  let ae    = coms eAE
       popup = coms eVPopup
 
   store <- listStoreNewDND [] Nothing Nothing
@@ -135,11 +134,7 @@ mkPropFlt prop coll = do
           aEnableSel ae $ not $ null rows
           aEnableRen ae False
           aEnableDel ae False
-  setupViewFocus abRef view aef
-    AB { aWithColl  = withBuiltColl pf
-       , aWithNames = const $ return ()
-       , aSelection = Just sel
-       }
+  setupViewFocus pf aef
   sel `on` treeSelectionSelectionChanged $ aef
 
   return pf
@@ -156,7 +151,13 @@ instance CollBuilder PropFlt where
       flt <- collParse $ mkFilterText (pProp pf) vals
       collAddOperand int flt
       f int
-  treeViewSel pf = (pView pf, pSel pf)
+  treeViewSel pf    = (pView pf, pSel pf)
+  actionBackend pf  =
+    AB { aWithColl  = withBuiltColl pf
+       , aWithNames = const $ return ()
+       , aSelection = Just $ pSel pf
+       }
+
 
 instance CompoundWidget PropFlt where
   type Outer PropFlt = ScrolledWindow

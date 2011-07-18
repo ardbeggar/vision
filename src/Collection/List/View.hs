@@ -58,8 +58,7 @@ data ListView
       }
 
 mkListView = withModel $ do
-  let abRef = coms eABRef
-      ae    = coms eAE
+  let ae    = coms eAE
       popup = coms eLPopup
 
   view <- treeViewNewWithModel store
@@ -112,11 +111,7 @@ mkListView = withModel $ do
             [[0]] -> False
             [_]   -> True
             _     -> False
-  setupViewFocus abRef view aef
-    AB { aWithColl  = withBuiltColl v
-       , aWithNames = \f -> withColls v (f . map fst . catMaybes)
-       , aSelection = Just sel
-       }
+  setupViewFocus v aef
   sel `on` treeSelectionSelectionChanged $ aef
 
   xcW <- atomically $ newTGWatch connectedV
@@ -130,7 +125,13 @@ mkListView = withModel $ do
 
 instance CollBuilder ListView where
   withBuiltColl lv f = withColls lv $ withColl f
-  treeViewSel lv = (vView lv, vSel lv)
+  treeViewSel lv     = (vView lv, vSel lv)
+  actionBackend lv   =
+    AB { aWithColl   = withBuiltColl lv
+       , aWithNames  = \f -> withColls lv (f . map fst . catMaybes)
+       , aSelection  = Just $ vSel lv
+       }
+
 
 withColls lv f = do
   let store = vStore lv

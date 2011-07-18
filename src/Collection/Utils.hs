@@ -43,7 +43,7 @@ import Control.Monad.Trans
 
 import Data.IORef
 
-import Graphics.UI.Gtk hiding (selectAll)
+import Graphics.UI.Gtk hiding (selectAll, focus)
 
 import XMMS2.Client
 
@@ -53,6 +53,7 @@ import UI
 import Compound
 
 import Collection.Common
+import Collection.Actions
 
 
 selectAll =
@@ -63,9 +64,10 @@ invertSelection sel = do
   treeSelectionSelectAll sel
   mapM_ (treeSelectionUnselectPath sel) rows
 
-setupViewFocus abRef view aef ab = do
-  view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef ab
+setupViewFocus view aef = do
+  let f = focus view
+  f `on` focusInEvent $ liftIO $ do
+    writeIORef (coms eABRef) $ actionBackend view
     aef
     return False
 
@@ -139,6 +141,7 @@ runDlg title enable isOk init = do
 class CollBuilder b where
   withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
+  actionBackend :: b -> ActionBackend
 
 onCollBuilt b f = do
   let (view, sel) = treeViewSel b
