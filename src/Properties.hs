@@ -24,6 +24,7 @@ module Properties
   , showValue
   , lookup
   , initProperties
+  , withProperties
   , property
   , showPropertyManager
   , showPropertyEditor
@@ -47,15 +48,11 @@ import Properties.Impex
 import Properties.Order
 
 
+withProperties = withModel
+
 initProperties = withXMMS $ do
-  context <- initModel
-  let ?context = context
-
-  initPropertyManager
-  initPropertyEditor
-
-  context <- initImpex
-  let ?context = context
-
-  return ?context
-
+  initModel
+  withModel $ do
+    initPropertyManager
+    initPropertyEditor
+    initImpex

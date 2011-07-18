@@ -17,9 +17,12 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes, DeriveDataTypeable #-}
+
 module Properties.Model
   ( lookup
   , initModel
+  , withModel
   , property
   , propertyMap
   , propertyStore
@@ -35,42 +38,51 @@ import Control.Concurrent.MVar
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk
 
-import Context
 import Config
+import Registry
 import Properties.Property
 
 
+data Ix = Ix deriving (Typeable)
+
 data Model
-  = Model { mMap        :: MVar (Map String Property)
-          , mStore      :: ListStore Property
-          , mGeneration :: TVar Integer
+  = Model { _map        :: MVar (Map String Property)
+          , _store      :: ListStore Property
+          , _generation :: TVar Integer
           }
+    deriving (Typeable)
 
-propertyMap          = mMap context
-propertyStore        = mStore context
-propertiesGeneration = mGeneration context
+propertyMap          = _map ?_Properties_Model
+propertyStore        = _store ?_Properties_Model
+propertiesGeneration = _generation ?_Properties_Model
 
+newtype Wrap a = Wrap { unWrap :: (?_Properties_Model :: Model) => a }
+
+withModel    = withModel' . Wrap
+withModel' w = do
+  Just (Env model) <- getEnv (Extract :: Extract Ix Model)
+  let ?_Properties_Model = model
+  unWrap w
 
 initModel = do
-  context <- initContext
-  let ?context = context
-
+  model <- mkModel
+  let ?_Properties_Model = model
   loadProperties
+  addEnv Ix model
 
-  return ?context
-
-initContext = do
-  npmap      <- newMVar $ mkMap builtinProperties
+mkModel = do
+  map        <- newMVar $ mkMap builtinProperties
   store      <- listStoreNewDND [] Nothing Nothing
   generation <- newTVarIO 0
-  return $ augmentContext
-    Model { mMap        = npmap
-          , mStore      = store
-          , mGeneration = generation
-          }
+  return Model { _map        = map
+               , _store      = store
+               , _generation = generation
+               }
 
 property name =
   withMVar propertyMap $ return . Map.lookup name

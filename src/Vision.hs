@@ -57,11 +57,12 @@ main = do
 
     initPlayback
     initVolume
-    initPlaytime
-    initClipboard
-    initPlaylist
+    withProperties $ do
+      initPlaytime
+      initClipboard
+      initPlaylist
 
-    showPlaylist
+      showPlaylist
 
     return ()
 
