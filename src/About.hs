@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes, DeriveDataTypeable #-}
+
 module About
   ( initAbout
   , showAbout
@@ -25,25 +27,30 @@ module About
 import Control.Concurrent.MVar
 
 import Data.Version
+import Data.Env
+import Data.Typeable
 
 import Graphics.UI.Gtk
 
 import Paths_vision
-import Context
+import Registry
 import Utils
 
 
+data Ix = Ix deriving (Typeable)
+
 data About
-  = About { aAbout :: MVar (Maybe AboutDialog) }
+  = About { _about :: MVar (Maybe AboutDialog) }
+    deriving (Typeable)
 
 
 initAbout = do
   about <- newMVar Nothing
-  return $ augmentContext
-    About { aAbout = about }
+  addEnv Ix About { _about = about }
 
-showAbout window =
-  tryModifyMVar_ (aAbout context) $ \maybeAbout ->
+showAbout window = do
+  Just (Env e) <- getEnv (Extract :: Extract Ix About)
+  tryModifyMVar_ (_about e) $ \maybeAbout ->
     case maybeAbout of
       Just about -> do
         windowPresent about
@@ -61,7 +68,7 @@ showAbout window =
         aboutDialogSetAuthors about authors
 
         about `onResponse` \_ ->
-          modifyMVar_ (aAbout context) . const $ do
+          modifyMVar_ (_about e) . const $ do
             widgetDestroy about
             return Nothing
 

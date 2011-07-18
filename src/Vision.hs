@@ -46,9 +46,7 @@ main = do
     context <- initEnvironment
     let ?context = context
 
-    context <- initAbout
-    let ?context = context
-
+    initAbout
     initXMMS
     initMedialib
     withMedialib $ do
