@@ -17,10 +17,11 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Location.Model
-  ( initModel
+  ( withModel
   , Item (..)
   , makeItem
   , locationStore
@@ -136,16 +137,16 @@ compareItems SortAscending a b
 
 
 data Model
-  = Model { mState    :: MVar State
-          , mStore    :: ListStore Item
-          , mSort     :: TypedTreeModelSort Item
-          , mLocation :: TGVar Location
+  = Model { _state    :: MVar State
+          , _store    :: ListStore Item
+          , _sort     :: TypedTreeModelSort Item
+          , _location :: TGVar Location
           }
 
-locationStore = mStore context
-sortModel = mSort context
-location = mLocation context
-state = mState context
+locationStore = _store ?_Location_Model
+sortModel     = _sort ?_Location_Model
+location      = _location ?_Location_Model
+state         = _state ?_Location_Model
 
 getCurrentLocation = lCurrent <$> readTGVarIO location
 
@@ -165,27 +166,25 @@ canGo = atomically $ do
           not $ null c || isSuffixOf "//" c,
           not $ null c)
 
+newtype Wrap a = Wrap { unWrap :: (?_Location_Model :: Model) => a }
 
-initModel order = do
-  context <- initContext order
-  let ?context = context
-
+withModel  order   = withModel' order . Wrap
+withModel' order w = do
+  model <- mkModel order
+  let ?_Location_Model = model
   setSortOrder order
+  unWrap w
 
-  return ?context
-
-
-initContext order = do
+mkModel order = do
   state    <- newMVar $ makeState order
   store    <- listStoreNewDND [] Nothing Nothing
   sort     <- treeModelSortNewWithModel store
   location <- atomically $ newTGVar makeLocation
-  return $ augmentContext
-    Model { mState    = state
-          , mStore    = store
-          , mSort     = sort
-          , mLocation = location
-          }
+  return Model { _state    = state
+               , _store    = store
+               , _sort     = sort
+               , _location = location
+               }
 
 split [] =  []
 split s  =
