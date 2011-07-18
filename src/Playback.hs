@@ -91,7 +91,7 @@ initPlayback = withXMMS $ do
         persist
       requestCurrentTrack
 
-  return ?context
+  return ()
 
 
 newtype Wrap a = Wrap { unWrap :: (?_Playback :: Playback) => a }
