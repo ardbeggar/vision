@@ -42,10 +42,7 @@ main = do
 
   timeoutAdd (yield >> return True) 100
 
-  withRegistry $ do
-    context <- initEnvironment
-    let ?context = context
-
+  withRegistry $ withEnvironment $ do
     initAbout
     initXMMS
     initMedialib
@@ -57,9 +54,6 @@ main = do
         initPlaytime
         initClipboard
         initPlaylist
-
         showPlaylist
-
-    return ()
 
   mainGUI
