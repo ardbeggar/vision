@@ -23,6 +23,7 @@ module Collection.List.Model
   ( initModel
   , withModel
   , store
+  , index
   , modelEnv
   ) where
 
@@ -34,9 +35,12 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Maybe
 import Data.Typeable
 import Data.Env
+import Data.IORef
 
 import Graphics.UI.Gtk hiding (add)
 
@@ -47,7 +51,9 @@ import XMMS
 
 
 data Model
-  = Model { _store :: ListStore (Maybe (String, Coll)) }
+  = Model { _store :: ListStore (Maybe (String, Coll))
+          , _index :: IORef (Map String TreeRowReference)
+          }
     deriving (Typeable)
 
 data Ix = Ix deriving (Typeable)
@@ -57,11 +63,11 @@ modelEnv = Extract
 
 initModel = do
   model <- mkModel
-  let ?collectionListModel = model
+  let ?_Collection_List_Model = model
   setupModel
   addEnv Ix model
 
-newtype Wrap a = Wrap { unWrap :: (?collectionListModel :: Model) => a }
+newtype Wrap a = Wrap { unWrap :: (?_Collection_List_Model :: Model) => a }
 
 withModel    = withModel' . Wrap
 withModel' w = do
@@ -72,12 +78,16 @@ withModel' w = do
       Nothing -> do
         initModel
         fromJust <$> getEnv modelEnv
-  let ?collectionListModel = model in unWrap w
+  let ?_Collection_List_Model = model
+  unWrap w
 
 
 mkModel = do
   store <- listStoreNewDND [] Nothing Nothing
-  return Model { _store = store }
+  index <- newIORef Map.empty
+  return Model { _store = store
+               , _index = index
+               }
 
 setupModel = do
   xcW <- atomically $ newTGWatch connectedV
@@ -99,9 +109,11 @@ listCollections =
       clearStore
       fillStore names
 
-store = _store ?collectionListModel
+store = _store ?_Collection_List_Model
+index = _index ?_Collection_List_Model
 
-clearStore =
+clearStore = do
+  writeIORef index Map.empty
   listStoreClear store
 
 fillStore names = do
@@ -109,4 +121,7 @@ fillStore names = do
   forM_ names $ \name ->
     collGet xmms name "Collections" >>* do
       coll <- result
-      liftIO $ listStoreAppend store $ Just (name, coll)
+      liftIO $ do
+        n      <- listStoreAppend store $ Just (name, coll)
+        Just r <- treeRowReferenceNew store [n]
+        modifyIORef index $ Map.insert name r

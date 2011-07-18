@@ -28,12 +28,17 @@ import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
-import Control.Monad
+import Control.Monad hiding (forM_)
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
 import Data.IORef
 import Data.Maybe
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Foldable
 
 import Graphics.UI.Gtk
 
@@ -54,6 +59,8 @@ data ListView
       , vSel     :: TreeSelection
       , vNextRef :: IORef VI
       , vStore   :: ListStore (Maybe (String, Coll))
+      , vIndex   :: IORef (Map String TreeRowReference)
+      , vSelSet  :: IORef (Set (Maybe String))
       , vScroll  :: ScrolledWindow
       }
 
@@ -61,6 +68,8 @@ mkListView = withModel $ do
   let abRef = coms eABRef
       ae    = coms eAE
       popup = coms eLPopup
+
+  selSet <- newIORef Set.empty
 
   view <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
@@ -77,6 +86,18 @@ mkListView = withModel $ do
 
   column <- treeViewColumnNew
   treeViewAppendColumn view column
+
+  cell <- cellRendererPixbufNew
+  cell `set` [ cellWidth := 30 ]
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributes column cell store $ \n ->
+    [ cellPixbufStockId :=> do
+         ss <- readIORef selSet
+         if Set.member (maybe Nothing (Just . fst) n) ss
+           then return stockApply
+           else return ""
+    ]
+
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
   cellLayoutSetAttributes column cell store $ \n ->
@@ -97,6 +118,8 @@ mkListView = withModel $ do
             , vSel     = sel
             , vNextRef = nextRef
             , vStore   = store
+            , vIndex   = index
+            , vSelSet  = selSet
             , vScroll  = scroll
             }
       aef = do
@@ -129,7 +152,7 @@ mkListView = withModel $ do
   return v
 
 instance CollBuilder ListView where
-  withBuiltColl lv f = withColls lv $ withColl f
+  withBuiltColl lv f = withColls lv $ withColl lv f
   treeViewSel lv = (vView lv, vSel lv)
 
 withColls lv f = do
@@ -140,11 +163,37 @@ withColls lv f = do
     colls <- mapM (listStoreGetValue store . head) rows
     f colls
 
-withColl _ []            = return ()
-withColl f (Nothing : _) = f =<< collUniverse
-withColl f list = do
+withColl v f list = do
+  ss <- readIORef $ vSelSet v
+  writeIORef (vSelSet v) Set.empty
+  ix <- readIORef $ vIndex v
+  Just iter <- treeModelGetIter (vStore v) [0]
+  treeModelRowChanged (vStore v) [0] iter
+  forM_ ss $ \mn ->
+    withJust mn $ \name ->
+      withJust (Map.lookup name ix) $ \r -> do
+        p <- treeRowReferenceGetPath r
+        Just iter <- treeModelGetIter (vStore v) p
+        treeModelRowChanged (vStore v) p iter
+  withColl' v f list
+
+withColl' _ _ []            = return ()
+withColl' v f (Nothing : _) = do
+  writeIORef (vSelSet v) $ Set.singleton Nothing
+  Just iter <- treeModelGetIter (vStore v) [0]
+  treeModelRowChanged (vStore v) [0] iter
+  f =<< collUniverse
+withColl' v f list = do
+  let ss = Set.fromList $ map (Just . fst) $ catMaybes list
+  writeIORef (vSelSet v) ss
+  ix <- readIORef $ vIndex v
   uni <- collNew TypeUnion
-  mapM_ (collAddOperand uni . snd) $ catMaybes list
+  forM_ (catMaybes list) $ \c -> do
+    collAddOperand uni $ snd c
+    withJust (Map.lookup (fst c) ix) $ \r -> do
+      p <- treeRowReferenceGetPath r
+      Just iter <- treeModelGetIter (vStore v) p
+      treeModelRowChanged (vStore v) p iter
   f uni
 
 instance CompoundWidget ListView where
