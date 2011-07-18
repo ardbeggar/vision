@@ -34,8 +34,5 @@ initPropertyEditor = do
   context <- initEditorView
   let ?context = context
 
-  context <- initEditorUI
-  let ?context = context
-
-  return ?context
+  initEditorUI
 

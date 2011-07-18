@@ -17,6 +17,7 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes, DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Editor.UI
@@ -31,10 +32,14 @@ import Control.Concurrent.STM.TGVar
 import Control.Monad
 
 import Data.IORef
+import Data.Typeable
+import Data.Env
 
 import Graphics.UI.Gtk hiding (add, remove)
+import XMMS2.Client (MediaId)
 
 import Context
+import Registry
 import Utils
 import UI
 import XMMS
@@ -52,6 +57,16 @@ data UI
        , uPBar    :: ProgressBar
        , uCancel  :: IORef (Maybe (IO ()))
        }
+
+data Ix = Ix deriving (Typeable)
+
+data UIE
+  = UIE { _showPropertyEditor :: WithUI ([MediaId] -> IO ()) }
+  deriving (Typeable)
+
+showPropertyEditor ids = do
+  Just (Env uie) <- getEnv (Extract :: Extract Ix UIE)
+  _showPropertyEditor uie ids
 
 tryLock f =
   maybe (return False) (const $ f >> return True)
@@ -72,7 +87,7 @@ cancelRetrieval    = do
   writeIORef (uCancel context) Nothing
 
 
-initEditorUI = do
+initEditorUI = withMedialib $ do
   context <- initContext
   let ?context = context
 
@@ -155,7 +170,8 @@ initEditorUI = do
       unlock
 
   widgetShowAll box
-  return ?context
+  addEnv Ix UIE { _showPropertyEditor = doShowPropertyEditor }
+  return ()
 
 doWriteProperties = do
   dialogSetResponseSensitive dialog ResponseApply False
@@ -176,7 +192,7 @@ updateTitle m r = do
     _    | r -> "Edit properties (retrieving)"
     _        -> "Edit properties"
 
-showPropertyEditor ids = do
+doShowPropertyEditor ids = do
   retr <- tryLock $ do
     dialogSetResponseSensitive dialog ResponseApply False
     dialogSetResponseSensitive dialog ResponseOk False
