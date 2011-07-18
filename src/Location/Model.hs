@@ -51,7 +51,6 @@ import Graphics.UI.Gtk
 
 import XMMS2.Client
 
-import Context
 import Utils
 
 
