@@ -51,9 +51,7 @@ initProperties = withXMMS $ do
   context <- initModel
   let ?context = context
 
-  context <- initPropertyManager
-  let ?context = context
-
+  initPropertyManager
   initPropertyEditor
 
   context <- initImpex

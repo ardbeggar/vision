@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, RankNTypes, DeriveDataTypeable #-}
 
 module Properties.Manager
   ( initPropertyManager
@@ -33,6 +33,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Ord
 import Data.Char
+import Data.Typeable
+import Data.Env
 
 import System.IO.Unsafe
 
@@ -40,18 +42,18 @@ import Graphics.UI.Gtk
 
 import Utils
 import Compound
-import Context
+import Registry
 import UI
 import Editor
 import Properties.Property
 import Properties.Model
 
 
+data Ix = Ix deriving (Typeable)
+
 data Manager
-  = Manager { pManager :: EditorDialog PropertyManager }
-
-manager = pManager context
-
+  = Manager { _showPropertyManager :: WithUI (IO ()) }
+    deriving (Typeable)
 
 initPropertyManager = do
   manager <- unsafeInterleaveIO $ makeEditorDialog
@@ -60,11 +62,15 @@ initPropertyManager = do
     let outerw = outer m
     windowSetTitle outerw "Manage properties"
     windowSetDefaultSize outerw 500 400
-  return $ augmentContext
-    Manager { pManager = manager }
+  addEnv Ix Manager { _showPropertyManager =
+                         runEditorDialog manager
+                         getProperties setProperties
+                         False window
+                    }
 
 showPropertyManager = do
-  runEditorDialog manager getProperties setProperties False window
+  Just (Env manager) <- getEnv (Extract :: Extract Ix Manager)
+  _showPropertyManager manager
 
 
 data PropertyManager
