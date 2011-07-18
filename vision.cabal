@@ -41,7 +41,6 @@ data-files:         ui/*.xml,
 executable vision
   main-is:          Vision.hs
   other-modules:    Utils,
-                    Context,
                     Registry,
                     XMMS,
                     Environment,
