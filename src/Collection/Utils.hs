@@ -67,7 +67,11 @@ invertSelection sel = do
 setupViewFocus view aef = do
   let f = focus view
   f `on` focusInEvent $ liftIO $ do
-    writeIORef (coms eABRef) $ actionBackend view
+    writeIORef (coms eABRef) $
+      AB { aWithColl  = withBuiltColl view
+         , aWithNames = withNames view
+         , aSelection = Just $ snd $ treeViewSel view
+         }
     aef
     return False
 
@@ -141,7 +145,9 @@ runDlg title enable isOk init = do
 class CollBuilder b where
   withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
-  actionBackend :: b -> ActionBackend
+  withNames     :: b -> ([String] -> IO ()) -> IO ()
+  withNames _ = const $ return ()
+
 
 onCollBuilt b f = do
   let (view, sel) = treeViewSel b

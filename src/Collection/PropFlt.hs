@@ -152,11 +152,6 @@ instance CollBuilder PropFlt where
       collAddOperand int flt
       f int
   treeViewSel pf    = (pView pf, pSel pf)
-  actionBackend pf  =
-    AB { aWithColl  = withBuiltColl pf
-       , aWithNames = const $ return ()
-       , aSelection = Just $ pSel pf
-       }
 
 
 instance CompoundWidget PropFlt where

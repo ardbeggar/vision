@@ -69,12 +69,7 @@ instance CollBuilder TrackView where
       ids <- mapM (listStoreGetValue store . head) rows
       ils <- collNewIdlist ids
       f ils
-  treeViewSel tv    = (tView tv, tSel tv)
-  actionBackend tv  =
-    AB { aWithColl  = withBuiltColl tv
-       , aWithNames = const $ return ()
-       , aSelection = Just $ tSel tv
-       }
+  treeViewSel tv = (tView tv, tSel tv)
 
 
 mkTrackView coll = do

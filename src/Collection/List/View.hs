@@ -126,11 +126,7 @@ mkListView = withModel $ do
 instance CollBuilder ListView where
   withBuiltColl lv f = withColls lv $ withColl f
   treeViewSel lv     = (vView lv, vSel lv)
-  actionBackend lv   =
-    AB { aWithColl   = withBuiltColl lv
-       , aWithNames  = \f -> withColls lv (f . map fst . catMaybes)
-       , aSelection  = Just $ vSel lv
-       }
+  withNames lv f     = withColls lv (f . map fst . catMaybes)
 
 
 withColls lv f = do
