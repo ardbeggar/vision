@@ -145,7 +145,9 @@ mkListView = withModel $ do
   xcW <- atomically $ newTGWatch connectedV
   tid <- forkIO $ forever $ do
     void $ atomically $ watch xcW
-    postGUISync $ killNext v
+    postGUISync $ do
+      killNext v
+      writeIORef selSet Set.empty
   view `onDestroy` (killThread tid)
 
   widgetShowAll scroll
