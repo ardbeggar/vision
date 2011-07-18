@@ -39,15 +39,11 @@ browseLocation order maybeURL = do
 
   withBuilder $ do
     addFromFile $ gladeFilePath "location-browser"
-    withModel order $ do
-      context <- initView
-      let ?context = context
+    withModel order $ withView $ withUI $ do
+      setupUI f
+      setupDnD
+      widgetShowAll window
 
-      withUI $ do
-        setupUI f
-        setupDnD
-        widgetShowAll window
-
-        case maybeURL of
-          Just url -> loadLocation $ Go url
-          Nothing  -> openLocation
+      case maybeURL of
+        Just url -> loadLocation $ Go url
+        Nothing  -> openLocation

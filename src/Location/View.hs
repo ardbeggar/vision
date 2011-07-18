@@ -17,8 +17,10 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module Location.View
-  ( initView
+  ( withView
   , locationView
   , locationSel
   , locationEntry
@@ -36,7 +38,6 @@ import Data.Maybe
 import Graphics.UI.Gtk
 
 import Builder
-import Context
 import Environment
 
 import Location.Model
@@ -44,21 +45,24 @@ import Location.PathComp
 
 
 data View
-  = View { vView  :: TreeView
-         , vSel   :: TreeSelection
-         , vEntry :: Entry
-         , vComp  :: PathComp
+  = View { _view  :: TreeView
+         , _sel   :: TreeSelection
+         , _entry :: Entry
+         , _comp  :: PathComp
          }
 
-locationView  = vView context
-locationSel   = vSel context
-locationEntry = vEntry context
-locationComp  = vComp context
+locationView  = _view ?_Location_View
+locationSel   = _sel ?_Location_View
+locationEntry = _entry ?_Location_View
+locationComp  = _comp ?_Location_View
 
 
-initView = do
-  context <- initContext
-  let ?context = context
+newtype Wrap a = Wrap { unWrap :: (?_Location_View :: View) => a }
+
+withView    = withView' . Wrap
+withView' w = do
+  v <- mkView
+  let ?_Location_View = v
 
   treeViewSetModel locationView sortModel
 
@@ -117,20 +121,19 @@ initView = do
       entryCompletionInsertPrefix $ pathComp locationComp
       entryCompletionComplete $ pathComp locationComp
 
-  return ?context
+  unWrap w
 
 
-initContext = do
+mkView = do
   view  <- getObject castToTreeView "location-view"
   sel   <- treeViewGetSelection view
   entry <- getObject castToEntry "location-entry"
   comp  <- makePathComp
-  return $ augmentContext
-    View { vView  = view
-         , vSel   = sel
-         , vEntry = entry
-         , vComp  = comp
-         }
+  return View { _view  = view
+              , _sel   = sel
+              , _entry = entry
+              , _comp  = comp
+              }
 
 makeURL url
   | "://" `isInfixOf` url =
