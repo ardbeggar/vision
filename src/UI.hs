@@ -20,7 +20,8 @@
 {-# LANGUAGE RankNTypes #-}
 
 module UI
-  ( withUI
+  ( WithUI
+  , withUI
   , window
   , contents
   , getWidget
@@ -39,6 +40,8 @@ import Graphics.UI.Gtk
 import About
 import Builder
 
+
+type WithUI a = (?ui :: UI) => a
 
 data UI
   = UI { uWindow      :: Window
