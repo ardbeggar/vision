@@ -51,18 +51,16 @@ main = do
 
     initXMMS
     initMedialib
+    withMedialib $ do
+      initProperties
+      initPlayback
+      initVolume
+      withProperties $ do
+        initPlaytime
+        initClipboard
+        initPlaylist
 
-    context <- initProperties
-    let ?context = context
-
-    initPlayback
-    initVolume
-    withProperties $ do
-      initPlaytime
-      initClipboard
-      initPlaylist
-
-      showPlaylist
+        showPlaylist
 
     return ()
 

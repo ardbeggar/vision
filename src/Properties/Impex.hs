@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DoRec, TupleSections #-}
+{-# LANGUAGE DoRec, TupleSections, DeriveDataTypeable, RankNTypes #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Impex
@@ -35,6 +35,8 @@ import Data.Char
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.List
+import Data.Typeable
+import Data.Env
 
 import Codec.Binary.UTF8.String
 
@@ -50,38 +52,39 @@ import XMMS2.Client hiding (Property)
 import qualified XMMS2.Client as X
 
 import UI
-import Context
+import Registry
 import Medialib
 import Utils
 import XMMS
 
 
+data Ix = Ix deriving (Typeable)
+
 data Impex
-  = Impex { iExportDlg :: Chooser
-          , iImportDlg :: Chooser
+  = Impex { _export :: WithUI ([MediaId] -> IO ())
+          , _import :: WithUI (IO ())
           }
+    deriving (Typeable)
 
 
-showPropertyExport =
-  runChooser (iExportDlg context) . exportProps
+showPropertyImport = do
+  Just (Env impex) <- getEnv (Extract :: Extract Ix Impex)
+  _import impex
 
-showPropertyImport =
-  runChooser (iImportDlg context) importProps
-
+showPropertyExport ids = do
+  Just (Env impex) <- getEnv (Extract :: Extract Ix Impex)
+  _export impex ids
 
 initImpex = do
-  context <- initContext
-  let ?context = context
+  impex <- mkImpex
+  addEnv Ix impex
 
-  return ?context
-
-initContext = do
+mkImpex = do
   exportDlg <- unsafeInterleaveIO makeExportDlg
   importDlg <- unsafeInterleaveIO makeImportDlg
-  return $ augmentContext
-    Impex { iExportDlg = exportDlg
-          , iImportDlg = importDlg
-          }
+  return Impex { _export = \ids -> runChooser exportDlg (exportProps ids)
+               , _import = runChooser importDlg importProps
+               }
 
 makeExportDlg =
   makeChooser "Export properties" FileChooserActionSave stockSave
