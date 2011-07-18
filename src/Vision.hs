@@ -50,9 +50,7 @@ main = do
     let ?context = context
 
     initXMMS
-
-    context <- initMedialib
-    let ?context = context
+    initMedialib
 
     context <- initProperties
     let ?context = context

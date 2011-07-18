@@ -29,6 +29,7 @@ import Builder
 import Environment
 import XMMS
 import Playback
+import Medialib
 
 import Playlist.Model
 import Playlist.Index
@@ -45,7 +46,7 @@ initPlaylist =
   initFormat
 
 showPlaylist =
-  withXMMS $ withPlayback $ withBuilder $ do
+  withXMMS $ withMedialib $ withPlayback $ withBuilder $ do
     addFromFile $ gladeFilePath "playlist"
     withUI $ withModel $ withFormat $ withIndex $
       withView $ withPlaylistConfig $ do

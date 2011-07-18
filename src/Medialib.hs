@@ -17,11 +17,14 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE DeriveDataTypeable, RankNTypes #-}
+
 module Medialib
   ( Stamp
   , MediaInfo
   , RequestPriority (..)
   , initMedialib
+  , withMedialib
   , requestInfo
   , retrieveProperties
   , mediaInfoChan
@@ -40,11 +43,13 @@ import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
 import Data.PSQueue (PSQ, Binding (..))
 import qualified Data.PSQueue as PSQ
+import Data.Env
+import Data.Typeable
 
 import XMMS2.Client
 import XMMS2.Client.Bindings (propdictToDict)
 
-import Context
+import Registry
 import XMMS
 import Utils
 
@@ -75,19 +80,23 @@ emptyCache =
         }
 
 
-data MLib
-  = MLib { mCache         :: TVar (Maybe Cache)
-         , mMediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
-         , mReqQ          :: TVar (PSQ MediaId RequestPriority)
-         }
+data Ix = Ix deriving (Typeable)
 
-cache         = mCache context
-reqQ          = mReqQ context
-mediaInfoChan = mMediaInfoChan context
+data MLib
+  = MLib { _cache         :: TVar (Maybe Cache)
+         , _mediaInfoChan :: TChan (MediaId, Stamp, MediaInfo)
+         , _reqQ          :: TVar (PSQ MediaId RequestPriority)
+         }
+    deriving (Typeable)
+
+cache         = _cache ?_Medialib
+reqQ          = _reqQ ?_Medialib
+mediaInfoChan = _mediaInfoChan ?_Medialib
 
 initMedialib = withXMMS $ do
-  context <- initContext
-  let ?context = context
+  mlib <- mkMLib
+  addEnv Ix mlib
+  let ?_Medialib = mlib
 
   xcW <- atomically $ newTGWatch connectedV
   let mon xc
@@ -115,7 +124,15 @@ initMedialib = withXMMS $ do
           mon xc
   forkIO $ mon False
 
-  return ?context
+  return ()
+
+newtype Wrap a = Wrap { unWrap :: (?_Medialib :: MLib) => a }
+
+withMedialib    = withMedialib' . Wrap
+withMedialib' w = do
+  Just (Env mlib) <- getEnv (Extract :: Extract Ix MLib)
+  let ?_Medialib = mlib
+  unWrap w
 
 requestInfo prio id = atomically $ do
   cc <- readTVar cache
@@ -138,15 +155,14 @@ requestInfo prio id = atomically $ do
         void $ readTChan mediaInfoChan
       _ -> return ()
 
-initContext = do
+mkMLib = do
   cache         <- newTVarIO Nothing
   mediaInfoChan <- newTChanIO
   reqQ          <- newTVarIO PSQ.empty
-  return $ augmentContext
-    MLib { mCache         = cache
-         , mMediaInfoChan = mediaInfoChan
-         , mReqQ          = reqQ
-         }
+  return MLib { _cache         = cache
+              , _mediaInfoChan = mediaInfoChan
+              , _reqQ          = reqQ
+              }
 
 retrieveProperties ids f = do
   let ids'       = IntSet.fromList $ map fromIntegral ids

@@ -35,6 +35,7 @@ import XMMS
 import Properties
 import Builder
 import Environment
+import Medialib
 
 import Collection.Common
 import Collection.List
@@ -44,7 +45,7 @@ import Collection.Utils
 
 browseCollection _maybeName = withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
-  withUI $ withCommon $ withClipboard $ do
+  withUI $ withCommon $ withClipboard $ withMedialib $ do
     bindActions
       [ ("add-to-playlist", comWithColl $ addToPlaylist False)
       , ("replace-playlist", comWithColl $ addToPlaylist True)
