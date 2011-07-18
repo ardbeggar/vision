@@ -43,7 +43,7 @@ import Control.Monad.Trans
 
 import Data.IORef
 
-import Graphics.UI.Gtk hiding (selectAll)
+import Graphics.UI.Gtk hiding (selectAll, focus)
 
 import XMMS2.Client
 
@@ -53,6 +53,7 @@ import UI
 import Compound
 
 import Collection.Common
+import Collection.Actions
 
 
 selectAll =
@@ -63,11 +64,23 @@ invertSelection sel = do
   treeSelectionSelectAll sel
   mapM_ (treeSelectionUnselectPath sel) rows
 
-setupViewFocus abRef view aef ab = do
-  view `on` focusInEvent $ liftIO $ do
-    writeIORef abRef ab
+setupViewFocus view = do
+  let foc = focus view
+      sel = snd $ treeViewSel view
+      aef = do
+        hasFocus <- foc `get` widgetHasFocus
+        when hasFocus $ do
+          rows <- treeSelectionGetSelectedRows sel
+          enableActions view (coms eAE) rows
+  foc `on` focusInEvent $ liftIO $ do
+    writeIORef (coms eABRef) $
+      AB { aWithColl  = withBuiltColl view
+         , aWithNames = withNames view
+         , aSelection = Just $ snd $ treeViewSel view
+         }
     aef
     return False
+  sel `on` treeSelectionSelectionChanged $ aef
 
 addToPlaylist replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()
@@ -139,6 +152,14 @@ runDlg title enable isOk init = do
 class CollBuilder b where
   withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
+  withNames     :: b -> ([String] -> IO ()) -> IO ()
+  withNames _ = const $ return ()
+  enableActions :: b -> (ActionEnabler -> [TreePath] -> IO ())
+  enableActions _ = \ae rows -> do
+    aEnableSel ae $ not $ null rows
+    aEnableRen ae False
+    aEnableDel ae False
+
 
 onCollBuilt b f = do
   let (view, sel) = treeViewSel b

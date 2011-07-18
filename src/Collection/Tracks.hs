@@ -47,7 +47,6 @@ import Medialib
 import Compound
 
 import Collection.Common
-import Collection.Actions
 import Collection.Utils
 
 
@@ -70,6 +69,7 @@ instance CollBuilder TrackView where
       ils <- collNewIdlist ids
       f ils
   treeViewSel tv = (tView tv, tSel tv)
+
 
 mkTrackView coll = do
   store   <- listStoreNewDND [] Nothing Nothing
@@ -98,27 +98,13 @@ instance ViewItem TrackView where
 setupView tv = do
   let view  = tView tv
       sel   = tSel tv
-      abRef = coms eABRef
-      ae    = coms eAE
       popup = coms eVPopup
 
   treeSelectionSetMode sel SelectionMultiple
   treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
-  let aef = do
-        foc <- view `get` widgetHasFocus
-        when foc $ do
-          rows <- treeSelectionGetSelectedRows sel
-          aEnableSel ae $ not $ null rows
-          aEnableRen ae False
-          aEnableDel ae False
-  setupViewFocus abRef view aef
-    AB { aWithColl  = withBuiltColl tv
-       , aWithNames = const $ return ()
-       , aSelection = Just sel
-       }
-  sel `on` treeSelectionSelectionChanged $ aef
+  setupViewFocus tv
 
   view `onDestroy` (killIndex $ tIndex tv)
 

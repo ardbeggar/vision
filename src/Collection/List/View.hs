@@ -65,9 +65,7 @@ data ListView
       }
 
 mkListView = withModel $ do
-  let abRef = coms eABRef
-      ae    = coms eAE
-      popup = coms eLPopup
+  let popup = coms eLPopup
 
   selSet <- newIORef Set.empty
 
@@ -118,25 +116,7 @@ mkListView = withModel $ do
             , vSelSet  = selSet
             , vScroll  = scroll
             }
-      aef = do
-        foc <- view `get` widgetHasFocus
-        when foc $ do
-          rows <- treeSelectionGetSelectedRows sel
-          aEnableSel ae $ not $ null rows
-          aEnableDel ae $ case rows of
-            []      -> False
-            [0] : _ -> False
-            _       -> True
-          aEnableRen ae $ case rows of
-            [[0]] -> False
-            [_]   -> True
-            _     -> False
-  setupViewFocus abRef view aef
-    AB { aWithColl  = withBuiltColl v
-       , aWithNames = \f -> withColls v (f . map fst . catMaybes)
-       , aSelection = Just sel
-       }
-  sel `on` treeSelectionSelectionChanged $ aef
+  setupViewFocus v
 
   xcW <- atomically $ newTGWatch connectedV
   tid <- forkIO $ forever $ do
@@ -151,7 +131,18 @@ mkListView = withModel $ do
 
 instance CollBuilder ListView where
   withBuiltColl lv f = withColls lv $ withColl lv f
-  treeViewSel lv = (vView lv, vSel lv)
+  treeViewSel lv     = (vView lv, vSel lv)
+  withNames lv f     = withColls lv (f . map fst . catMaybes)
+  enableActions _    = \ae rows -> do
+    aEnableSel ae $ not $ null rows
+    aEnableDel ae $ case rows of
+      []      -> False
+      [0] : _ -> False
+      _       -> True
+    aEnableRen ae $ case rows of
+      [[0]] -> False
+      [_]   -> True
+      _     -> False
 
 withColls lv f = do
   let store = vStore lv
