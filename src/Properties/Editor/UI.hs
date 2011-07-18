@@ -38,7 +38,6 @@ import Data.Env
 import Graphics.UI.Gtk hiding (add, remove)
 import XMMS2.Client (MediaId)
 
-import Context
 import Registry
 import Utils
 import UI
@@ -49,13 +48,13 @@ import Properties.Editor.View
 
 
 data UI
-  = UI { uLock    :: MVar ()
-       , uDialog  :: Dialog
-       , uPrevB   :: Button
-       , uNextB   :: Button
-       , uPtrkB   :: ToggleButton
-       , uPBar    :: ProgressBar
-       , uCancel  :: IORef (Maybe (IO ()))
+  = UI { _lock    :: MVar ()
+       , _dialog  :: Dialog
+       , _prevB   :: Button
+       , _nextB   :: Button
+       , _ptrkB   :: ToggleButton
+       , _pBar    :: ProgressBar
+       , _cancel  :: IORef (Maybe (IO ()))
        }
 
 data Ix = Ix deriving (Typeable)
@@ -70,26 +69,26 @@ showPropertyEditor ids = do
 
 tryLock f =
   maybe (return False) (const $ f >> return True)
-  =<< tryTakeMVar (uLock context)
-unlock  = tryPutMVar (uLock context) () >> return ()
+  =<< tryTakeMVar (_lock ?_Properties_Editor_UI)
+unlock  = tryPutMVar (_lock ?_Properties_Editor_UI) () >> return ()
 
-dialog = uDialog context
+dialog = _dialog ?_Properties_Editor_UI
 
-prevB = uPrevB context
-nextB = uNextB context
-ptrkB = uPtrkB context
-pBar  = uPBar  context
+prevB = _prevB ?_Properties_Editor_UI
+nextB = _nextB ?_Properties_Editor_UI
+ptrkB = _ptrkB ?_Properties_Editor_UI
+pBar  = _pBar  ?_Properties_Editor_UI
 
-setRetrievalCancel = writeIORef (uCancel context) . Just
+setRetrievalCancel = writeIORef (_cancel ?_Properties_Editor_UI) . Just
 cancelRetrieval    = do
-  cancel' <- readIORef (uCancel context)
+  cancel' <- readIORef (_cancel ?_Properties_Editor_UI)
   withJust cancel' id
-  writeIORef (uCancel context) Nothing
+  writeIORef (_cancel ?_Properties_Editor_UI) Nothing
 
 
 initEditorUI = withMedialib $ do
-  context <- initContext
-  let ?context = context
+  ui <- mkUI
+  let ?_Properties_Editor_UI = ui
 
   hideOnDeleteEvent dialog
   windowSetModal dialog False
@@ -221,23 +220,22 @@ doShowPropertyEditor ids = do
   updateTitle False retr
   windowPresent dialog
 
-initContext = do
-  lock    <- newMVar ()
-  dialog  <- dialogNew
-  prevB   <- buttonNewWithMnemonic "_Previous track"
-  nextB   <- buttonNewWithMnemonic "_Next track"
-  ptrkB   <- toggleButtonNewWithMnemonic "Per _track"
-  pBar    <- progressBarNew
-  cancel  <- newIORef Nothing
-  return $ augmentContext
-    UI { uLock    = lock
-       , uDialog  = dialog
-       , uPrevB   = prevB
-       , uNextB   = nextB
-       , uPtrkB   = ptrkB
-       , uPBar    = pBar
-       , uCancel  = cancel
-       }
+mkUI = do
+  lock   <- newMVar ()
+  dialog <- dialogNew
+  prevB  <- buttonNewWithMnemonic "_Previous track"
+  nextB  <- buttonNewWithMnemonic "_Next track"
+  ptrkB  <- toggleButtonNewWithMnemonic "Per _track"
+  pBar   <- progressBarNew
+  cancel <- newIORef Nothing
+  return UI { _lock   = lock
+            , _dialog = dialog
+            , _prevB  = prevB
+            , _nextB  = nextB
+            , _ptrkB  = ptrkB
+            , _pBar   = pBar
+            , _cancel = cancel
+            }
 
 updateNavButtons = do
   (ep, en) <- getNavEnables
