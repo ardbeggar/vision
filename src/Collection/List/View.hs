@@ -87,15 +87,11 @@ mkListView = withModel $ do
   column <- treeViewColumnNew
   treeViewAppendColumn view column
 
-  cell <- cellRendererPixbufNew
-  cell `set` [ cellWidth := 30 ]
+  cell <- cellRendererToggleNew
   treeViewColumnPackStart column cell False
   cellLayoutSetAttributes column cell store $ \n ->
-    [ cellPixbufStockId :=> do
-         ss <- readIORef selSet
-         if Set.member (maybe Nothing (Just . fst) n) ss
-           then return stockApply
-           else return ""
+    [ cellToggleActive :=>
+        Set.member (maybe Nothing (Just . fst) n) <$> readIORef selSet
     ]
 
   cell <- cellRendererTextNew
