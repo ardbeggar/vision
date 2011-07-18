@@ -44,7 +44,6 @@ import Utils
 import Compound
 
 import Collection.Common
-import Collection.Actions
 import Collection.Utils
 
 
@@ -62,8 +61,7 @@ instance ViewItem PropFlt where
   nextVIRef = pNextRef
 
 mkPropFlt prop coll = do
-  let ae    = coms eAE
-      popup = coms eVPopup
+  let popup = coms eVPopup
 
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
@@ -127,16 +125,7 @@ mkPropFlt prop coll = do
               , pProp    = prop
               , pNextRef = nextRef
               }
-      aef = do
-        foc <- view `get` widgetHasFocus
-        when foc $ do
-          rows <- treeSelectionGetSelectedRows sel
-          aEnableSel ae $ not $ null rows
-          aEnableRen ae False
-          aEnableDel ae False
-  setupViewFocus pf aef
-  sel `on` treeSelectionSelectionChanged $ aef
-
+  setupViewFocus pf
   return pf
 
 instance CollBuilder PropFlt where

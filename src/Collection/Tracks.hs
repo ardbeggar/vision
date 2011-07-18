@@ -47,7 +47,6 @@ import Medialib
 import Compound
 
 import Collection.Common
-import Collection.Actions
 import Collection.Utils
 
 
@@ -99,22 +98,13 @@ instance ViewItem TrackView where
 setupView tv = do
   let view  = tView tv
       sel   = tSel tv
-      ae    = coms eAE
       popup = coms eVPopup
 
   treeSelectionSetMode sel SelectionMultiple
   treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
-  let aef = do
-        foc <- view `get` widgetHasFocus
-        when foc $ do
-          rows <- treeSelectionGetSelectedRows sel
-          aEnableSel ae $ not $ null rows
-          aEnableRen ae False
-          aEnableDel ae False
-  setupViewFocus tv aef
-  sel `on` treeSelectionSelectionChanged $ aef
+  setupViewFocus tv
 
   view `onDestroy` (killIndex $ tIndex tv)
 

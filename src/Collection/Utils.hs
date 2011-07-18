@@ -64,9 +64,15 @@ invertSelection sel = do
   treeSelectionSelectAll sel
   mapM_ (treeSelectionUnselectPath sel) rows
 
-setupViewFocus view aef = do
-  let f = focus view
-  f `on` focusInEvent $ liftIO $ do
+setupViewFocus view = do
+  let foc = focus view
+      sel = snd $ treeViewSel view
+      aef = do
+        hasFocus <- foc `get` widgetHasFocus
+        when hasFocus $ do
+          rows <- treeSelectionGetSelectedRows sel
+          enableActions view (coms eAE) rows
+  foc `on` focusInEvent $ liftIO $ do
     writeIORef (coms eABRef) $
       AB { aWithColl  = withBuiltColl view
          , aWithNames = withNames view
@@ -74,6 +80,7 @@ setupViewFocus view aef = do
          }
     aef
     return False
+  sel `on` treeSelectionSelectionChanged $ aef
 
 addToPlaylist replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()
@@ -147,6 +154,11 @@ class CollBuilder b where
   treeViewSel   :: b -> (TreeView, TreeSelection)
   withNames     :: b -> ([String] -> IO ()) -> IO ()
   withNames _ = const $ return ()
+  enableActions :: b -> (ActionEnabler -> [TreePath] -> IO ())
+  enableActions _ = \ae rows -> do
+    aEnableSel ae $ not $ null rows
+    aEnableRen ae False
+    aEnableDel ae False
 
 
 onCollBuilt b f = do

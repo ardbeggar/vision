@@ -58,8 +58,7 @@ data ListView
       }
 
 mkListView = withModel $ do
-  let ae    = coms eAE
-      popup = coms eLPopup
+  let popup = coms eLPopup
 
   view <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
@@ -98,21 +97,7 @@ mkListView = withModel $ do
             , vStore   = store
             , vScroll  = scroll
             }
-      aef = do
-        foc <- view `get` widgetHasFocus
-        when foc $ do
-          rows <- treeSelectionGetSelectedRows sel
-          aEnableSel ae $ not $ null rows
-          aEnableDel ae $ case rows of
-            []      -> False
-            [0] : _ -> False
-            _       -> True
-          aEnableRen ae $ case rows of
-            [[0]] -> False
-            [_]   -> True
-            _     -> False
-  setupViewFocus v aef
-  sel `on` treeSelectionSelectionChanged $ aef
+  setupViewFocus v
 
   xcW <- atomically $ newTGWatch connectedV
   tid <- forkIO $ forever $ do
@@ -127,7 +112,16 @@ instance CollBuilder ListView where
   withBuiltColl lv f = withColls lv $ withColl f
   treeViewSel lv     = (vView lv, vSel lv)
   withNames lv f     = withColls lv (f . map fst . catMaybes)
-
+  enableActions _    = \ae rows -> do
+    aEnableSel ae $ not $ null rows
+    aEnableDel ae $ case rows of
+      []      -> False
+      [0] : _ -> False
+      _       -> True
+    aEnableRen ae $ case rows of
+      [[0]] -> False
+      [_]   -> True
+      _     -> False
 
 withColls lv f = do
   let store = vStore lv
