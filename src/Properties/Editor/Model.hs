@@ -17,8 +17,10 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE RankNTypes #-}
+
 module Properties.Editor.Model
-  ( initEditorModel
+  ( withEditorModel
   , store
   , populateModel
   , resetModel
@@ -54,7 +56,6 @@ import Graphics.UI.Gtk hiding (add, get, Entry)
 import qualified XMMS2.Client as X
 
 import XMMS
-import Context
 import Config
 import Utils
 import Medialib
@@ -88,12 +89,12 @@ makeState list =
            }
 
 data Model
-  = Model { mState :: MVar (Maybe State)
-          , mStore :: ListStore Property
+  = Model { _state :: MVar (Maybe State)
+          , _store :: ListStore Property
           }
 
-state = mState context
-store = mStore context
+state = _state ?_Properties_Editor_Model
+store = _store ?_Properties_Editor_Model
 
 setupState list =
   modifyMVar_ state . const . return . Just $ makeState list
@@ -110,9 +111,12 @@ withState d f =
       Nothing ->
         return (Nothing, d)
 
-initEditorModel = do
-  context <- initContext
-  let ?context = context
+newtype Wrap a = Wrap { unWrap :: (?_Properties_Editor_Model :: Model) => a }
+
+withEditorModel    = withEditorModel' . Wrap
+withEditorModel' w = do
+  model <- mkModel
+  let ?_Properties_Editor_Model = model
 
   cid <- store `on` rowDeleted $ const saveConfig
 
@@ -130,15 +134,14 @@ initEditorModel = do
 
   loadConfig
 
-  return ?context
+  unWrap w
 
-initContext = do
+mkModel = do
   state <- newMVar Nothing
   store <- listStoreNew []
-  return $ augmentContext
-    Model { mState = state
-          , mStore = store
-          }
+  return Model { _state = state
+               , _store = store
+               }
 
 loadConfig = do
   cfg <- mapM property =<< config configFile []
