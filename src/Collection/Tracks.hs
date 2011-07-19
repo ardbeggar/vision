@@ -22,16 +22,19 @@ module Collection.Tracks
   , mkTrackView
   ) where
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, mapM_)
 
 import Control.Applicative
-import Control.Monad
+import Control.Monad hiding (forM_, mapM_)
 import Control.Monad.Trans
 
 import Data.Char
 import Data.List hiding (lookup)
 import Data.Maybe
 import Data.IORef
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Foldable
 
 import Graphics.UI.Gtk
 
@@ -53,6 +56,7 @@ import Collection.Utils
 data TrackView
   = TV { tStore   :: ListStore MediaId
        , tIndex   :: Index MediaInfo
+       , tSelSet  :: IORef (Set MediaId)
        , tView    :: TreeView
        , tSel     :: TreeSelection
        , tScroll  :: ScrolledWindow
@@ -66,6 +70,14 @@ instance CollBuilder TrackView where
     rows <- treeSelectionGetSelectedRows sel
     unless (null rows) $ do
       ids <- mapM (listStoreGetValue store . head) rows
+      ss <- readIORef $ tSelSet tv
+      let ss' = Set.fromList ids
+      writeIORef (tSelSet tv) ss'
+      forM_ (Set.union ss ss') $ \id -> do
+        Just [r] <- getRefs (tIndex tv) id
+        p <- treeRowReferenceGetPath r
+        Just iter <- treeModelGetIter store p
+        treeModelRowChanged store p iter
       ils <- collNewIdlist ids
       f ils
   treeViewSel tv = (tView tv, tSel tv)
@@ -74,6 +86,7 @@ instance CollBuilder TrackView where
 mkTrackView coll = do
   store   <- listStoreNewDND [] Nothing Nothing
   index   <- makeIndex store return
+  selSet  <- newIORef Set.empty
   view    <- treeViewNewWithModel store
   sel     <- treeViewGetSelection view
   nextRef <- newIORef None
@@ -83,6 +96,7 @@ mkTrackView coll = do
   containerAdd scroll view
   let tv = TV { tStore   = store
               , tIndex   = index
+              , tSelSet  = selSet
               , tView    = view
               , tSel     = sel
               , tScroll  = scroll
@@ -119,6 +133,14 @@ loadTracks tv coll =
 setColumns tv save props = do
   let view = tView tv
   mapM_ (treeViewRemoveColumn view) =<< treeViewGetColumns view
+
+  column <- treeViewColumnNew
+  treeViewAppendColumn (tView tv) column
+  cell <- cellRendererToggleNew
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributes column cell (tStore tv)  $ \i ->
+    [ cellToggleActive :=> Set.member i <$> readIORef (tSelSet tv) ]
+
   mapM_ (addColumn tv) props
   setupSearch tv props
   when save $ saveConfig props
