@@ -150,21 +150,22 @@ mkPropFlt prop coll = do
   return pf
 
 instance CollBuilder PropFlt where
-  withBuiltColl pf f = do
+  withBuiltColl pf s f = do
     let store = pStore pf
         sel   = pSel pf
     rows <- treeSelectionGetSelectedRows sel
     unless (null rows) $ do
       vals <- mapM (listStoreGetValue store . head) rows
-      ss <- readIORef $ pSelSet pf
-      let ss' = Set.fromList vals
-      writeIORef (pSelSet pf) ss'
-      ix <- readIORef $ pSelIx pf
-      forM_ (Set.union ss ss') $ \p ->
-        withJust (Map.lookup p ix) $ \r -> do
-          p <- treeRowReferenceGetPath r
-          Just iter <- treeModelGetIter store p
-          treeModelRowChanged store p iter
+      when s $ do
+        ss <- readIORef $ pSelSet pf
+        let ss' = Set.fromList vals
+        writeIORef (pSelSet pf) ss'
+        ix <- readIORef $ pSelIx pf
+        forM_ (Set.union ss ss') $ \p ->
+          withJust (Map.lookup p ix) $ \r -> do
+            p <- treeRowReferenceGetPath r
+            Just iter <- treeModelGetIter store p
+            treeModelRowChanged store p iter
       int <- collNew TypeIntersection
       collAddOperand int $ pColl pf
       flt <- collParse $ mkFilterText (pProp pf) vals

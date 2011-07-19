@@ -64,20 +64,21 @@ data TrackView
        }
 
 instance CollBuilder TrackView where
-  withBuiltColl tv f = do
+  withBuiltColl tv s f = do
     let store = tStore tv
         sel   = tSel tv
     rows <- treeSelectionGetSelectedRows sel
     unless (null rows) $ do
       ids <- mapM (listStoreGetValue store . head) rows
-      ss <- readIORef $ tSelSet tv
-      let ss' = Set.fromList ids
-      writeIORef (tSelSet tv) ss'
-      forM_ (Set.union ss ss') $ \id -> do
-        Just [r] <- getRefs (tIndex tv) id
-        p <- treeRowReferenceGetPath r
-        Just iter <- treeModelGetIter store p
-        treeModelRowChanged store p iter
+      when s $ do
+        ss <- readIORef $ tSelSet tv
+        let ss' = Set.fromList ids
+        writeIORef (tSelSet tv) ss'
+        forM_ (Set.union ss ss') $ \id -> do
+          Just [r] <- getRefs (tIndex tv) id
+          p <- treeRowReferenceGetPath r
+          Just iter <- treeModelGetIter store p
+          treeModelRowChanged store p iter
       ils <- collNewIdlist ids
       f ils
   treeViewSel tv = (tView tv, tSel tv)

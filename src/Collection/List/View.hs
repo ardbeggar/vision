@@ -132,10 +132,10 @@ mkListView = withModel $ do
   return v
 
 instance CollBuilder ListView where
-  withBuiltColl lv f = withColls lv $ withColl lv f
-  treeViewSel lv     = (vView lv, vSel lv)
-  withNames lv f     = withColls lv (f . map fst . catMaybes)
-  enableActions _    = \ae rows -> do
+  withBuiltColl lv s f = withColls lv $ withColl lv s f
+  treeViewSel lv       = (vView lv, vSel lv)
+  withNames lv f       = withColls lv (f . map fst . catMaybes)
+  enableActions _      = \ae rows -> do
     aEnableSel ae $ not $ null rows
     aEnableDel ae $ case rows of
       []      -> False
@@ -154,18 +154,19 @@ withColls lv f = do
     colls <- mapM (listStoreGetValue store . head) rows
     f colls
 
-withColl v f list = do
-  ix <- readIORef $ vIndex v
-  ss <- readIORef $ vSelSet v
-  let ss' = case list of
-        Nothing : _ -> Set.singleton Nothing
-        _           -> Set.fromList $ map (liftM fst) list
-  writeIORef (vSelSet v) ss'
-  forM_ (Set.union ss ss') $ \k ->
-    withJust (Map.lookup k ix) $ \r -> do
-      p <- treeRowReferenceGetPath r
-      Just iter <- treeModelGetIter (vStore v) p
-      treeModelRowChanged (vStore v) p iter
+withColl v s f list = do
+  when s $ do
+    ix <- readIORef $ vIndex v
+    ss <- readIORef $ vSelSet v
+    let ss' = case list of
+          Nothing : _ -> Set.singleton Nothing
+          _           -> Set.fromList $ map (liftM fst) list
+    writeIORef (vSelSet v) ss'
+    forM_ (Set.union ss ss') $ \k ->
+      withJust (Map.lookup k ix) $ \r -> do
+        p <- treeRowReferenceGetPath r
+        Just iter <- treeModelGetIter (vStore v) p
+        treeModelRowChanged (vStore v) p iter
   withColl' f list
 
 withColl' _ []            = return ()

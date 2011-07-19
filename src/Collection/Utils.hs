@@ -74,7 +74,7 @@ setupViewFocus view = do
           enableActions view (coms eAE) rows
   foc `on` focusInEvent $ liftIO $ do
     writeIORef (coms eABRef) $
-      AB { aWithColl  = withBuiltColl view
+      AB { aWithColl  = withBuiltColl view False
          , aWithNames = withNames view
          , aSelection = Just $ snd $ treeViewSel view
          }
@@ -150,7 +150,7 @@ runDlg title enable isOk init = do
 
 
 class CollBuilder b where
-  withBuiltColl :: b -> (Coll -> IO ()) -> IO ()
+  withBuiltColl :: b -> Bool -> (Coll -> IO ()) -> IO ()
   treeViewSel   :: b -> (TreeView, TreeSelection)
   withNames     :: b -> ([String] -> IO ()) -> IO ()
   withNames _ = const $ return ()
@@ -163,7 +163,7 @@ class CollBuilder b where
 
 onCollBuilt b f = do
   let (view, sel) = treeViewSel b
-      doit = withBuiltColl b $ \c -> do
+      doit = withBuiltColl b True $ \c -> do
         n <- f c
         setNext b n
         addView n
