@@ -52,7 +52,7 @@ import XMMS
 
 data Model
   = Model { _store :: ListStore (Maybe (String, Coll))
-          , _index :: IORef (Map String TreeRowReference)
+          , _index :: IORef (Map (Maybe String) TreeRowReference)
           }
     deriving (Typeable)
 
@@ -116,12 +116,14 @@ clearStore = do
   writeIORef index Map.empty
   listStoreClear store
 
+addRow row = do
+  n <- listStoreAppend store row
+  Just r <- treeRowReferenceNew store [n]
+  modifyIORef index $ Map.insert (fst <$> row) r
+
 fillStore names = do
-  listStoreAppend store Nothing
+  addRow Nothing
   forM_ names $ \name ->
     collGet xmms name "Collections" >>* do
       coll <- result
-      liftIO $ do
-        n      <- listStoreAppend store $ Just (name, coll)
-        Just r <- treeRowReferenceNew store [n]
-        modifyIORef index $ Map.insert name r
+      liftIO $ addRow $ Just (name, coll)

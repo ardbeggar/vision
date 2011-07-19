@@ -23,12 +23,14 @@ module Collection.List.View
   , mkListView
   ) where
 
+import Prelude hiding (mapM_)
+
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
-import Control.Monad hiding (forM_)
+import Control.Monad hiding (forM_, mapM_)
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
@@ -59,7 +61,7 @@ data ListView
       , vSel     :: TreeSelection
       , vNextRef :: IORef VI
       , vStore   :: ListStore (Maybe (String, Coll))
-      , vIndex   :: IORef (Map String TreeRowReference)
+      , vIndex   :: IORef (Map (Maybe String) TreeRowReference)
       , vSelSet  :: IORef (Set (Maybe String))
       , vScroll  :: ScrolledWindow
       }
@@ -153,36 +155,24 @@ withColls lv f = do
     f colls
 
 withColl v f list = do
+  ix <- readIORef $ vIndex v
   ss <- readIORef $ vSelSet v
-  writeIORef (vSelSet v) Set.empty
-  ix <- readIORef $ vIndex v
-  Just iter <- treeModelGetIter (vStore v) [0]
-  treeModelRowChanged (vStore v) [0] iter
-  forM_ ss $ \mn ->
-    withJust mn $ \name ->
-      withJust (Map.lookup name ix) $ \r -> do
-        p <- treeRowReferenceGetPath r
-        Just iter <- treeModelGetIter (vStore v) p
-        treeModelRowChanged (vStore v) p iter
-  withColl' v f list
-
-withColl' _ _ []            = return ()
-withColl' v f (Nothing : _) = do
-  writeIORef (vSelSet v) $ Set.singleton Nothing
-  Just iter <- treeModelGetIter (vStore v) [0]
-  treeModelRowChanged (vStore v) [0] iter
-  f =<< collUniverse
-withColl' v f list = do
-  let ss = Set.fromList $ map (Just . fst) $ catMaybes list
-  writeIORef (vSelSet v) ss
-  ix <- readIORef $ vIndex v
-  uni <- collNew TypeUnion
-  forM_ (catMaybes list) $ \c -> do
-    collAddOperand uni $ snd c
-    withJust (Map.lookup (fst c) ix) $ \r -> do
+  let ss' = case list of
+        Nothing : _ -> Set.singleton Nothing
+        _           -> Set.fromList $ map (liftM fst) list
+  writeIORef (vSelSet v) ss'
+  forM_ (Set.union ss ss') $ \k ->
+    withJust (Map.lookup k ix) $ \r -> do
       p <- treeRowReferenceGetPath r
       Just iter <- treeModelGetIter (vStore v) p
       treeModelRowChanged (vStore v) p iter
+  withColl' f list
+
+withColl' _ []            = return ()
+withColl' f (Nothing : _) = f =<< collUniverse
+withColl' f list = do
+  uni <- collNew TypeUnion
+  mapM_ (collAddOperand uni . snd) $ catMaybes list
   f uni
 
 instance CompoundWidget ListView where
