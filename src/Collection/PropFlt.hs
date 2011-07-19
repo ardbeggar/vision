@@ -25,13 +25,17 @@ module Collection.PropFlt
 import Prelude hiding (lookup)
 
 import Control.Applicative
-import Control.Monad
+import Control.Monad (when, unless)
 import Control.Monad.Trans
 
 import Data.List (intercalate, isInfixOf)
 import Data.Char (toLower)
-import Data.Map (lookup)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.IORef
+import Data.Foldable
 
 import Graphics.UI.Gtk
 
@@ -47,8 +51,12 @@ import Collection.Common
 import Collection.Utils
 
 
+deriving instance Ord X.Property
+
 data PropFlt
   = PF { pStore   :: ListStore X.Property
+       , pSelIx   :: IORef (Map X.Property TreeRowReference)
+       , pSelSet  :: IORef (Set X.Property)
        , pView    :: TreeView
        , pSel     :: TreeSelection
        , pScroll  :: ScrolledWindow
@@ -63,6 +71,9 @@ instance ViewItem PropFlt where
 mkPropFlt prop coll = do
   let popup = coms eVPopup
 
+  selIx  <- newIORef Map.empty
+  selSet <- newIORef Set.empty
+
   store <- listStoreNewDND [] Nothing Nothing
   view  <- treeViewNewWithModel store
   treeViewSetHeadersVisible view False
@@ -75,6 +86,12 @@ mkPropFlt prop coll = do
 
   column <- treeViewColumnNew
   treeViewAppendColumn view column
+
+  cell <- cellRendererToggleNew
+  treeViewColumnPackStart column cell False
+  cellLayoutSetAttributes column cell store $ \p ->
+    [ cellToggleActive :=> Set.member p <$> readIORef selSet ]
+
   cell <- cellRendererTextNew
   treeViewColumnPackStart column cell True
   cellLayoutSetAttributes column cell store $ \p ->
@@ -99,10 +116,12 @@ mkPropFlt prop coll = do
   let key = propKey prop
       addLine v [] = return v
       addLine v (p : ps) =
-        case lookup key p of
+        case Map.lookup key p of
           Just s | v == s    -> addLine v ps
                  | otherwise -> do
-                   listStoreAppend store s
+                   n      <- listStoreAppend store s
+                   Just r <- treeRowReferenceNew store [n]
+                   modifyIORef selIx $ Map.insert s r
                    addLine s ps
           Nothing -> addLine v ps
       getInfos s v =
@@ -118,6 +137,8 @@ mkPropFlt prop coll = do
   nextRef <- newIORef None
 
   let pf = PF { pStore   = store
+              , pSelIx   = selIx
+              , pSelSet  = selSet
               , pView    = view
               , pSel     = sel
               , pScroll  = scroll
@@ -135,7 +156,16 @@ instance CollBuilder PropFlt where
     rows <- treeSelectionGetSelectedRows sel
     unless (null rows) $ do
       vals <- mapM (listStoreGetValue store . head) rows
-      int  <- collNew TypeIntersection
+      ss <- readIORef $ pSelSet pf
+      let ss' = Set.fromList vals
+      writeIORef (pSelSet pf) ss'
+      ix <- readIORef $ pSelIx pf
+      forM_ (Set.union ss ss') $ \p ->
+        withJust (Map.lookup p ix) $ \r -> do
+          p <- treeRowReferenceGetPath r
+          Just iter <- treeModelGetIter store p
+          treeModelRowChanged store p iter
+      int <- collNew TypeIntersection
       collAddOperand int $ pColl pf
       flt <- collParse $ mkFilterText (pProp pf) vals
       collAddOperand int flt
