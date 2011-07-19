@@ -24,10 +24,12 @@ module Index
   , makeIndex
   , killIndex
   , getInfo
+  , getRefs
   , addToIndex
   , clearIndex
   ) where
 
+import Control.Applicative
 import Control.Monad
 
 import Control.Concurrent
@@ -116,6 +118,9 @@ getInfo index id prio = do
       _ ->
         return (ix, Nothing)
 
+getRefs index id = do
+  withMVar (iTable index) $ \tab ->
+    return (snd <$> IntMap.lookup (fromIntegral id) tab)
 
 addToIndex index id n =
   modifyMVar_ (iTable index) $ \ix -> do
