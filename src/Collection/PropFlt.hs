@@ -126,12 +126,13 @@ mkPropFlt prop coll = do
           Nothing -> addLine v ps
       getInfos s v =
         collQueryInfos xmms fcoll [key] s 100 [key] [key] >>* do
-          lst <- result
-          len <- resultLength
-          liftIO $ do
-            v' <- addLine v lst
-            when (len == 100) $
-              getInfos (s + 100) v'
+          handleXMMSException $ do
+            lst <- result
+            len <- resultLength
+            liftIO $ do
+              v' <- addLine v lst
+              when (len == 100) $
+                getInfos (s + 100) v'
   getInfos 0 (PropString "")
 
   nextRef <- newIORef None

@@ -35,11 +35,15 @@ module Collection.Utils
   , killThis
   , killNext
   , setNext
+  , handleXMMSException
   ) where
+
+import Prelude hiding (catch)
 
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.CatchIO
 
 import Data.IORef
 
@@ -211,3 +215,8 @@ setNext :: (ViewItem t, ViewItem n, Killable n) => t -> n -> IO ()
 setNext t n = do
   killNext t
   writeIORef (nextVIRef t) $ VI n
+
+handleXMMSException f = f `catch` \(e :: XMMSException) ->
+  liftIO $ informUser MessageError $ escapeMarkup $ case e of
+    XMMSError e -> e
+    _           -> "Unknown error"

@@ -128,8 +128,9 @@ setupView tv = do
 
 loadTracks tv coll =
   collQueryIds xmms coll [] 0 0 >>* do
-    ids <- result
-    liftIO $ populateModel tv ids
+    handleXMMSException $ do
+      ids <- result
+      liftIO $ populateModel tv ids
 
 setColumns tv save props = do
   let view = tView tv
