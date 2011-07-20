@@ -169,7 +169,7 @@ instance CollBuilder PropFlt where
             treeModelRowChanged store p iter
       int <- collNew TypeIntersection
       collAddOperand int $ pColl pf
-      flt <- collParse $ mkFilterText (pProp pf) vals
+      flt <- mkFilter (pProp pf) vals
       collAddOperand int flt
       f int
   treeViewSel pf    = (pView pf, pSel pf)
@@ -183,6 +183,16 @@ instance FocusChild PropFlt where
   type Focus PropFlt = TreeView
   focus = pView
 
+mkFilter prop list = do
+  uni <- collNew TypeUnion
+  add uni list
+  return uni
+  where add _ []     = return ()
+        add uni list = do
+          let (h, t) = splitAt 100 list
+          flt <- collParse $ mkFilterText prop h
+          collAddOperand uni flt
+          add uni t
 
 cond' [] = "'"
 cond' ('\'' : t) = '\\' : '\'' : cond' t
