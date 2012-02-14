@@ -34,7 +34,7 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TGVar
 
-import Control.Monad (when, void, forever)
+import Control.Monad (when, forever)
 import Control.Monad.Trans
 
 import Data.Map (Map)
@@ -150,9 +150,8 @@ requestInfo prio id = atomically $ do
         writeTVar reqQ $ PSQ.update (const $ Just prio) id r
         writeTVar cache $ Just
           cc { cEntries = IntMap.insert id' (CERetrieving prio) entries }
-      Just (CEReady s i) -> do
-        writeTChan mediaInfoChan (id, s, i)
-        void $ readTChan mediaInfoChan
+      Just (CEReady s i) ->
+        writeBroadcastTChan mediaInfoChan (id, s, i)
       _ -> return ()
 
 mkMLib = do
@@ -225,6 +224,5 @@ infoReqJob = do
                       }
               return $ Just stamp
             Nothing -> return Nothing
-        withJust stamp $ \stamp -> atomically $ do
-          writeTChan mediaInfoChan (id, stamp, info)
-          void $ readTChan mediaInfoChan
+        withJust stamp $ \stamp -> atomically $
+          writeBroadcastTChan mediaInfoChan (id, stamp, info)

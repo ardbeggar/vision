@@ -31,6 +31,7 @@ module Utils
   , hideOnDeleteEvent
   , eqBy
   , tryModifyMVar_
+  , writeBroadcastTChan
   , EntryIcon (..)
   , onIconPress
   , secondaryIconSensitive
@@ -43,6 +44,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Applicative
 import Control.Concurrent.MVar
+import Control.Concurrent.STM
 import Data.Char hiding (Control)
 import Codec.Binary.UTF8.String
 
@@ -164,6 +166,11 @@ tryModifyMVar_ m io =
         putMVar m a'
       Nothing ->
         return ()
+
+writeBroadcastTChan :: TChan a -> a -> STM ()
+writeBroadcastTChan chan x = do
+  writeTChan chan x
+  void $ readTChan chan
 
 
 deriving instance MonadCatchIO (ResultM c a)
