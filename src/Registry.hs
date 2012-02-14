@@ -26,7 +26,7 @@
              UndecidableInstances,
              ImplicitParams,
              StandaloneDeriving,
-             RankNTypes #-}
+             Rank2Types #-}
 
 module Registry
   ( withRegistry

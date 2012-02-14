@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE TupleSections, RankNTypes #-}
+{-# LANGUAGE TupleSections, Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Playlist.View

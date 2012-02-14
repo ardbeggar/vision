@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE TupleSections, RankNTypes, DeriveDataTypeable #-}
+{-# LANGUAGE TupleSections, Rank2Types, DeriveDataTypeable #-}
 
 module Properties.Manager
   ( initPropertyManager

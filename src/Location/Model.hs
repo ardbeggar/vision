@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Location.Model

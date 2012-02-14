@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE TupleSections, DeriveDataTypeable, RankNTypes #-}
+{-# LANGUAGE TupleSections, DeriveDataTypeable, Rank2Types #-}
 
 module Playlist.Format
   ( initFormat

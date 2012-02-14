@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE RankNTypes, DeriveDataTypeable #-}
+{-# LANGUAGE Rank2Types, DeriveDataTypeable #-}
 
 module Properties.Model
   ( lookup

@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DoRec, TupleSections, DeriveDataTypeable, RankNTypes #-}
+{-# LANGUAGE DoRec, TupleSections, DeriveDataTypeable, Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Impex

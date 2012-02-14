@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DeriveDataTypeable, RankNTypes #-}
+{-# LANGUAGE DeriveDataTypeable, Rank2Types #-}
 
 module Medialib
   ( Stamp
