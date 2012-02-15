@@ -32,7 +32,8 @@ module Playlist.Format
   , formatsGeneration
   ) where
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, catch)
+import Control.Exception
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -49,7 +50,6 @@ import Data.Env
 import Data.Typeable
 
 import Graphics.UI.Gtk hiding (add)
-import System.Glib.GError
 
 import Medialib
 import Properties
@@ -191,4 +191,4 @@ makeMakeInfo fs = do
              , cellTextEllipsize := ellipsize ]
            , search )
   where plain text =
-          (trd <$> parseMarkup text '\0') `catchGError` \_ -> return ""
+          (trd <$> parseMarkup text '\0') `catch` \(_ :: SomeException) -> return ""

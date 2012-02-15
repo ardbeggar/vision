@@ -187,7 +187,7 @@ retrieveProperties ids f = do
           else
           handler st
 
-  tid <- forkIOUnmasked $ handler (0, ids', [])
+  tid <- forkIO $ handler (0, ids', [])
   forkIO $ mapM_ (requestInfo Background . fromIntegral) $ IntSet.toList ids'
 
   return $ killThread tid

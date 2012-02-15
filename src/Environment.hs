@@ -33,6 +33,9 @@ import System.Environment
 import System.FilePath
 import Control.Applicative
 
+import Prelude hiding (catch)
+import Control.Exception
+
 import Paths_vision
 
 
@@ -61,7 +64,7 @@ withEnvironment' w = do
   unWrap w
 
 maybeGetEnv var =
-  (Just <$> getEnv var) `catch` \_ -> return Nothing
+  (Just <$> getEnv var) `catch` \(_ :: SomeException) -> return Nothing
 
 uiFilePath name = dataDir </> "ui" </> name <.> "xml"
 gladeFilePath name = dataDir </> "ui" </> name <.> "glade"

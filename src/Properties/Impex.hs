@@ -26,6 +26,10 @@ module Properties.Impex
   , showPropertyImport
   ) where
 
+import Prelude hiding (catch)
+import Control.Exception
+import System.IO.Error (ioeGetErrorString)
+
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
@@ -41,7 +45,6 @@ import Data.Env
 import Codec.Binary.UTF8.String
 
 import System.FilePath
-import System.IO.Error
 import System.IO.Unsafe
 
 import Text.JSON

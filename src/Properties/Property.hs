@@ -29,11 +29,12 @@ module Properties.Property
   , builtinPropertyMap
   ) where
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, catch)
 
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
+import Control.Exception
 
 import Data.Maybe
 import qualified Data.Map as Map
@@ -101,7 +102,7 @@ mk (pn, pk, pt, pr) =
 
 
 
-readValue p s  = liftM Just read `catch` \_ -> return Nothing
+readValue p s  = liftM Just read `catch` \(_ :: SomeException) -> return Nothing
   where read   = fromMaybe rdef (propReadValue p) s
         rdef s = case (propType p) of
                    PropertyInt    -> X.PropInt32 <$> readIO s

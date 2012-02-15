@@ -26,6 +26,9 @@ module Config
   , prepareToShow
   ) where
 
+import Prelude hiding (catch)
+import Control.Exception
+
 import Control.Monad
 
 import Data.Maybe
@@ -44,7 +47,7 @@ import Utils
 
 
 config name defl =
-  withFile (configFileName name) ReadMode config' `catch` \_ -> return defl
+  withFile (configFileName name) ReadMode config' `catch` \(_ :: SomeException) -> return defl
   where config' h = do
           c <- hGetContents h
           case decodeStrict c of
@@ -52,7 +55,7 @@ config name defl =
             Error _ -> readIO c -- try to read old format
 
 writeConfig name cont =
-  writeConfig' >> return True `catch` \_ -> return False
+  writeConfig' >> return True `catch` \(_ :: SomeException) -> return False
   where writeConfig' = do
           createDirectoryIfMissing True configBaseDir
           writeFile (configFileName name) $ encodeStrict $ showJSON cont
