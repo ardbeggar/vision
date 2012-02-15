@@ -63,7 +63,8 @@ scrollBoxAdd sb widget = do
   boxPackStart (sBox sb) eb PackNatural 0
 
 setupResize eb widget = do
-  widget `onDestroy` widgetDestroy eb
+  cid <- widget `onDestroy` widgetDestroy eb
+  eb `on` unrealize $ signalDisconnect cid
   widgetAddEvents eb [ButtonPressMask, ButtonReleaseMask,
                       Button1MotionMask, PointerMotionHintMask]
   eb `set` [ widgetCanFocus := True ]
