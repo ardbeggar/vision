@@ -36,8 +36,8 @@ module Registry
 
 import Control.Concurrent.STM
 
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Typeable
 import Data.Dynamic
 import Data.Env
@@ -45,30 +45,27 @@ import Data.Env
 
 deriving instance Typeable2 Env
 
-type EnvMap = TVar (IntMap Dynamic)
+type EnvMap = TVar (Map TypeRep Dynamic)
 
 newtype Wrap a = Wrap { unWrap :: (?registry :: EnvMap) => a }
 
 withRegistry    = withRegistry' . Wrap
 withRegistry' w = do
-  registry <- newTVarIO IntMap.empty
+  registry <- newTVarIO Map.empty
   let ?registry = registry in unWrap w
 
 addEnv :: (?registry :: EnvMap, Typeable ix, Typeable r) => ix -> r -> IO ()
 addEnv ix r = do
   let val = mkEnv ix r
-  key <- typeRepKey $ typeOf val
   atomically $ do
     map <- readTVar ?registry
-    writeTVar ?registry $ IntMap.insert key (toDyn val) map
+    writeTVar ?registry $ Map.insert (typeOf val) (toDyn val) map
 
 getEnv :: (?registry :: EnvMap, Typeable ix, Typeable r) => Extract ix r -> IO (Maybe (Env ix r))
-getEnv spec = do
-  key <- typeRepKey $ typeOf $ env spec
-  atomically $ do
-    map <- readTVar ?registry
-    case IntMap.lookup key map of
-      Nothing -> return Nothing
-      Just dv -> return $ fromDynamic dv
+getEnv spec = atomically $ do
+  map <- readTVar ?registry
+  case Map.lookup (typeOf $ env spec) map of
+    Nothing -> return Nothing
+    Just dv -> return $ fromDynamic dv
   where env :: Extract ix a -> Env ix a
         env = const undefined
