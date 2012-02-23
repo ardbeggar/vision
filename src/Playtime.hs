@@ -193,7 +193,7 @@ dispatch = do
     playbackCurrentId xmms >>*
       handleCurrentId
     broadcastPlaybackCurrentId xmms >>*
-      (handleCurrentId >> persist)
+      (handleCurrentId >> return True)
     atomically $ writeTVar seekCountV $ Just 0
     miC <- atomically $ dupTChan mediaInfoChan
     ciW <- atomically $ newTWatch currentIdV Nothing

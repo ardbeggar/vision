@@ -84,11 +84,11 @@ initPlayback = withXMMS $ do
     when conn $ do
       broadcastPlaybackStatus xmms >>* do
         liftIO requestStatus
-        persist
+        return True
       requestStatus
       broadcastPlaylistCurrentPos xmms >>* do
         liftIO requestCurrentTrack
-        persist
+        return True
       requestCurrentTrack
 
   return ()

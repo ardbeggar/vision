@@ -54,7 +54,7 @@ initUpdate = do
         liftIO $ broadcastPlaylistChanged xmms >>* handleChange
       broadcastPlaylistLoaded xmms >>* do
         setupPlaylist
-        persist
+        return True
 
   psW <- atomically $ newTWatch playbackStatus Nothing
   forkIO $ forever $ do
@@ -134,4 +134,4 @@ handleChange = do
           atomically $ modPlaylistSize $ const 0
         _ ->
           requestPlaylist name
-  persist
+  return True

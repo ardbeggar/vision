@@ -111,7 +111,7 @@ initMedialib = withXMMS $ do
                 when (IntMap.member id' $ cEntries cc) $ do
                   r <- readTVar reqQ
                   writeTVar reqQ $ PSQ.insert id Changed r
-            persist
+            return True
           rt <- forkIO infoReqJob
           xc <- atomically $ watch xcW
           killThread rt

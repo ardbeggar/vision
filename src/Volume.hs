@@ -69,7 +69,7 @@ initVolume = withXMMS $ do
         handleVolume adj cId
         liftIO $ broadcastPlaybackVolumeChanged xmms >>* do
           handleVolume adj cId
-          persist
+          return True
       else withoutVolumeChange cId $ adjustmentSetValue adj 0
 
   return ()

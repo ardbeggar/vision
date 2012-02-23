@@ -99,7 +99,7 @@ setupModel = do
         change <- result
         when (namespace change == "Collections") $
           liftIO listCollections
-        persist
+        return True
       listCollections
 
 listCollections =
