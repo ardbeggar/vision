@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DoRec, TupleSections, DeriveDataTypeable, Rank2Types #-}
+{-# LANGUAGE TupleSections, DeriveDataTypeable, Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Impex
@@ -32,6 +32,7 @@ import System.IO.Error (ioeGetErrorString)
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.Fix
 import Control.Monad.Trans
 import Control.Concurrent.MVar
 
@@ -180,18 +181,17 @@ runChooser Chooser { cLock = lock, cChooser = chooser } onAccept = do
   locked <- isJust <$> tryTakeMVar lock
   when locked $ do
     windowSetTransientFor chooser window
-    rec { cid <- chooser `onResponse` \resp -> do
-             signalDisconnect cid
-             case resp of
-               ResponseAccept -> do
-                 name <- fileChooserGetFilename chooser
-                 withJust name onAccept
-               _ ->
-                 return ()
-             widgetHide chooser
-             putMVar lock ()
-        }
-    return ()
+    void $ mfix $ \cid ->
+      chooser `onResponse` \resp -> do
+        signalDisconnect cid
+        case resp of
+          ResponseAccept -> do
+            name <- fileChooserGetFilename chooser
+            withJust name onAccept
+          _ ->
+            return ()
+        widgetHide chooser
+        putMVar lock ()
   windowPresent chooser
 
 

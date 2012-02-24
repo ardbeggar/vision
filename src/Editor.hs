@@ -17,8 +17,6 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE DoRec #-}
-
 module Editor
   ( EditorWidget (..)
   , EditorDialog
@@ -28,6 +26,7 @@ module Editor
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.Fix
 import Control.Concurrent.MVar
 
 import Data.Maybe
@@ -76,7 +75,8 @@ makeEditorDialog buttons makeEditor setup = do
   dialogAddButton dialog stockCancel ResponseCancel
   dialogAddButtonCR dialog stockOk ResponseOk
 
-  rec { editor <- makeEditor dialog $ updateState dialog editor }
+  editor <- mfix $ \editor ->
+    makeEditor dialog $ updateState dialog editor
 
   upper <- dialogGetUpper dialog
   boxPackStartDefaults upper $ outer editor
@@ -109,28 +109,26 @@ runEditorDialog e get set modal parent = do
     dialogSetDefaultResponse dialog ResponseOk
     setupView editor
     focusView editor
-    rec { cid <- dialog `onResponse` \resp -> do
-             let done = do
-                   signalDisconnect cid
-                   widgetHide dialog
-                   clearData editor
-                   putMVar lock ()
-             dialogSetDefaultResponse dialog ResponseOk
-             focusView editor
-             case resp of
-               ResponseApply -> do
-                 (valid, modified) <- getState editor
-                 when (valid && modified) (set =<< getData editor)
-                 resetModified editor
-                 updateState dialog editor
-               ResponseOk -> do
-                 (valid, modified) <- getState editor
-                 when valid $ do
-                   when modified (set =<< getData editor)
-                   done
-               _ -> done
-        }
-    return ()
+    void $ mfix $ \cid -> dialog `onResponse` \resp -> do
+      let done = do
+            signalDisconnect cid
+            widgetHide dialog
+            clearData editor
+            putMVar lock ()
+      dialogSetDefaultResponse dialog ResponseOk
+      focusView editor
+      case resp of
+        ResponseApply -> do
+          (valid, modified) <- getState editor
+          when (valid && modified) (set =<< getData editor)
+          resetModified editor
+          updateState dialog editor
+        ResponseOk -> do
+          (valid, modified) <- getState editor
+          when valid $ do
+            when modified (set =<< getData editor)
+            done
+        _ -> done
 
   windowPresent dialog
 
