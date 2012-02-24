@@ -135,7 +135,7 @@ runEditorDialog e get set modal parent = do
   windowPresent dialog
 
 
-updateState dialog editor = do
+updateState dialog editor = postGUIAsync $ do
   (valid, modified) <- getState editor
   dialogSetResponseSensitive dialog ResponseOk valid
   dialogSetResponseSensitive dialog ResponseApply modified
