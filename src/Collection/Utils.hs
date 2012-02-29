@@ -216,6 +216,7 @@ setNext t n = do
   killNext t
   writeIORef (nextVIRef t) $ VI n
 
+handleXMMSException :: WithUI (ResultM c a () -> ResultM c a ())
 handleXMMSException f = f `catch` \(e :: XMMSException) ->
   liftIO $ informUser MessageError $ escapeMarkup $ case e of
     XMMSError e -> e

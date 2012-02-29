@@ -135,7 +135,7 @@ comWithColl f = do
 comWithIds f =
   comWithColl $ \coll ->
     collQueryIds xmms coll [] 0 0 >>* do
-      ids <- result
+      ids :: [MediaId] <- result
       liftIO $ f ids
 
 comWithSel f = do

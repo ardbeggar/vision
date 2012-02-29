@@ -89,6 +89,7 @@ trd (_, _, c) = c
 
 trim = f . f where f = reverse . dropWhile isSpace
 
+catchResult :: FromRRV a a => b -> (a -> b) -> ResultM c a b
 catchResult def conv =
   (conv <$> result) `catch` \(_ :: XMMSException) -> return def
 
