@@ -217,11 +217,13 @@ setNext t n = do
   killNext t
   writeIORef (nextVIRef t) $ VI n
 
-handleXMMSException f = f `catch` \(e :: XMMSException) ->
-  liftIO $ informUser MessageError $ escapeMarkup $ case e of
-    XMMSError e -> e
-    _           -> "Unknown error"
-
+handleXMMSException f = f `catch` handler
+  where handler (XMMSError "invalid collection structure") =
+          return ()
+        handler e =
+          liftIO $ informUser MessageError $ escapeMarkup $ case e of
+            XMMSError e -> e
+            _           -> "Unknown error"
 
 class SetColl s where
   setColl :: s -> Coll -> IO ()
