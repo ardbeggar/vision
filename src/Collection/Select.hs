@@ -43,6 +43,7 @@ data Select
   = S { sCombo   :: ComboBox
       , sColl    :: Coll
       , sBox     :: VBox
+      , sEntry   :: Entry
       , sNextRef :: IORef VI
       }
 
@@ -53,24 +54,48 @@ mkSelect coll = do
   nextRef <- newIORef None
   box     <- vBoxNew False 5
   combo   <- mkCombo
-  let s = S { sCombo  = combo
+  entry   <- entryNew
+  exp     <- expanderNew "Filter"
+  let s = S { sCombo   = combo
             , sBox     = box
             , sColl    = coll
+            , sEntry   = entry
             , sNextRef = nextRef
             }
       setup w = do
           setNext s w
           onCollBuilt w mkSelect
+          widgetShowAll exp
           boxPackStartDefaults box $ outer w
           widgetGrabFocus $ focus w
+      mkFilterColl = do
+        text <- entryGetText entry
+        case text of
+          [] -> return coll
+          _  -> do
+            flt <- collParse text
+            int <- collNew TypeIntersection
+            collAddOperand int coll
+            collAddOperand int flt
+            return int
 
   boxPackStart box combo PackNatural 0
-  combo `on` changed $
+  combo `on` changed $ handleXMMSException $
     withSelectedView combo $ \cur -> case cur of
-      CITracks    -> setup =<< mkTrackView coll
-      CIProp pr   -> setup =<< mkPropFlt pr coll
+      CITracks    -> setup =<< mkTrackView  =<< mkFilterColl
+      CIProp pr   -> setup =<< mkPropFlt pr =<< mkFilterColl
       CISeparator -> return ()
+
   widgetShowAll box
+
+  entry `on` entryActivate $ handleXMMSException $
+    withSelectedView combo $ \cur -> case cur of
+      CITracks    -> setup =<< mkTrackView  =<< mkFilterColl
+      CIProp pr   -> setup =<< mkPropFlt pr =<< mkFilterColl
+      CISeparator -> return ()
+
+  containerAdd exp entry
+  boxPackStart box exp PackNatural 0
 
   return s
 
