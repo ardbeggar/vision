@@ -26,6 +26,8 @@ module Collection.Select
 
 import Prelude hiding (catch)
 import Control.Exception
+import Control.Monad
+import Control.Monad.Trans
 
 import Data.IORef
 
@@ -54,6 +56,7 @@ data Select
       , sEntry   :: Entry
       , sNextRef :: IORef VI
       , sViewRef :: IORef VR
+      , sEBox    :: EventBox
       }
 
 instance ViewItem Select where
@@ -66,12 +69,14 @@ mkSelect coll = do
   entry   <- entryNew
   exp     <- expanderNew "Filter"
   viewRef <- newIORef NoVR
+  eBox    <- eventBoxNew
   let s = S { sCombo   = combo
             , sBox     = box
             , sColl    = coll
             , sEntry   = entry
             , sNextRef = nextRef
             , sViewRef = viewRef
+            , sEBox    = eBox
             }
       setup w = do
         writeIORef viewRef $ VR w
@@ -91,6 +96,9 @@ mkSelect coll = do
             collAddOperand int flt
             return int
 
+  eventBoxSetVisibleWindow eBox False
+  containerAdd eBox box
+
   boxPackStart box combo PackNatural 0
   combo `on` changed $ handleXMMSException $
     withSelectedView combo $ \cur -> case cur of
@@ -98,7 +106,7 @@ mkSelect coll = do
       CIProp pr   -> setup =<< mkPropFlt pr =<< mkFilterColl
       CISeparator -> return ()
 
-  widgetShowAll box
+  widgetShowAll eBox
 
   let filter = do
         vr <- readIORef viewRef
@@ -125,11 +133,22 @@ mkSelect coll = do
   containerAdd exp entry
   boxPackStart box exp PackNatural 0
 
+  exp `onActivate` do
+    e <- exp `get` expanderExpanded
+    unless e $ widgetGrabFocus entry
+
+  eBox `on` keyPressEvent $ tryEvent $ do
+    "l"       <- eventKeyName
+    [Control] <- eventModifier
+    liftIO $ do
+      expanderSetExpanded exp True
+      widgetGrabFocus entry
+
   return s
 
 instance CompoundWidget Select where
-  type Outer Select = VBox
-  outer = sBox
+  type Outer Select = EventBox
+  outer = sEBox
 
 instance FocusChild Select where
   type Focus Select = ComboBox
