@@ -61,6 +61,8 @@ data TrackView
        , tSel     :: TreeSelection
        , tScroll  :: ScrolledWindow
        , tNextRef :: IORef VI
+       , tCollRef :: IORef Coll
+       , tSetColl :: TrackView -> Coll -> IO ()
        }
 
 instance CollBuilder TrackView where
@@ -91,6 +93,7 @@ mkTrackView coll = do
   view    <- treeViewNewWithModel store
   sel     <- treeViewGetSelection view
   nextRef <- newIORef None
+  collRef <- newIORef coll
   scroll  <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetShadowType scroll ShadowIn
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
@@ -102,9 +105,11 @@ mkTrackView coll = do
               , tSel     = sel
               , tScroll  = scroll
               , tNextRef = nextRef
+              , tCollRef = collRef
+              , tSetColl = doSetColl
               }
   setupView tv
-  loadTracks tv coll
+  loadTracks tv
   return tv
 
 instance ViewItem TrackView where
@@ -126,7 +131,18 @@ setupView tv = do
   setColumns tv False =<< loadConfig
   widgetShowAll $ tScroll tv
 
-loadTracks tv coll =
+instance SetColl TrackView where
+  setColl tv coll = tSetColl tv tv coll
+
+doSetColl tv coll = do
+  clearIndex $ tIndex tv
+  listStoreClear $ tStore tv
+  writeIORef (tSelSet tv) Set.empty
+  writeIORef (tCollRef tv) coll
+  loadTracks tv
+
+loadTracks tv = do
+  coll <- readIORef $ tCollRef tv
   collQueryIds xmms coll [] 0 0 >>* do
     handleXMMSException $ do
       ids <- result

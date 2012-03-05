@@ -17,7 +17,7 @@
 --  General Public License for more details.
 --
 
-{-# LANGUAGE NoMonoLocalBinds #-}
+{-# LANGUAGE NoMonoLocalBinds, ExistentialQuantification #-}
 
 module Collection.Select
   ( Select (..)
@@ -39,12 +39,17 @@ import Collection.Combo
 import Collection.Utils
 
 
+data VR =
+  forall a. SetColl a => VR a
+  | NoVR
+
 data Select
   = S { sCombo   :: ComboBox
       , sColl    :: Coll
       , sBox     :: VBox
       , sEntry   :: Entry
       , sNextRef :: IORef VI
+      , sViewRef :: IORef VR
       }
 
 instance ViewItem Select where
@@ -56,18 +61,21 @@ mkSelect coll = do
   combo   <- mkCombo
   entry   <- entryNew
   exp     <- expanderNew "Filter"
+  viewRef <- newIORef NoVR
   let s = S { sCombo   = combo
             , sBox     = box
             , sColl    = coll
             , sEntry   = entry
             , sNextRef = nextRef
+            , sViewRef = viewRef
             }
       setup w = do
-          setNext s w
-          onCollBuilt w mkSelect
-          widgetShowAll exp
-          boxPackStartDefaults box $ outer w
-          widgetGrabFocus $ focus w
+        writeIORef viewRef $ VR w
+        setNext s w
+        onCollBuilt w mkSelect
+        widgetShowAll exp
+        boxPackStartDefaults box $ outer w
+        widgetGrabFocus $ focus w
       mkFilterColl = do
         text <- entryGetText entry
         case text of
@@ -88,11 +96,11 @@ mkSelect coll = do
 
   widgetShowAll box
 
-  entry `on` entryActivate $ handleXMMSException $
-    withSelectedView combo $ \cur -> case cur of
-      CITracks    -> setup =<< mkTrackView  =<< mkFilterColl
-      CIProp pr   -> setup =<< mkPropFlt pr =<< mkFilterColl
-      CISeparator -> return ()
+  entry `on` entryActivate $ handleXMMSException $ do
+    vr <- readIORef viewRef
+    case vr of
+      VR v -> setColl v =<< mkFilterColl
+      _    -> return ()
 
   containerAdd exp entry
   boxPackStart box exp PackNatural 0

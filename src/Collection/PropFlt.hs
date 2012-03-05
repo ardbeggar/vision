@@ -60,9 +60,10 @@ data PropFlt
        , pView    :: TreeView
        , pSel     :: TreeSelection
        , pScroll  :: ScrolledWindow
-       , pColl    :: Coll
+       , pCollRef :: IORef Coll
        , pProp    :: Property
        , pNextRef :: IORef VI
+       , pSetColl :: PropFlt -> Coll -> IO ()
        }
 
 instance ViewItem PropFlt where
@@ -108,12 +109,45 @@ mkPropFlt prop coll = do
     (isInfixOf (map toLower str) . map toLower . showValue prop) <$>
     (listStoreGetValue store $ listStoreIterToIndex iter)
 
+  collRef <- newIORef coll
+  nextRef <- newIORef None
+
+  let pf = PF { pStore   = store
+              , pSelIx   = selIx
+              , pSelSet  = selSet
+              , pView    = view
+              , pSel     = sel
+              , pScroll  = scroll
+              , pCollRef = collRef
+              , pProp    = prop
+              , pNextRef = nextRef
+              , pSetColl = doSetColl
+              }
+  loadColl pf
+  setupViewFocus pf
+  return pf
+
+instance SetColl PropFlt where
+  setColl pf coll = pSetColl pf pf coll
+
+doSetColl pf coll = do
+  listStoreClear $ pStore pf
+  writeIORef (pSelIx pf) Map.empty
+  writeIORef (pSelSet pf) Set.empty
+  writeIORef (pCollRef pf) coll
+  loadColl pf
+
+loadColl pf = do
+  let key = propKey $ pProp pf
+
   fcoll <- collNew TypeIntersection
+  coll <- readIORef $ pCollRef pf
   collAddOperand fcoll coll
-  flt <- collParse $ "NOT " ++ propKey prop ++ ":''"
+  flt <- collParse $ "NOT " ++ key ++ ":''"
   collAddOperand fcoll flt
 
-  let key = propKey prop
+  let store = pStore pf
+      selIx = pSelIx pf
       addLine v [] = return v
       addLine v (p : ps) =
         case Map.lookup key p of
@@ -135,20 +169,6 @@ mkPropFlt prop coll = do
                 getInfos (s + 100) v'
   getInfos 0 (PropString "")
 
-  nextRef <- newIORef None
-
-  let pf = PF { pStore   = store
-              , pSelIx   = selIx
-              , pSelSet  = selSet
-              , pView    = view
-              , pSel     = sel
-              , pScroll  = scroll
-              , pColl    = fcoll
-              , pProp    = prop
-              , pNextRef = nextRef
-              }
-  setupViewFocus pf
-  return pf
 
 instance CollBuilder PropFlt where
   withBuiltColl pf s f = do
@@ -168,7 +188,7 @@ instance CollBuilder PropFlt where
             Just iter <- treeModelGetIter store p
             treeModelRowChanged store p iter
       int <- collNew TypeIntersection
-      collAddOperand int $ pColl pf
+      collAddOperand int =<< readIORef (pCollRef pf)
       flt <- mkFilter (pProp pf) vals
       collAddOperand int flt
       f int
@@ -206,3 +226,4 @@ cond prop (PropInt32 i)   = propKey prop ++ ":" ++ show i
 
 mkFilterText prop vals =
   intercalate " OR " $ map (cond prop) vals
+

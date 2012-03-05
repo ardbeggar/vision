@@ -36,6 +36,7 @@ module Collection.Utils
   , killNext
   , setNext
   , handleXMMSException
+  , SetColl (..)
   ) where
 
 import Prelude hiding (catch)
@@ -220,3 +221,7 @@ handleXMMSException f = f `catch` \(e :: XMMSException) ->
   liftIO $ informUser MessageError $ escapeMarkup $ case e of
     XMMSError e -> e
     _           -> "Unknown error"
+
+
+class SetColl s where
+  setColl :: s -> Coll -> IO ()
