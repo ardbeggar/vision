@@ -64,6 +64,7 @@ data PropFlt
        , pProp    :: Property
        , pNextRef :: IORef VI
        , pSetColl :: PropFlt -> Coll -> IO ()
+       , pLoadRef :: IORef Int
        }
 
 instance ViewItem PropFlt where
@@ -111,6 +112,7 @@ mkPropFlt prop coll = do
 
   collRef <- newIORef coll
   nextRef <- newIORef None
+  loadRef <- newIORef 0
 
   let pf = PF { pStore   = store
               , pSelIx   = selIx
@@ -122,6 +124,7 @@ mkPropFlt prop coll = do
               , pProp    = prop
               , pNextRef = nextRef
               , pSetColl = doSetColl
+              , pLoadRef = loadRef
               }
   loadColl pf
   setupViewFocus pf
@@ -131,6 +134,7 @@ instance SetColl PropFlt where
   setColl pf coll = pSetColl pf pf coll
 
 doSetColl pf coll = do
+  modifyIORef (pLoadRef pf) (+ 1)
   listStoreClear $ pStore pf
   writeIORef (pSelIx pf) Map.empty
   writeIORef (pSelSet pf) Set.empty
@@ -146,6 +150,8 @@ loadColl pf = do
   flt <- collParse $ "NOT " ++ key ++ ":''"
   collAddOperand fcoll flt
 
+  load <- readIORef $ pLoadRef pf
+
   let store = pStore pf
       selIx = pSelIx pf
       addLine v [] = return v
@@ -158,15 +164,17 @@ loadColl pf = do
                    modifyIORef selIx $ Map.insert s r
                    addLine s ps
           Nothing -> addLine v ps
-      getInfos s v =
-        collQueryInfos xmms fcoll [key] s 100 [key] [key] >>* do
-          handleXMMSException $ do
-            lst <- result
-            len <- resultLength
-            liftIO $ do
-              v' <- addLine v lst
-              when (len == 100) $
-                getInfos (s + 100) v'
+      getInfos s v = do
+        load' <- readIORef $ pLoadRef pf
+        when (load' == load) $
+          collQueryInfos xmms fcoll [key] s 100 [key] [key] >>* do
+            handleXMMSException $ do
+              lst <- result
+              len <- resultLength
+              liftIO $ do
+                v' <- addLine v lst
+                when (len == 100) $
+                  getInfos (s + 100) v'
   getInfos 0 (PropString "")
 
 
