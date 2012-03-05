@@ -40,7 +40,7 @@ import Collection.Utils
 
 
 data VR =
-  forall a. SetColl a => VR a
+  forall a. (SetColl a, ViewItem a) => VR a
   | NoVR
 
 data Select
@@ -99,7 +99,10 @@ mkSelect coll = do
   entry `on` entryActivate $ handleXMMSException $ do
     vr <- readIORef viewRef
     case vr of
-      VR v -> setColl v =<< mkFilterColl
+      VR v -> do
+        killNext v
+        fc <- mkFilterColl
+        setColl v fc
       _    -> return ()
 
   containerAdd exp entry
