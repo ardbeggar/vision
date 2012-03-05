@@ -24,6 +24,9 @@ module Collection.Select
   , mkSelect
   ) where
 
+import Prelude hiding (catch)
+import Control.Exception
+
 import Data.IORef
 
 import Graphics.UI.Gtk hiding (focus)
@@ -31,6 +34,7 @@ import Graphics.UI.Gtk hiding (focus)
 import XMMS2.Client
 
 import Compound
+import Utils
 
 import Collection.Common
 import Collection.Tracks
@@ -96,14 +100,27 @@ mkSelect coll = do
 
   widgetShowAll box
 
-  entry `on` entryActivate $ handleXMMSException $ do
-    vr <- readIORef viewRef
-    case vr of
-      VR v -> do
-        killNext v
-        fc <- mkFilterColl
-        setColl v fc
-      _    -> return ()
+  let filter = do
+        vr <- readIORef viewRef
+        case vr of
+          VR v -> do
+            killNext v
+            (mkFilterColl >>= setColl v) `catch`
+              \(_ :: XMMSException) -> return ()
+          _    -> return ()
+
+  hRef <- newIORef Nothing
+  entry `on` editableChanged $ do
+    hid <- readIORef hRef
+    withJust (hid) timeoutRemove
+    hid <- timeoutAddFull (filter >> return False) priorityLow 250
+    writeIORef hRef $ Just hid
+
+  entry `on` entryActivate $ do
+    hid <- readIORef hRef
+    withJust (hid) timeoutRemove
+    writeIORef hRef Nothing
+    filter
 
   containerAdd exp entry
   boxPackStart box exp PackNatural 0
