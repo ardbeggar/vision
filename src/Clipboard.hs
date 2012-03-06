@@ -50,8 +50,8 @@ data C = C { _targets   :: TVar [TargetTag]
 clipboardEnv :: Extract Ix C
 clipboardEnv = Extract
 
-clipboard        = _clipboard ?clipboard
-clipboardTargets = _targets ?clipboard
+clipboard        = _clipboard ?_Clipboard
+clipboardTargets = _targets ?_Clipboard
 
 getClipboardTargets =
   readTVarIO clipboardTargets
@@ -69,16 +69,16 @@ updateClipboardTargets ts =
 initClipboard = do
   c <- makeC
   addEnv Ix c
-  let ?clipboard = c
+  let ?_Clipboard = c
   timeoutAdd checkClipboard 0
   return ()
 
-newtype Wrap a = Wrap { unWrap :: (?clipboard :: C) => a }
+newtype Wrap a = Wrap { unWrap :: (?_Clipboard :: C) => a }
 
 withClipboard    = withClipboard' . Wrap
 withClipboard' w = do
   Just (Env c) <- getEnv clipboardEnv
-  let ?clipboard = c in unWrap w
+  let ?_Clipboard = c in unWrap w
 
 makeC = do
   targets   <- newTVarIO []

@@ -37,14 +37,14 @@ import Control.Applicative
 import Graphics.UI.Gtk
 
 
-newtype Wrap a = Wrap { unWrap :: (?builder :: Builder) => a }
+newtype Wrap a = Wrap { unWrap :: (?_Builder :: Builder) => a }
 
 withBuilder    = withBuilder' . Wrap
 withBuilder' w = do
   builder <- builderNew
-  let ?builder = builder in unWrap w
+  let ?_Builder = builder in unWrap w
 
-builder = ?builder
+builder = ?_Builder
 
 addFromFile file =
   builderAddFromFile builder file

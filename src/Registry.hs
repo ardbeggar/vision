@@ -47,23 +47,23 @@ deriving instance Typeable2 Env
 
 type EnvMap = TVar (Map TypeRep Dynamic)
 
-newtype Wrap a = Wrap { unWrap :: (?registry :: EnvMap) => a }
+newtype Wrap a = Wrap { unWrap :: (?_Registry :: EnvMap) => a }
 
 withRegistry    = withRegistry' . Wrap
 withRegistry' w = do
   registry <- newTVarIO Map.empty
-  let ?registry = registry in unWrap w
+  let ?_Registry = registry in unWrap w
 
-addEnv :: (?registry :: EnvMap, Typeable ix, Typeable r) => ix -> r -> IO ()
+addEnv :: (?_Registry :: EnvMap, Typeable ix, Typeable r) => ix -> r -> IO ()
 addEnv ix r = do
   let val = mkEnv ix r
   atomically $ do
-    map <- readTVar ?registry
-    writeTVar ?registry $ Map.insert (typeOf val) (toDyn val) map
+    map <- readTVar ?_Registry
+    writeTVar ?_Registry $ Map.insert (typeOf val) (toDyn val) map
 
-getEnv :: (?registry :: EnvMap, Typeable ix, Typeable r) => Extract ix r -> IO (Maybe (Env ix r))
+getEnv :: (?_Registry :: EnvMap, Typeable ix, Typeable r) => Extract ix r -> IO (Maybe (Env ix r))
 getEnv spec = atomically $ do
-  map <- readTVar ?registry
+  map <- readTVar ?_Registry
   case Map.lookup (typeOf $ env spec) map of
     Nothing -> return Nothing
     Just dv -> return $ fromDynamic dv

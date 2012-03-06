@@ -60,10 +60,10 @@ data Playtime
              }
     deriving (Typeable)
 
-adj        = _adj ?playtime
-currentIdV = _currentIdV ?playtime
-playtimeV  = _playtimeV ?playtime
-seekCountV = _seekCountV ?playtime
+adj        = _adj ?_Playtime
+currentIdV = _currentIdV ?_Playtime
+playtimeV  = _playtimeV ?_Playtime
+seekCountV = _seekCountV ?_Playtime
 
 
 data Ix = Ix deriving (Typeable)
@@ -74,7 +74,7 @@ playtimeEnv = Extract
 initPlaytime = withXMMS $ withMedialib $ withPlayback $ do
   pt <- makePlaytime
   addEnv Ix pt
-  let ?playtime = pt
+  let ?_Playtime = pt
 
   cId <- setupSeek
   xcW <- atomically $ newTGWatch connectedV
@@ -95,12 +95,12 @@ initPlaytime = withXMMS $ withMedialib $ withPlayback $ do
   return ()
 
 
-newtype Wrap a = Wrap { unWrap :: (?playtime :: Playtime) => a }
+newtype Wrap a = Wrap { unWrap :: (?_Playtime :: Playtime) => a }
 
 withPlaytime    = withPlaytime' . Wrap
 withPlaytime' w = do
   Just (Env pt) <- getEnv playtimeEnv
-  let ?playtime = pt in unWrap w
+  let ?_Playtime = pt in unWrap w
 
 makePlaytime = do
   adj        <- adjustmentNew 0 0 0 5000 5000 0

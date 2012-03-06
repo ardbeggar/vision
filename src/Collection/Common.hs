@@ -63,9 +63,9 @@ data Com
         , eSAdj   :: Adjustment
         }
 
-coms = ($ ?collectionCommon)
+coms = ($ ?_Collection_Common)
 
-newtype Wrap a = Wrap { unWrap :: (?collectionCommon :: Com) => a }
+newtype Wrap a = Wrap { unWrap :: (?_Collection_Common :: Com) => a }
 
 withCommon    = withCommon' . Wrap
 withCommon' w = do
@@ -114,7 +114,7 @@ withCommon' w = do
 
   containerAdd scroll $ outer sbox
 
-  let ?collectionCommon =
+  let ?_Collection_Common =
         Com { eABRef  = abRef
             , eAE     = ae
             , eSBox   = sbox

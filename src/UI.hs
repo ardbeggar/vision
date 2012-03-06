@@ -46,7 +46,7 @@ import About
 import Builder
 
 
-type WithUI a = (?ui :: UI) => a
+type WithUI a = (?_UI :: UI) => a
 
 data UI
   = UI { uWindow      :: Window
@@ -58,12 +58,12 @@ data UI
        , uInfoText    :: Label
        }
 
-window        = uWindow ?ui
-contents      = uContents ?ui
-uiManager     = uManager ?ui
-windowGroup   = uWindowGroup ?ui
-infoBar       = uInfoBar ?ui
-infoText      = uInfoText ?ui
+window        = uWindow ?_UI
+contents      = uContents ?_UI
+uiManager     = uManager ?_UI
+windowGroup   = uWindowGroup ?_UI
+infoBar       = uInfoBar ?_UI
+infoText      = uInfoText ?_UI
 
 setWindowTitle title =
   windowSetTitle window title
@@ -75,12 +75,12 @@ getWidget cast name =
   fromJust <$> maybeGetWidget cast name
 
 
-newtype Wrap a = Wrap { unWrap :: (?ui :: UI) => a }
+newtype Wrap a = Wrap { unWrap :: (?_UI :: UI) => a }
 
 withUI  r   = withUI' r . Wrap
 withUI' r w = do
   ui <- makeUI
-  let ?ui = ui
+  let ?_UI = ui
 
   role <- mkWindowRole r
   windowSetRole window role

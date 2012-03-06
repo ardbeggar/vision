@@ -74,15 +74,15 @@ initVolume = withXMMS $ do
 
   return ()
 
-newtype Wrap a = Wrap { unWrap :: (?volume :: Adjustment) => a }
+newtype Wrap a = Wrap { unWrap :: (?_Volume :: Adjustment) => a }
 
 withVolume    = withVolume' . Wrap
 withVolume' w = do
   Just (Env v) <- getEnv volumeEnv
-  let ?volume = v in unWrap w
+  let ?_Volume = v in unWrap w
 
 makeVolumeControl = do
-  view <- hScaleNew ?volume
+  view <- hScaleNew ?_Volume
   scaleSetDrawValue view False
   rangeSetUpdatePolicy view UpdateContinuous
   widgetSetCanFocus view False

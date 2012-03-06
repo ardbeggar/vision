@@ -51,23 +51,23 @@ data XMMS
          }
     deriving (Typeable)
 
-xmms       = _xmms ?xmms
-connectedV = _connected ?xmms
+xmms       = _xmms ?_XMMS
+connectedV = _connected ?_XMMS
 connected  = readTGVarIO connectedV
 
 initXMMS = do
   xmms <- mkXMMS
   addEnv Ix xmms
-  let ?xmms = xmms
+  let ?_XMMS = xmms
   scheduleTryConnect 100
   return ()
 
-newtype Wrap a = Wrap { unWrap :: (?xmms :: XMMS) => a }
+newtype Wrap a = Wrap { unWrap :: (?_XMMS :: XMMS) => a }
 
 withXMMS    = withXMMS' . Wrap
 withXMMS' w = do
   Just (Env xmms) <- getEnv (Extract :: Extract Ix XMMS)
-  let ?xmms = xmms
+  let ?_XMMS = xmms
   unWrap w
 
 mkXMMS = do
