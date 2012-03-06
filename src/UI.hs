@@ -28,12 +28,17 @@ module UI
   , windowGroup
   , setWindowTitle
   , informUser
+  , withUIGlobal
   ) where
 
 import Control.Applicative
 import Control.Monad.Trans
 
+import Control.Concurrent.STM
+
 import Data.Maybe
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 import Graphics.UI.Gtk
 
@@ -72,10 +77,13 @@ getWidget cast name =
 
 newtype Wrap a = Wrap { unWrap :: (?ui :: UI) => a }
 
-withUI    = withUI' . Wrap
-withUI' w = do
+withUI  r   = withUI' r . Wrap
+withUI' r w = do
   ui <- makeUI
   let ?ui = ui
+
+  role <- mkWindowRole r
+  windowSetRole window role
 
   mapM_ (uncurry maybeBindAction)
     [ ("close", widgetDestroy window)
@@ -131,3 +139,28 @@ makeInfoBar = do
   return (infoBar, infoText)
 
 dismiss = 0
+
+
+data UIGlobal
+  = UIGlobal
+    { _roles :: TVar (Map String Int) }
+
+mkUIGlobal = do
+  roles <- newTVarIO Map.empty
+  return UIGlobal { _roles = roles }
+
+newtype WrapG a = WrapG { unWrapG :: (?_UI_Global :: UIGlobal) => a }
+
+withUIGlobal    = withUIGlobal' . WrapG
+withUIGlobal' w = do
+  uiGlobal <- mkUIGlobal
+  let ?_UI_Global = uiGlobal
+  unWrapG w
+
+mkWindowRole h = do
+  n <- atomically $ do
+    m <- readTVar $ _roles ?_UI_Global
+    let (n, m') = Map.insertLookupWithKey (\_ _ o -> o + 1) h 1 m
+    writeTVar (_roles ?_UI_Global) m'
+    return $! maybe 1 (+ 1) n
+  return $ h ++ "#" ++ show n

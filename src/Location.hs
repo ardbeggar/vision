@@ -39,7 +39,7 @@ browseLocation order maybeURL = do
 
   withBuilder $ do
     addFromFile $ gladeFilePath "location-browser"
-    withModel order $ withView $ withUI $ do
+    withModel order $ withView $ withUI "Vision Location Browser" $ do
       setupUI f
       setupDnD
       widgetShowAll window

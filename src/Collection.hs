@@ -45,36 +45,37 @@ import Collection.Utils
 
 browseCollection _maybeName = withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
-  withUI $ withCommon $ withClipboard $ withMedialib $ do
-    bindActions
-      [ ("add-to-playlist", comWithColl $ addToPlaylist False)
-      , ("replace-playlist", comWithColl $ addToPlaylist True)
-      , ("select-all", comWithSel selectAll)
-      , ("invert-selection", comWithSel invertSelection)
-      , ("copy", comWithIds copyIds)
-      , ("edit-properties", comWithIds $ showPropertyEditor)
-      , ("export-properties", comWithIds $ showPropertyExport)
-      , ("import-properties", showPropertyImport)
-      , ("manage-properties", showPropertyManager)
-      , ("save-collection", comWithColl $ saveCollection)
-      , ("rename-collection", comWithNames $ renameCollection)
-      , ("delete-collections", comWithNames $ deleteCollections)
-      ]
+  withUI "Vision Collection Browser" $
+    withCommon $ withClipboard $ withMedialib $ do
+      bindActions
+        [ ("add-to-playlist", comWithColl $ addToPlaylist False)
+        , ("replace-playlist", comWithColl $ addToPlaylist True)
+        , ("select-all", comWithSel selectAll)
+        , ("invert-selection", comWithSel invertSelection)
+        , ("copy", comWithIds copyIds)
+        , ("edit-properties", comWithIds $ showPropertyEditor)
+        , ("export-properties", comWithIds $ showPropertyExport)
+        , ("import-properties", showPropertyImport)
+        , ("manage-properties", showPropertyManager)
+        , ("save-collection", comWithColl $ saveCollection)
+        , ("rename-collection", comWithNames $ renameCollection)
+        , ("delete-collections", comWithNames $ deleteCollections)
+        ]
 
-    ag <- getObject castToActionGroup "server-actions"
-    xcW <- atomically $ newTGWatch connectedV
-    tid <- forkIO $ forever $ do
-      conn <- atomically $ watch xcW
-      postGUISync $ actionGroupSetSensitive ag conn
-    window `onDestroy` (killThread tid)
+      ag <- getObject castToActionGroup "server-actions"
+      xcW <- atomically $ newTGWatch connectedV
+      tid <- forkIO $ forever $ do
+        conn <- atomically $ watch xcW
+        postGUISync $ actionGroupSetSensitive ag conn
+      window `onDestroy` (killThread tid)
 
-    lv  <- mkListView
-    box <- getObject castToVBox "views"
-    boxPackStartDefaults box $ coms eScroll
+      lv  <- mkListView
+      box <- getObject castToVBox "views"
+      boxPackStartDefaults box $ coms eScroll
 
-    addView lv
+      addView lv
 
-    onCollBuilt lv mkSelect
+      onCollBuilt lv mkSelect
 
-    widgetShowAll window
+      widgetShowAll window
 

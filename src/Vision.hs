@@ -35,6 +35,7 @@ import Playtime
 import Clipboard
 import Playlist
 import Registry
+import UI
 
 
 main = do
@@ -42,7 +43,7 @@ main = do
 
   timeoutAdd (yield >> return True) 100
 
-  withRegistry $ withEnvironment $ do
+  withRegistry $ withEnvironment $ withUIGlobal $ do
     initAbout
     initXMMS
     initMedialib

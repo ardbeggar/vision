@@ -48,7 +48,7 @@ initPlaylist =
 showPlaylist =
   withXMMS $ withMedialib $ withPlayback $ withBuilder $ do
     addFromFile $ gladeFilePath "playlist"
-    withUI $ withModel $ withFormat $ withIndex $
+    withUI "Vision Playlist" $ withModel $ withFormat $ withIndex $
       withView $ withPlaylistConfig $ do
         initUpdate
         setupSearch
