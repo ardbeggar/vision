@@ -147,7 +147,9 @@ loadColl pf = do
   fcoll <- collNew TypeIntersection
   coll <- readIORef $ pCollRef pf
   collAddOperand fcoll coll
-  flt <- collParse $ "NOT " ++ key ++ ":''"
+  flt <- collNew TypeHas
+  collAttributeSet flt "field" key
+  collAddOperand flt =<< collUniverse
   collAddOperand fcoll flt
 
   load <- readIORef $ pLoadRef pf
