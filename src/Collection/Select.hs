@@ -27,6 +27,7 @@ module Collection.Select
 import Prelude hiding (catch)
 import Control.Exception
 import Control.Monad
+import Control.Monad.Fix
 import Control.Monad.Trans
 
 import Data.IORef
@@ -142,7 +143,13 @@ mkSelect coll = do
     [Control] <- eventModifier
     liftIO $ do
       expanderSetExpanded exp True
-      widgetGrabFocus entry
+      realized <- widgetGetRealized entry
+      if realized
+        then widgetGrabFocus entry
+        else void $ mfix $ \cid ->
+          entry `after` realize $ do
+            signalDisconnect cid
+            widgetGrabFocus entry
 
   return s
 
