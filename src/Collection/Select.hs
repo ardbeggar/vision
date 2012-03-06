@@ -107,6 +107,9 @@ mkSelect coll = do
       CIProp pr   -> setup =<< mkPropFlt pr =<< mkFilterColl
       CISeparator -> return ()
 
+  containerAdd exp entry
+  boxPackStart box exp PackNatural 0
+
   widgetShowAll eBox
 
   let filter = do
@@ -130,9 +133,6 @@ mkSelect coll = do
     withJust (hid) timeoutRemove
     writeIORef hRef Nothing
     filter
-
-  containerAdd exp entry
-  boxPackStart box exp PackNatural 0
 
   exp `onActivate` do
     e <- exp `get` expanderExpanded
