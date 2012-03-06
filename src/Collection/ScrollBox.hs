@@ -55,7 +55,7 @@ scrollBoxAdd sb widget = do
   vs <- vSeparatorNew
   eb <- eventBoxNew
   containerAdd eb vs
-  eventBoxSetVisibleWindow eb False
+  eventBoxSetVisibleWindow eb True
   widgetSetSizeRequest eb 9 (-1)
   widgetShowAll eb
   setupResize eb widget
@@ -63,6 +63,10 @@ scrollBoxAdd sb widget = do
   boxPackStart (sBox sb) eb PackNatural 0
 
 setupResize eb widget = do
+  eb `after` realize $ do
+    cs <- cursorNew SbHDoubleArrow
+    dw <- widgetGetDrawWindow eb
+    drawWindowSetCursor dw $ Just cs
   cid <- widget `onDestroy` widgetDestroy eb
   eb `on` unrealize $ signalDisconnect cid
   widgetAddEvents eb [ButtonPressMask, ButtonReleaseMask,
