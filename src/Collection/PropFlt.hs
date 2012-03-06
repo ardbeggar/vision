@@ -28,7 +28,7 @@ import Control.Applicative
 import Control.Monad (when, unless)
 import Control.Monad.Trans
 
-import Data.List (intercalate, isInfixOf)
+import Data.List (isInfixOf)
 import Data.Char (toLower)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -213,6 +213,7 @@ instance FocusChild PropFlt where
   type Focus PropFlt = TreeView
   focus = pView
 
+mkFilter :: Property -> [X.Property] -> IO Coll
 mkFilter prop list = do
   uni <- collNew TypeUnion
   add uni list
@@ -220,20 +221,14 @@ mkFilter prop list = do
   where add _ []     = return ()
         add uni list = do
           let (h, t) = splitAt 100 list
-          flt <- collParse $ mkFilterText prop h
+          flt <- collNew TypeUnion
+          forM_ h $ \v -> do
+            tmp <- collNew TypeEquals
+            collAddOperand tmp =<< collUniverse
+            collAttributeSet tmp "field" $ propKey prop
+            collAttributeSet tmp "value" $ case v of
+              PropString s -> s
+              PropInt32  i -> show i
+            collAddOperand flt tmp
           collAddOperand uni flt
           add uni t
-
-cond' [] = "'"
-cond' ('\'' : t) = '\\' : '\'' : cond' t
-cond' ('\\' : t) = '\\' : '\\' : cond' t
-cond' (h : t) = h : cond' t
-
-cond prop (PropString s)
-  | propKey prop == "url" = "url:'" ++ s ++ "'"
-  | otherwise             = propKey prop ++ ":'" ++ cond' s
-cond prop (PropInt32 i)   = propKey prop ++ ":" ++ show i
-
-mkFilterText prop vals =
-  intercalate " OR " $ map (cond prop) vals
-
