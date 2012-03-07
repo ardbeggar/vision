@@ -27,9 +27,6 @@ module Location.PathComp
 import Control.Monad
 import Control.Monad.Trans
 
-import Prelude hiding (catch)
-import Control.Monad.CatchIO
-
 import Data.IORef
 
 import System.FilePath
@@ -73,7 +70,7 @@ updatePathComp pc url = do
   unless (old == hd) $ do
     writeIORef (pURL pc) hd
     xformMediaBrowse xmms hd >>* do
-      (flip catch) (\(_ :: XMMSException) -> return ()) $ do
+      flip catchXMMS_ (return ()) $ do
         r <- result
         liftIO $ do
           listStoreClear $ pStore pc

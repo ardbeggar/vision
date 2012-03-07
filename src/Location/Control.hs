@@ -25,8 +25,6 @@ module Location.Control
   , openLocation
   ) where
 
-import Prelude hiding (catch)
-import Control.Monad.CatchIO
 import Control.Monad.Trans
 
 import Data.Maybe
@@ -37,6 +35,7 @@ import Graphics.UI.Gtk
 import XMMS2.Client
 
 import XMMS
+import Utils
 import Environment
 import UI
 import Location.Model
@@ -56,7 +55,7 @@ loadLocation location = do
       return ()
 
 handleBrowse url =
-  handleBrowse' `catch` \(e :: XMMSException) -> do
+  handleBrowse' `catchXMMS` \e -> do
     let t = case e of
           XMMSError s -> s
           _           -> "Unknown error"
@@ -95,10 +94,9 @@ addOne p = do
         ((do coll <- result
              liftIO $ playlistAddIdlist xmms Nothing coll
              return ())
-         `catch`
-         (\(_ :: XMMSException) -> do
-             liftIO $ playlistAddURL xmms Nothing path
-             return ()))
+         `catchXMMS_` do
+            liftIO $ playlistAddURL xmms Nothing path
+            return ())
       return ()
 
 openLocation = do

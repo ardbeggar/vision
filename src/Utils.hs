@@ -35,6 +35,8 @@ module Utils
   , EntryIcon (..)
   , onIconPress
   , secondaryIconSensitive
+  , catchXMMS
+  , catchXMMS_
   ) where
 
 import Prelude hiding (catch)
@@ -90,7 +92,7 @@ trd (_, _, c) = c
 trim = f . f where f = reverse . dropWhile isSpace
 
 catchResult def conv =
-  (conv <$> result) `catch` \(_ :: XMMSException) -> return def
+  (conv <$> result) `catchXMMS_` return def
 
 setupTreeViewPopup view popup = do
   view `on` popupMenuSignal $ (menuPopup popup Nothing >> return True)
@@ -192,3 +194,9 @@ onIconPress entry handler =
 
 secondaryIconSensitive =
   newAttrFromBoolProperty "secondary-icon-sensitive"
+
+catchXMMS :: MonadCatchIO m => m a -> (XMMSException -> m a) -> m a
+catchXMMS f h = f `catch` h
+
+catchXMMS_ :: MonadCatchIO m => m a -> m a -> m a
+catchXMMS_ f h = f `catchXMMS` (const h)

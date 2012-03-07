@@ -24,8 +24,6 @@ module Collection.Select
   , mkSelect
   ) where
 
-import Prelude hiding (catch)
-import Control.Exception
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans
@@ -120,8 +118,7 @@ mkSelect coll = do
         vr <- readIORef viewRef
         withJust vr $ \(VR w) -> do
           killNext w
-          (mkFilterColl >>= setColl w) `catch`
-            \(_ :: XMMSException) -> return ()
+          (mkFilterColl >>= setColl w) `catchXMMS_` return ()
 
   hRef <- newIORef Nothing
   entry `on` editableChanged $ do
