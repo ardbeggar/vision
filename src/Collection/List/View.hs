@@ -170,11 +170,21 @@ withColl v s f list = do
   withColl' f list
 
 withColl' _ []            = return ()
-withColl' f (Nothing : _) = f =<< collUniverse
+withColl' f (Nothing : _) = f =<< fc =<< collUniverse
 withColl' f list = do
   uni <- collNew TypeUnion
   mapM_ (collAddOperand uni . snd) $ catMaybes list
-  f uni
+  f =<< fc uni
+
+fc coll = do
+  flt <- collNew TypeEquals
+  collAddOperand flt =<< collUniverse
+  collAttributeSet flt "field" "status"
+  collAttributeSet flt "value" "1"
+  int <- collNew TypeIntersection
+  collAddOperand int coll
+  collAddOperand int flt
+  return int
 
 instance CompoundWidget ListView where
   type Outer ListView = ScrolledWindow
