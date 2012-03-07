@@ -62,7 +62,7 @@ showAbout window = do
         aboutDialogSetName about "Vision"
         aboutDialogSetVersion about $ showVersion version
         aboutDialogSetComments about "An XMMS2 client."
-        aboutDialogSetCopyright about "Copyright © 2010-2011 Oleg Belozeorov."
+        aboutDialogSetCopyright about "Copyright © 2010-2012 Oleg Belozeorov."
         aboutDialogSetLicense about $ Just license
         aboutDialogSetWrapLicense about True
         aboutDialogSetAuthors about authors
