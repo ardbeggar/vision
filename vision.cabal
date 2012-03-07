@@ -1,9 +1,9 @@
 name:               vision
-version:            0.0.5.0
+version:            0.0.6.0
 
 author:             Oleg Belozeorov
 maintainer:         Oleg Belozeorov <upwawet@gmail.com>
-copyright:          (C) 2010, 2011 Oleg Belozeorov
+copyright:          (C) 2010-2012 Oleg Belozeorov
 license:            GPL-3
 license-file:       COPYING
 
