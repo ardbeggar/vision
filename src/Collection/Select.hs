@@ -53,7 +53,6 @@ data VR =
   , FocusChild a
   , WidgetClass (Focus a)
   ) => VR a
-  | NoVR
 
 data Select
   = S { sCombo   :: ComboBox
@@ -61,7 +60,7 @@ data Select
       , sBox     :: VBox
       , sEntry   :: Entry
       , sNextRef :: IORef VI
-      , sViewRef :: IORef VR
+      , sViewRef :: IORef (Maybe VR)
       , sEBox    :: EventBox
       }
 
@@ -74,7 +73,7 @@ mkSelect coll = do
   combo   <- mkCombo
   entry   <- entryNew
   exp     <- expanderNew "Filter"
-  viewRef <- newIORef NoVR
+  viewRef <- newIORef Nothing
   eBox    <- eventBoxNew
   let s = S { sCombo   = combo
             , sBox     = box
@@ -85,7 +84,7 @@ mkSelect coll = do
             , sEBox    = eBox
             }
       setup w = do
-        writeIORef viewRef $ VR w
+        writeIORef viewRef $ Just $ VR w
         setNext s w
         onCollBuilt w mkSelect
         widgetShowAll exp
@@ -119,12 +118,10 @@ mkSelect coll = do
 
   let filter = do
         vr <- readIORef viewRef
-        case vr of
-          VR v -> do
-            killNext v
-            (mkFilterColl >>= setColl v) `catch`
-              \(_ :: XMMSException) -> return ()
-          _    -> return ()
+        withJust vr $ \(VR w) -> do
+          killNext w
+          (mkFilterColl >>= setColl w) `catch`
+            \(_ :: XMMSException) -> return ()
 
   hRef <- newIORef Nothing
   entry `on` editableChanged $ do
@@ -165,7 +162,7 @@ mkSelect coll = do
     "k"       <- eventKeyName
     [Control] <- eventModifier
     liftIO $ do
-      VR w <- readIORef viewRef
+      Just (VR w) <- readIORef viewRef
       widgetGrabFocus $ focus w
 
   return s
