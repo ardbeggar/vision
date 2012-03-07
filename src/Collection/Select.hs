@@ -47,7 +47,12 @@ import Collection.Utils
 
 
 data VR =
-  forall a. (SetColl a, ViewItem a) => VR a
+  forall a.
+  ( SetColl a
+  , ViewItem a
+  , FocusChild a
+  , WidgetClass (Focus a)
+  ) => VR a
   | NoVR
 
 data Select
@@ -150,6 +155,18 @@ mkSelect coll = do
           entry `after` realize $ do
             signalDisconnect cid
             widgetGrabFocus entry
+
+  eBox `on` keyPressEvent $ tryEvent $ do
+    "j"       <- eventKeyName
+    [Control] <- eventModifier
+    liftIO $ widgetGrabFocus combo
+
+  eBox `on` keyPressEvent $ tryEvent $ do
+    "k"       <- eventKeyName
+    [Control] <- eventModifier
+    liftIO $ do
+      VR w <- readIORef viewRef
+      widgetGrabFocus $ focus w
 
   return s
 
