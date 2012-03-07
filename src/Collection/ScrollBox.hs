@@ -52,11 +52,9 @@ mkScrollBox = do
             }
 
 scrollBoxAdd sb widget = do
-  vs <- vSeparatorNew
   eb <- eventBoxNew
-  containerAdd eb vs
   eventBoxSetVisibleWindow eb True
-  widgetSetSizeRequest eb 9 (-1)
+  widgetSetSizeRequest eb 5 (-1)
   widgetShowAll eb
   setupResize eb widget
   boxPackStart (sBox sb) widget PackNatural 0
