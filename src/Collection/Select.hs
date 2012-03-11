@@ -93,7 +93,7 @@ mkSelect coll = do
                     , secondaryIconTooltipText := "Expression is valid"
                     ]
       showFilterValid False =
-        entry `set` [ secondaryIconStock       := stockDialogError
+        entry `set` [ secondaryIconStock       := stockStop
                     , secondaryIconTooltipText := "Expression is not valid"
                     ]
       mkFilterColl = do
