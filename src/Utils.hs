@@ -35,6 +35,8 @@ module Utils
   , EntryIcon (..)
   , onIconPress
   , secondaryIconSensitive
+  , secondaryIconStock
+  , secondaryIconTooltipText
   , catchXMMS
   , catchXMMS_
   ) where
@@ -194,6 +196,12 @@ onIconPress entry handler =
 
 secondaryIconSensitive =
   newAttrFromBoolProperty "secondary-icon-sensitive"
+
+secondaryIconStock =
+  newAttrFromStringProperty "secondary-icon-stock"
+
+secondaryIconTooltipText =
+  newAttrFromStringProperty "secondary-icon-tooltip-text"
 
 catchXMMS :: MonadCatchIO m => m a -> (XMMSException -> m a) -> m a
 catchXMMS f h = f `catch` h
