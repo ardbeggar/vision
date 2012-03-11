@@ -88,15 +88,26 @@ mkSelect coll = do
         widgetShowAll exp
         boxPackStartDefaults box $ outer w
         widgetGrabFocus $ focus w
+      showFilterValid True =
+        entry `set` [ secondaryIconStock       := stockApply
+                    , secondaryIconTooltipText := "Expression is valid"
+                    ]
+      showFilterValid False =
+        entry `set` [ secondaryIconStock       := stockDialogError
+                    , secondaryIconTooltipText := "Expression is not valid"
+                    ]
       mkFilterColl = do
         text <- entryGetText entry
         case text of
-          [] -> return coll
+          [] -> do
+            showFilterValid True
+            return coll
           _  -> do
             flt <- collParse text
             int <- collNew TypeIntersection
             collAddOperand int coll
             collAddOperand int flt
+            showFilterValid True
             return int
 
   eventBoxSetVisibleWindow eBox False
@@ -109,6 +120,7 @@ mkSelect coll = do
       CIProp pr   -> setup =<< mkPropFlt pr =<< mkFilterColl
       CISeparator -> return ()
 
+  showFilterValid True
   containerAdd exp entry
   boxPackStart box exp PackNatural 0
 
@@ -118,7 +130,7 @@ mkSelect coll = do
         vr <- readIORef viewRef
         withJust vr $ \(VR w) -> do
           killNext w
-          (mkFilterColl >>= setColl w) `catchXMMS_` return ()
+          (mkFilterColl >>= setColl w) `catchXMMS_` (showFilterValid False)
 
   hRef <- newIORef Nothing
   entry `on` editableChanged $ do
