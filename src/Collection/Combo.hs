@@ -44,9 +44,7 @@ mkCombo = do
       CIProp p    -> [ cellText := propName p ]
       CISeparator -> []
 
-  combo `on` setFocusChild $ \_fc -> do
-    -- TODO: remove all dynamic actions/uis
-    return ()
+  combo `on` setFocusChild $ const $ removeUI Nothing
 
   return combo
 
