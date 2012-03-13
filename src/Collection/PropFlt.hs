@@ -46,6 +46,7 @@ import Properties hiding (lookup)
 import XMMS
 import Utils
 import Compound
+import Clipboard
 
 import Collection.Common
 import Collection.Utils
@@ -247,6 +248,13 @@ setupUI pf = do
   actionGroupAddActionWithAccel g a (Just "<Control><Shift>Return")
   a `on` actionActivated $ withBuiltColl pf False $ addToPlaylist True
 
+  a <- actionNew "copy" "_Copy" Nothing (Just stockCopy)
+  actionGroupAddActionWithAccel g a (Just "<Control>c")
+  a `on` actionActivated $ withBuiltColl pf False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ copyIds ids
+
   let view  = pView pf
   tag <- newUITag
 
@@ -259,7 +267,10 @@ setupUI pf = do
   return ()
 
 ui =
-  [ ( "ui/view-popup/collection-actions",
+  [ ( "ui/view-popup/playlist-actions",
       [ Just "add-to-playlist", Just "replace-playlist" ]
+    )
+  , ( "ui/view-popup/clipboard-actions",
+      [ Just "copy" ]
     )
   ]

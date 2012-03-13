@@ -221,7 +221,7 @@
       <popup action="view-popup">
         <placeholder name="playlist-actions"/>
         <separator/>
-        <menuitem action="copy"/>
+        <placeholder name="clipboard-actions"/>
         <separator/>
         <menuitem action="select-all"/>
         <menuitem action="invert-selection"/>
