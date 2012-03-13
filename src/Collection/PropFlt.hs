@@ -263,6 +263,20 @@ setupUI pf = do
   actionGroupAddActionWithAccel g a (Just "<Control><Shift>a")
   a `on` actionActivated $ invertSelection $ pSel pf
 
+  a <- actionNew "edit-properties" "_Edit properties" Nothing (Just stockEdit)
+  actionGroupAddActionWithAccel g a (Just "<Alt>Return")
+  a `on` actionActivated $ withBuiltColl pf False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyEditor ids
+
+  a <- actionNew "export-properties" "E_xport properties…" Nothing (Just stockSave)
+  actionGroupAddActionWithAccel g a (Just "")
+  a `on` actionActivated $ withBuiltColl pf False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyExport ids
+
   let view  = pView pf
   tag <- newUITag
 
@@ -283,5 +297,8 @@ ui =
     )
   , ( "ui/view-popup/selection-actions",
       [ Just "select-all", Just "invert-selection" ]
+    )
+  , ( "ui/view-popup/property-actions",
+      [ Just "edit-properties" ]
     )
   ]

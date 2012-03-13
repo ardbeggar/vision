@@ -225,7 +225,7 @@
         <separator/>
         <placeholder name="selection-actions"/>
         <separator/>
-        <menuitem action="edit-properties"/>
+        <placeholder name="property-actions"/>
         <separator/>
         <menuitem action="save-collection"/>
       </popup>
