@@ -56,7 +56,6 @@ import Properties
 import Collection.Common
 import Collection.Utils
 import Collection.List.Model
-import Collection.Actions
 
 
 data ListView
@@ -139,16 +138,6 @@ instance CollBuilder ListView where
   withBuiltColl lv s f = withColls lv $ withColl lv s f
   treeViewSel lv       = (vView lv, vSel lv)
   withNames lv f       = withColls lv (f . map fst . catMaybes)
-  enableActions _      = \ae rows -> do
-    aEnableSel ae $ not $ null rows
-    aEnableDel ae $ case rows of
-      []      -> False
-      [0] : _ -> False
-      _       -> True
-    aEnableRen ae $ case rows of
-      [[0]] -> False
-      [_]   -> True
-      _     -> False
 
 withColls lv f = do
   let store = vStore lv

@@ -80,7 +80,6 @@ executable vision
                     Collection.List,
                     Collection.List.Model,
                     Collection.List.View,
-                    Collection.Actions,
                     Collection.ScrollBox,
                     Collection.PropFlt,
                     Collection.Tracks,

@@ -57,7 +57,6 @@ import UI
 import Compound
 
 import Collection.Common
-import Collection.Actions
 
 
 selectAll =
@@ -140,11 +139,6 @@ class CollBuilder b where
   treeViewSel   :: b -> (TreeView, TreeSelection)
   withNames     :: b -> ([String] -> IO ()) -> IO ()
   withNames _ = const $ return ()
-  enableActions :: b -> (ActionEnabler -> [TreePath] -> IO ())
-  enableActions _ = \ae rows -> do
-    aEnableSel ae $ not $ null rows
-    aEnableRen ae False
-    aEnableDel ae False
 
 
 onCollBuilt b f = do
