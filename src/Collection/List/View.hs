@@ -31,6 +31,7 @@ import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
 import Control.Monad hiding (forM_, mapM_)
+import Control.Monad.Trans
 
 import Data.Char (toLower)
 import Data.List (isInfixOf)
@@ -42,18 +43,20 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Foldable
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (selectAll)
 
 import XMMS2.Client
 
 import XMMS
 import Utils
 import Compound
+import Clipboard
+import Properties
 
 import Collection.Common
+import Collection.Utils
 import Collection.List.Model
 import Collection.Actions
-import Collection.Utils
 
 
 data ListView
@@ -67,7 +70,7 @@ data ListView
       }
 
 mkListView = withModel $ do
-  let popup = coms eLPopup
+  let popup = coms eVPopup
 
   selSet <- newIORef Set.empty
 
@@ -126,6 +129,8 @@ mkListView = withModel $ do
       killNext v
       writeIORef selSet Set.empty
   view `onDestroy` (killThread tid)
+
+  setupUI v
 
   widgetShowAll scroll
   return v
@@ -195,3 +200,77 @@ instance FocusChild ListView where
 
 instance ViewItem ListView where
   nextVIRef = vNextRef
+
+
+setupUI lv = do
+  g <- actionGroupNew "view-actions"
+
+  a <- actionNew "add-to-playlist" "_Add to playlist" Nothing (Just stockAdd)
+  actionGroupAddActionWithAccel g a (Just "<Control>Return")
+  a `on` actionActivated $ withBuiltColl lv False $ addToPlaylist False
+
+  a <- actionNew "replace-playlist" "_Replace playlist" Nothing Nothing
+  actionGroupAddActionWithAccel g a (Just "<Control><Shift>Return")
+  a `on` actionActivated $ withBuiltColl lv False $ addToPlaylist True
+
+  a <- actionNew "copy" "_Copy" Nothing (Just stockCopy)
+  actionGroupAddActionWithAccel g a (Just "<Control>c")
+  a `on` actionActivated $ withBuiltColl lv False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ copyIds ids
+
+  a <- actionNew "select-all" "_Select all" Nothing (Just stockSelectAll)
+  actionGroupAddActionWithAccel g a (Just "<Control>a")
+  a `on` actionActivated $ selectAll $ vSel lv
+
+  a <- actionNew "invert-selection" "_Invert selection" Nothing (Just stockSelectAll)
+  actionGroupAddActionWithAccel g a (Just "<Control><Shift>a")
+  a `on` actionActivated $ invertSelection $ vSel lv
+
+  a <- actionNew "edit-properties" "_Edit properties" Nothing (Just stockEdit)
+  actionGroupAddActionWithAccel g a (Just "<Alt>Return")
+  a `on` actionActivated $ withBuiltColl lv False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyEditor ids
+
+  a <- actionNew "export-properties" "E_xport properties…" Nothing (Just stockSave)
+  actionGroupAddActionWithAccel g a (Just "")
+  a `on` actionActivated $ withBuiltColl lv False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyExport ids
+
+  a <- actionNew "save-collection" "_Save collection…" Nothing (Just stockSave)
+  actionGroupAddActionWithAccel g a (Just "<Control>s")
+  a `on` actionActivated $ withBuiltColl lv False saveCollection
+
+  let view  = vView lv
+  tag <- newUITag
+
+  view `on` focusInEvent $ do
+    liftIO $ mergeUI tag g (Just ui)
+    return False
+
+  view `onDestroy` (removeUI tag)
+
+  return ()
+
+ui =
+  [ ( "ui/view-popup/playlist-actions",
+      [ Just "add-to-playlist", Just "replace-playlist" ]
+    )
+  , ( "ui/view-popup/clipboard-actions",
+      [ Just "copy" ]
+    )
+  , ( "ui/view-popup/selection-actions",
+      [ Just "select-all", Just "invert-selection" ]
+    )
+  , ( "ui/view-popup/property-actions",
+      [ Just "edit-properties" ]
+    )
+  , ( "ui/view-popup/collection-actions",
+      [ Just "save-collection" ]
+    )
+  ]

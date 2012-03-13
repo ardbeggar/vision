@@ -60,7 +60,6 @@ data Com
   = Com { eABRef  :: IORef ActionBackend
         , eAE     :: ActionEnabler
         , eSBox   :: ScrollBox
-        , eLPopup :: Menu
         , eVPopup :: Menu
         , eCModel :: ListStore ComboItem
         , eScroll :: ScrolledWindow
@@ -91,7 +90,6 @@ withCommon' w = do
               , aEnableDel = actionSetSensitive delAct
               }
 
-  lpopup <- getWidget castToMenu "ui/list-popup"
   vpopup <- getWidget castToMenu "ui/view-popup"
 
   sbox   <- mkScrollBox
@@ -127,7 +125,6 @@ withCommon' w = do
         Com { eABRef  = abRef
             , eAE     = ae
             , eSBox   = sbox
-            , eLPopup = lpopup
             , eVPopup = vpopup
             , eCModel = cmodel
             , eScroll = scroll

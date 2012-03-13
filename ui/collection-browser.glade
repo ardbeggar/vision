@@ -203,21 +203,6 @@
           </menu>
         </placeholder>
       </menubar>
-      <popup action="list-popup">
-        <menuitem action="add-to-playlist"/>
-        <menuitem action="replace-playlist"/>
-        <separator/>
-        <menuitem action="copy"/>
-        <separator/>
-        <menuitem action="select-all"/>
-        <menuitem action="invert-selection"/>
-        <separator/>
-        <menuitem action="edit-properties"/>
-        <separator/>
-        <menuitem action="save-collection"/>
-        <menuitem action="rename-collection"/>
-        <menuitem action="delete-collections"/>
-      </popup>
       <popup action="view-popup">
         <placeholder name="playlist-actions"/>
         <separator/>
