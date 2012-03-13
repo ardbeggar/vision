@@ -37,7 +37,7 @@ import qualified Data.Set as Set
 import Data.IORef
 import Data.Foldable
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (selectAll)
 
 import XMMS2.Client hiding (Property)
 import qualified XMMS2.Client as X
@@ -255,6 +255,14 @@ setupUI pf = do
       ids <- result
       liftIO $ copyIds ids
 
+  a <- actionNew "select-all" "_Select all" Nothing (Just stockSelectAll)
+  actionGroupAddActionWithAccel g a (Just "<Control>a")
+  a `on` actionActivated $ selectAll $ pSel pf
+
+  a <- actionNew "invert-selection" "_Invert selection" Nothing (Just stockSelectAll)
+  actionGroupAddActionWithAccel g a (Just "<Control><Shift>a")
+  a `on` actionActivated $ invertSelection $ pSel pf
+
   let view  = pView pf
   tag <- newUITag
 
@@ -272,5 +280,8 @@ ui =
     )
   , ( "ui/view-popup/clipboard-actions",
       [ Just "copy" ]
+    )
+  , ( "ui/view-popup/selection-actions",
+      [ Just "select-all", Just "invert-selection" ]
     )
   ]

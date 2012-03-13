@@ -223,8 +223,7 @@
         <separator/>
         <placeholder name="clipboard-actions"/>
         <separator/>
-        <menuitem action="select-all"/>
-        <menuitem action="invert-selection"/>
+        <placeholder name="selection-actions"/>
         <separator/>
         <menuitem action="edit-properties"/>
         <separator/>
