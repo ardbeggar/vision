@@ -22,21 +22,16 @@ module Collection.Combo
   , ComboItem (..)
   ) where
 
-import Data.IORef
-
 import Graphics.UI.Gtk
 
 import Properties.Property
 
-import Collection.Actions
 import Collection.Common
 import Collection.ComboModel
 
 
 mkCombo = do
-  let abRef  = coms eABRef
-      ae     = coms eAE
-      cmodel = coms eCModel
+  let cmodel = coms eCModel
 
   combo <- comboBoxNewWithModel cmodel
   comboBoxSetRowSeparatorSource combo $ Just (cmodel, separator)
@@ -49,11 +44,9 @@ mkCombo = do
       CIProp p    -> [ cellText := propName p ]
       CISeparator -> []
 
-  combo `on` setFocusChild $ \fc -> do
-    maybe (return ()) (const $ writeIORef abRef emptyAB) fc
-    aEnableSel ae False
-    aEnableRen ae False
-    aEnableDel ae False
+  combo `on` setFocusChild $ \_fc -> do
+    -- TODO: remove all dynamic actions/uis
+    return ()
 
   return combo
 

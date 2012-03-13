@@ -23,10 +23,6 @@ module Collection.Common
   ( Com (..)
   , coms
   , withCommon
-  , comWithColl
-  , comWithIds
-  , comWithSel
-  , comWithNames
   , addView
   , mergeUI
   , removeUI
@@ -37,29 +33,21 @@ module Collection.Common
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Trans
 
 import Data.IORef
 
 import Graphics.UI.Gtk hiding (focus)
 
-import XMMS2.Client
-
 import UI
 import Utils
-import XMMS
 import Compound
-import Builder
 
-import Collection.Actions
 import Collection.ScrollBox
 import Collection.ComboModel
 
 
 data Com
-  = Com { eABRef  :: IORef ActionBackend
-        , eAE     :: ActionEnabler
-        , eSBox   :: ScrollBox
+  = Com { eSBox   :: ScrollBox
         , eVPopup :: Menu
         , eCModel :: ListStore ComboItem
         , eScroll :: ScrolledWindow
@@ -74,22 +62,6 @@ newtype Wrap a = Wrap { unWrap :: (?_Collection_Common :: Com) => a }
 
 withCommon    = withCommon' . Wrap
 withCommon' w = do
-  abRef <- newIORef emptyAB
-
-  selActs <- actions [ "add-to-playlist"
-                     , "replace-playlist"
-                     , "copy"
-                     , "edit-properties"
-                     , "export-properties"
-                     , "save-collection"
-                     ]
-  renAct <- action "rename-collection"
-  delAct <- action "delete-collections"
-  let ae = AE { aEnableSel = \en -> mapM_ (`actionSetSensitive` en) selActs
-              , aEnableRen = actionSetSensitive renAct
-              , aEnableDel = actionSetSensitive delAct
-              }
-
   vpopup <- getWidget castToMenu "ui/view-popup"
 
   sbox   <- mkScrollBox
@@ -122,9 +94,7 @@ withCommon' w = do
   uiRef <- newIORef Nothing
 
   let ?_Collection_Common =
-        Com { eABRef  = abRef
-            , eAE     = ae
-            , eSBox   = sbox
+        Com { eSBox   = sbox
             , eVPopup = vpopup
             , eCModel = cmodel
             , eScroll = scroll
@@ -135,24 +105,6 @@ withCommon' w = do
 
   unWrap w
 
-
-comWithColl f = do
-  ab <- readIORef $ coms eABRef
-  aWithColl ab f
-
-comWithIds f =
-  comWithColl $ \coll ->
-    collQueryIds xmms coll [] 0 0 >>* do
-      ids <- result
-      liftIO $ f ids
-
-comWithSel f = do
-  ab <- readIORef $ coms eABRef
-  withJust (aSelection ab) f
-
-comWithNames f = do
-  ab <- readIORef $ coms eABRef
-  aWithNames ab f
 
 addView w = do
   scrollBoxAdd (coms eSBox) $ outer w

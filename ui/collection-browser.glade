@@ -33,16 +33,6 @@
           </object>
         </child>
         <child>
-          <object class="GtkAction" id="configure-columns">
-            <property name="label">Configure _columns</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkAction" id="configure-ordering">
-            <property name="label">Configure _ordering</property>
-          </object>
-        </child>
-        <child>
           <object class="GtkAction" id="properties">
             <property name="label">P_roperties</property>
           </object>
@@ -68,94 +58,6 @@
     </child>
     <child>
       <object class="GtkActionGroup" id="server-actions">
-        <child>
-          <object class="GtkAction" id="save-collection">
-            <property name="label">_Save collection…</property>
-            <property name="stock_id">gtk-save</property>
-          </object>
-          <accelerator key="s" modifiers="GDK_CONTROL_MASK"/>
-        </child>
-        <child>
-          <object class="GtkAction" id="rename-collection">
-            <property name="label">Rena_me collection…</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkAction" id="delete-collections">
-            <property name="label">_Delete collections</property>
-            <property name="stock_id">gtk-delete</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkAction" id="add-to-playlist">
-            <property name="label">_Add to playlist</property>
-            <property name="stock_id">gtk-add</property>
-          </object>
-          <accelerator key="Return" modifiers="GDK_CONTROL_MASK"/>
-        </child>
-        <child>
-          <object class="GtkAction" id="replace-playlist">
-            <property name="label">_Replace playlist</property>
-          </object>
-          <accelerator key="Return" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
-        </child>
-        <child>
-          <object class="GtkAction" id="coll-add-to-playlist">
-            <property name="label">_Add to playlist</property>
-            <property name="stock_id">gtk-add</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkAction" id="coll-replace-playlist">
-            <property name="label">_Replace playlist</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkAction" id="list-add-to-playlist">
-            <property name="label">_Add to playlist</property>
-            <property name="stock_id">gtk-add</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkAction" id="list-replace-playlist">
-            <property name="label">_Replace playlist</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkAction" id="copy">
-            <property name="label">_Copy</property>
-            <property name="stock_id">gtk-copy</property>
-          </object>
-          <accelerator key="c" modifiers="GDK_CONTROL_MASK"/>
-        </child>
-        <child>
-          <object class="GtkAction" id="select-all">
-            <property name="label">_Select all</property>
-            <property name="stock_id">gtk-select-all</property>
-          </object>
-          <accelerator key="a" modifiers="GDK_CONTROL_MASK"/>
-        </child>
-        <child>
-          <object class="GtkAction" id="invert-selection">
-            <property name="label">_Invert selection</property>
-            <property name="stock_id">gtk-select-all</property>
-          </object>
-          <accelerator key="a" modifiers="GDK_CONTROL_MASK | GDK_SHIFT_MASK"/>
-        </child>
-        <child>
-          <object class="GtkAction" id="edit-properties">
-            <property name="label">_Edit properties</property>
-            <property name="stock_id">gtk-edit</property>
-          </object>
-          <accelerator key="Return" modifiers="GDK_MOD1_MASK"/>
-        </child>
-        <child>
-          <object class="GtkAction" id="export-properties">
-            <property name="label">E_xport properties…</property>
-            <property name="stock_id">gtk-save</property>
-          </object>
-          <accelerator/>
-        </child>
         <child>
           <object class="GtkAction" id="import-properties">
             <property name="label">_Import properties…</property>

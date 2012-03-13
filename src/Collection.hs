@@ -48,18 +48,8 @@ browseCollection _maybeName = withBuilder $ do
   withUI "Vision Collection Browser" $
     withCommon $ withClipboard $ withMedialib $ do
       bindActions
-        [ ("add-to-playlist", comWithColl $ addToPlaylist False)
-        , ("replace-playlist", comWithColl $ addToPlaylist True)
-        , ("select-all", comWithSel selectAll)
-        , ("invert-selection", comWithSel invertSelection)
-        , ("copy", comWithIds copyIds)
-        , ("edit-properties", comWithIds $ showPropertyEditor)
-        , ("export-properties", comWithIds $ showPropertyExport)
-        , ("import-properties", showPropertyImport)
+        [ ("import-properties", showPropertyImport)
         , ("manage-properties", showPropertyManager)
-        , ("save-collection", comWithColl $ saveCollection)
-        , ("rename-collection", comWithNames $ renameCollection)
-        , ("delete-collections", comWithNames $ deleteCollections)
         ]
 
       ag <- getObject castToActionGroup "server-actions"
