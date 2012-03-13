@@ -61,7 +61,7 @@ data Actions
 mkActions = do
   group <- actionGroupNew "view-actions"
 
-  addToPlaylist <- actionNew "add-to-playlist" "_Add to playlist (test)" Nothing (Just stockAdd)
+  addToPlaylist <- actionNew "add-to-playlist" "_Add to playlist" Nothing (Just stockAdd)
   actionGroupAddActionWithAccel group addToPlaylist (Just "<Control>Return")
 
   return A { _group         = group
