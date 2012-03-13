@@ -287,7 +287,7 @@ setupUI pf = do
     liftIO $ mergeUI tag g (Just ui)
     return False
 
-  view `onDestroy` (removeUI tag)
+  view `onDestroy` (removeUI $ Just tag)
 
   return ()
 

@@ -35,6 +35,7 @@ import Control.Applicative
 import Control.Monad
 
 import Data.IORef
+import Data.Maybe
 
 import Graphics.UI.Gtk hiding (focus)
 
@@ -153,7 +154,7 @@ mergeUI tag ag ui = do
 removeUI tag = do
   mui <- readIORef (coms eUIRef)
   withJust mui $ \(tag', ag, mmid) -> do
-    when (tag == tag') $ do
+    when (fromMaybe tag' tag == tag') $ do
       uiManagerRemoveActionGroup uiManager ag
       withJust mmid $ \mid ->
         uiManagerRemoveUi uiManager mid
