@@ -28,6 +28,9 @@ module Collection.Common
   , comWithSel
   , comWithNames
   , addView
+  , mergeUI
+  , removeUI
+  , newUITag
   , FocusChild (..)
   , withSelectedView
   ) where
@@ -61,6 +64,8 @@ data Com
         , eCModel :: ListStore ComboItem
         , eScroll :: ScrolledWindow
         , eSAdj   :: Adjustment
+        , eUITag  :: IORef Integer
+        , eUIRef  :: IORef (Maybe (Integer, ActionGroup))
         }
 
 coms = ($ ?_Collection_Common)
@@ -114,6 +119,9 @@ withCommon' w = do
 
   containerAdd scroll $ outer sbox
 
+  uiTag <- newIORef 0
+  uiRef <- newIORef Nothing
+
   let ?_Collection_Common =
         Com { eABRef  = abRef
             , eAE     = ae
@@ -123,6 +131,8 @@ withCommon' w = do
             , eCModel = cmodel
             , eScroll = scroll
             , eSAdj   = adj
+            , eUITag  = uiTag
+            , eUIRef  = uiRef
             }
 
   unWrap w
@@ -159,3 +169,22 @@ withSelectedView combo f = do
   withJust iter $ \iter -> do
     v <- listStoreGetValue (coms eCModel) $ listStoreIterToIndex iter
     f v
+
+mergeUI tag ag = do
+  mui <- readIORef (coms eUIRef)
+  withJust mui $ \(_, ag) ->
+    uiManagerRemoveActionGroup uiManager ag
+  uiManagerInsertActionGroup uiManager ag 0
+  writeIORef (coms eUIRef) $ Just (tag, ag)
+
+removeUI tag = do
+  mui <- readIORef (coms eUIRef)
+  withJust mui $ \(tag', ag) -> do
+    when (tag == tag') $ do
+      uiManagerRemoveActionGroup uiManager ag
+      writeIORef (coms eUIRef) Nothing
+
+newUITag = do
+  tag <- readIORef (coms eUITag)
+  writeIORef (coms eUITag) $ tag + 1
+  return tag

@@ -23,6 +23,7 @@ module UI
   ( WithUI
   , withUI
   , window
+  , uiManager
   , contents
   , getWidget
   , windowGroup

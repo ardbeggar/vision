@@ -53,6 +53,35 @@ import Collection.Utils
 
 deriving instance Ord X.Property
 
+data Actions
+  = A { _group          :: ActionGroup
+      , _addToPlaylist  :: Action
+      }
+
+mkActions = do
+  group <- actionGroupNew "view-actions"
+
+  addToPlaylist <- actionNew "add-to-playlist" "_Add to playlist (test)" Nothing (Just stockAdd)
+  actionGroupAddActionWithAccel group addToPlaylist (Just "<Control>Return")
+
+  return A { _group         = group
+           , _addToPlaylist = addToPlaylist
+           }
+
+setupActions pf = do
+  let as = pActions pf
+
+  (_addToPlaylist as) `on` actionActivated $ do
+    withBuiltColl pf False $ addToPlaylist False
+
+  (pView pf) `on` focusInEvent $ do
+    liftIO $ mergeUI (pUITag pf) (_group as)
+    return False
+
+  (pView pf) `onDestroy` (removeUI $ pUITag pf)
+
+  return ()
+
 data PropFlt
   = PF { pStore   :: ListStore X.Property
        , pSelIx   :: IORef (Map X.Property TreeRowReference)
@@ -65,6 +94,8 @@ data PropFlt
        , pNextRef :: IORef VI
        , pSetColl :: PropFlt -> Coll -> IO ()
        , pLoadRef :: IORef Int
+       , pActions :: Actions
+       , pUITag   :: Integer
        }
 
 instance ViewItem PropFlt where
@@ -113,6 +144,8 @@ mkPropFlt prop coll = do
   collRef <- newIORef coll
   nextRef <- newIORef None
   loadRef <- newIORef 0
+  actions <- mkActions
+  uiTag   <- newUITag
 
   let pf = PF { pStore   = store
               , pSelIx   = selIx
@@ -125,8 +158,11 @@ mkPropFlt prop coll = do
               , pNextRef = nextRef
               , pSetColl = doSetColl
               , pLoadRef = loadRef
+              , pActions = actions
+              , pUITag   = uiTag
               }
   loadColl pf
+  setupActions pf
   setupViewFocus pf
   return pf
 
