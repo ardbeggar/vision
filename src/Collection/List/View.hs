@@ -246,6 +246,14 @@ setupUI lv = do
   actionGroupAddActionWithAccel g a (Just "<Control>s")
   a `on` actionActivated $ withBuiltColl lv False saveCollection
 
+  a <- actionNew "rename-collection" "Rena_me collection…" Nothing Nothing
+  actionGroupAddActionWithAccel g a (Just "")
+  a `on` actionActivated $ withNames lv renameCollection
+
+  a <- actionNew "delete-collections" "_Delete collections" Nothing Nothing
+  actionGroupAddActionWithAccel g a (Just "")
+  a `on` actionActivated $ withNames lv deleteCollections
+
   let view  = vView lv
   tag <- newUITag
 
@@ -259,18 +267,25 @@ setupUI lv = do
 
 ui =
   [ ( "ui/view-popup/playlist-actions",
-      [ Just "add-to-playlist", Just "replace-playlist" ]
+      [ Just "add-to-playlist"
+      , Just "replace-playlist"
+      ]
     )
   , ( "ui/view-popup/clipboard-actions",
       [ Just "copy" ]
     )
   , ( "ui/view-popup/selection-actions",
-      [ Just "select-all", Just "invert-selection" ]
+      [ Just "select-all"
+      , Just "invert-selection"
+      ]
     )
   , ( "ui/view-popup/property-actions",
       [ Just "edit-properties" ]
     )
   , ( "ui/view-popup/collection-actions",
-      [ Just "save-collection" ]
+      [ Just "save-collection"
+      , Just "rename-collection"
+      , Just "delete-collections"
+      ]
     )
   ]
