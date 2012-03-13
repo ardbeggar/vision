@@ -118,7 +118,6 @@ mkListView = withModel $ do
             , vSelSet  = selSet
             , vScroll  = scroll
             }
-  setupViewFocus v
 
   xcW <- atomically $ newTGWatch connectedV
   tid <- forkIO $ forever $ do

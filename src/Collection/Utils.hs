@@ -22,7 +22,6 @@
 module Collection.Utils
   ( selectAll
   , invertSelection
-  , setupViewFocus
   , addToPlaylist
   , saveCollection
   , renameCollection
@@ -68,24 +67,6 @@ invertSelection sel = do
   rows <- treeSelectionGetSelectedRows sel
   treeSelectionSelectAll sel
   mapM_ (treeSelectionUnselectPath sel) rows
-
-setupViewFocus view = do
-  let foc = focus view
-      sel = snd $ treeViewSel view
-      aef = do
-        hasFocus <- foc `get` widgetHasFocus
-        when hasFocus $ do
-          rows <- treeSelectionGetSelectedRows sel
-          enableActions view (coms eAE) rows
-  foc `on` focusInEvent $ liftIO $ do
-    writeIORef (coms eABRef) $
-      AB { aWithColl  = withBuiltColl view False
-         , aWithNames = withNames view
-         , aSelection = Just $ snd $ treeViewSel view
-         }
-    aef
-    return False
-  sel `on` treeSelectionSelectionChanged $ aef
 
 addToPlaylist replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()

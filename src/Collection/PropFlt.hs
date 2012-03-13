@@ -130,7 +130,6 @@ mkPropFlt prop coll = do
               }
   loadColl pf
   setupUI pf
-  setupViewFocus pf
   return pf
 
 instance SetColl PropFlt where

@@ -124,8 +124,6 @@ setupView tv = do
   treeViewSetRulesHint view True
   setupTreeViewPopup view popup
 
-  setupViewFocus tv
-
   view `onDestroy` (killIndex $ tIndex tv)
 
   setColumns tv False =<< loadConfig
