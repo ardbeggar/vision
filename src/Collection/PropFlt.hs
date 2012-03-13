@@ -292,19 +292,28 @@ setupUI pf = do
   return ()
 
 ui =
-  [ ( "ui/view-popup/playlist-actions",
-      [ Just "add-to-playlist", Just "replace-playlist" ]
-    )
-  , ( "ui/view-popup/clipboard-actions",
-      [ Just "copy" ]
-    )
-  , ( "ui/view-popup/selection-actions",
-      [ Just "select-all", Just "invert-selection" ]
-    )
-  , ( "ui/view-popup/property-actions",
-      [ Just "edit-properties" ]
-    )
-  , ( "ui/view-popup/collection-actions",
-      [ Just "save-collection" ]
-    )
+  [ ( "ui/view-popup/playlist-actions", playlistActions )
+  , ( "ui/menubar/entries/collection/playlist-actions", playlistActions)
+  , ( "ui/view-popup/clipboard-actions", clipboardActions )
+  , ( "ui/menubar/entries/edit/clipboard-actions", clipboardActions)
+  , ( "ui/view-popup/selection-actions", selectionActions )
+  , ( "ui/menubar/entries/edit/selection-actions", selectionActions)
+  , ( "ui/view-popup/property-actions", propertyActions )
+  , ( "ui/menubar/entries/properties/property-actions", propertyActions)
+  , ( "ui/view-popup/collection-actions", collectionActions )
+  , ( "ui/menubar/entries/collection/collection-actions", collectionActions)
   ]
+  where playlistActions =
+          [ Just "add-to-playlist"
+          , Just "replace-playlist"
+          ]
+        clipboardActions = [ Just "copy" ]
+        selectionActions =
+          [ Just "select-all"
+          , Just "invert-selection"
+          ]
+        propertyActions =
+          [ Just "edit-properties"
+          , Just "export-properties"
+          ]
+        collectionActions = [ Just "save-collection" ]
