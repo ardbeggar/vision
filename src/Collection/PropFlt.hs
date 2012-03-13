@@ -75,7 +75,7 @@ setupActions pf = do
     withBuiltColl pf False $ addToPlaylist False
 
   (pView pf) `on` focusInEvent $ do
-    liftIO $ mergeUI (pUITag pf) (_group as)
+    liftIO $ mergeUI (pUITag pf) (_group as) (Just ui)
     return False
 
   (pView pf) `onDestroy` (removeUI $ pUITag pf)
@@ -268,3 +268,12 @@ mkFilter prop list = do
             collAddOperand flt tmp
           collAddOperand uni flt
           add uni t
+
+ui =
+  "<ui>\
+\    <popup action=\"view-popup\">\
+\      <placeholder name=\"collection-actions\">\
+\        <menuitem action=\"add-to-playlist\"/>\
+\      </placeholder>\
+\    </popup>\
+\  </ui>"

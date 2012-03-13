@@ -219,8 +219,7 @@
         <menuitem action="delete-collections"/>
       </popup>
       <popup action="view-popup">
-        <menuitem action="add-to-playlist"/>
-        <menuitem action="replace-playlist"/>
+        <placeholder name="collection-actions"/>
         <separator/>
         <menuitem action="copy"/>
         <separator/>

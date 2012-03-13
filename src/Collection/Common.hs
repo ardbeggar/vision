@@ -35,6 +35,7 @@ module Collection.Common
   , withSelectedView
   ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
@@ -65,7 +66,7 @@ data Com
         , eScroll :: ScrolledWindow
         , eSAdj   :: Adjustment
         , eUITag  :: IORef Integer
-        , eUIRef  :: IORef (Maybe (Integer, ActionGroup))
+        , eUIRef  :: IORef (Maybe (Integer, ActionGroup, Maybe MergeId))
         }
 
 coms = ($ ?_Collection_Common)
@@ -170,18 +171,25 @@ withSelectedView combo f = do
     v <- listStoreGetValue (coms eCModel) $ listStoreIterToIndex iter
     f v
 
-mergeUI tag ag = do
+mergeUI tag ag ui = do
   mui <- readIORef (coms eUIRef)
-  withJust mui $ \(_, ag) ->
+  withJust mui $ \(_, ag, mmid) -> do
     uiManagerRemoveActionGroup uiManager ag
+    withJust mmid $ \mid ->
+      uiManagerRemoveUi uiManager mid
   uiManagerInsertActionGroup uiManager ag 0
-  writeIORef (coms eUIRef) $ Just (tag, ag)
+  mid <- case ui of
+    Just str -> Just <$> uiManagerAddUiFromString uiManager str
+    Nothing  -> return Nothing
+  writeIORef (coms eUIRef) $ Just (tag, ag, mid)
 
 removeUI tag = do
   mui <- readIORef (coms eUIRef)
-  withJust mui $ \(tag', ag) -> do
+  withJust mui $ \(tag', ag, mmid) -> do
     when (tag == tag') $ do
       uiManagerRemoveActionGroup uiManager ag
+      withJust mmid $ \mid ->
+        uiManagerRemoveUi uiManager mid
       writeIORef (coms eUIRef) Nothing
 
 newUITag = do
