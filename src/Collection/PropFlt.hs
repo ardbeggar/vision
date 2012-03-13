@@ -259,11 +259,7 @@ setupUI pf = do
   return ()
 
 ui =
-  "<ui>\
-\    <popup action=\"view-popup\">\
-\      <placeholder name=\"collection-actions\">\
-\        <menuitem action=\"add-to-playlist\"/>\
-\        <menuitem action=\"replace-playlist\"/>\
-\      </placeholder>\
-\    </popup>\
-\  </ui>"
+  [ ( "ui/view-popup/collection-actions",
+      [ Just "add-to-playlist", Just "replace-playlist" ]
+    )
+  ]

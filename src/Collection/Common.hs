@@ -171,6 +171,24 @@ withSelectedView combo f = do
     v <- listStoreGetValue (coms eCModel) $ listStoreIterToIndex iter
     f v
 
+
+class UIDefClass def where
+  mergeUIDef :: UIManager -> def -> IO MergeId
+
+instance UIDefClass String where
+  mergeUIDef = uiManagerAddUiFromString
+
+instance UIDefClass [(String, [Maybe String])] where
+  mergeUIDef uiManager list = do
+    mergeId <- uiManagerNewMergeId uiManager
+    forM_ list $ \(path, actions) ->
+      forM_ actions $ add mergeId path
+    return mergeId
+    where add mergeId path (Just action) =
+            uiManagerAddUi uiManager mergeId path action (Just action) [UiManagerAuto] False
+          add mergeId path Nothing =
+            uiManagerAddUi uiManager mergeId path "" Nothing [UiManagerAuto] False
+
 mergeUI tag ag ui = do
   mui <- readIORef (coms eUIRef)
   withJust mui $ \(_, ag, mmid) -> do
@@ -179,7 +197,7 @@ mergeUI tag ag ui = do
       uiManagerRemoveUi uiManager mid
   uiManagerInsertActionGroup uiManager ag 0
   mid <- case ui of
-    Just str -> Just <$> uiManagerAddUiFromString uiManager str
+    Just def -> Just <$> mergeUIDef uiManager def
     Nothing  -> return Nothing
   writeIORef (coms eUIRef) $ Just (tag, ag, mid)
 
