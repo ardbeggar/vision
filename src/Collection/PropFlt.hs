@@ -53,34 +53,6 @@ import Collection.Utils
 
 deriving instance Ord X.Property
 
-data Actions
-  = A { _group          :: ActionGroup
-      , _addToPlaylist  :: Action
-      }
-
-mkActions = do
-  group <- actionGroupNew "view-actions"
-
-  addToPlaylist <- actionNew "add-to-playlist" "_Add to playlist" Nothing (Just stockAdd)
-  actionGroupAddActionWithAccel group addToPlaylist (Just "<Control>Return")
-
-  return A { _group         = group
-           , _addToPlaylist = addToPlaylist
-           }
-
-setupActions pf = do
-  let as = pActions pf
-
-  (_addToPlaylist as) `on` actionActivated $ do
-    withBuiltColl pf False $ addToPlaylist False
-
-  (pView pf) `on` focusInEvent $ do
-    liftIO $ mergeUI (pUITag pf) (_group as) (Just ui)
-    return False
-
-  (pView pf) `onDestroy` (removeUI $ pUITag pf)
-
-  return ()
 
 data PropFlt
   = PF { pStore   :: ListStore X.Property
@@ -94,8 +66,6 @@ data PropFlt
        , pNextRef :: IORef VI
        , pSetColl :: PropFlt -> Coll -> IO ()
        , pLoadRef :: IORef Int
-       , pActions :: Actions
-       , pUITag   :: Integer
        }
 
 instance ViewItem PropFlt where
@@ -144,8 +114,6 @@ mkPropFlt prop coll = do
   collRef <- newIORef coll
   nextRef <- newIORef None
   loadRef <- newIORef 0
-  actions <- mkActions
-  uiTag   <- newUITag
 
   let pf = PF { pStore   = store
               , pSelIx   = selIx
@@ -158,11 +126,9 @@ mkPropFlt prop coll = do
               , pNextRef = nextRef
               , pSetColl = doSetColl
               , pLoadRef = loadRef
-              , pActions = actions
-              , pUITag   = uiTag
               }
   loadColl pf
-  setupActions pf
+  setupUI pf
   setupViewFocus pf
   return pf
 
@@ -269,11 +235,35 @@ mkFilter prop list = do
           collAddOperand uni flt
           add uni t
 
+
+setupUI pf = do
+  g <- actionGroupNew "view-actions"
+
+  a <- actionNew "add-to-playlist" "_Add to playlist" Nothing (Just stockAdd)
+  actionGroupAddActionWithAccel g a (Just "<Control>Return")
+  a `on` actionActivated $ withBuiltColl pf False $ addToPlaylist False
+
+  a <- actionNew "replace-playlist" "_Replace playlist" Nothing Nothing
+  actionGroupAddActionWithAccel g a (Just "<Control><Shift>Return")
+  a `on` actionActivated $ withBuiltColl pf False $ addToPlaylist True
+
+  let view  = pView pf
+  tag <- newUITag
+
+  view `on` focusInEvent $ do
+    liftIO $ mergeUI tag g (Just ui)
+    return False
+
+  view `onDestroy` (removeUI tag)
+
+  return ()
+
 ui =
   "<ui>\
 \    <popup action=\"view-popup\">\
 \      <placeholder name=\"collection-actions\">\
 \        <menuitem action=\"add-to-playlist\"/>\
+\        <menuitem action=\"replace-playlist\"/>\
 \      </placeholder>\
 \    </popup>\
 \  </ui>"
