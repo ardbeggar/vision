@@ -36,7 +36,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Foldable
 
-import Graphics.UI.Gtk
+import Graphics.UI.Gtk hiding (selectAll)
 
 import XMMS2.Client
 
@@ -48,6 +48,7 @@ import Index hiding (getInfo)
 import qualified Index
 import Medialib
 import Compound
+import Clipboard
 
 import Collection.Common
 import Collection.Utils
@@ -109,6 +110,7 @@ mkTrackView coll = do
               , tSetColl = doSetColl
               }
   setupView tv
+  setupUI tv
   loadTracks tv
   return tv
 
@@ -229,3 +231,77 @@ instance CompoundWidget TrackView where
 instance FocusChild TrackView where
   type Focus TrackView = TreeView
   focus = tView
+
+
+setupUI tv = do
+  g <- actionGroupNew "view-actions"
+
+  a <- actionNew "add-to-playlist" "_Add to playlist" Nothing (Just stockAdd)
+  actionGroupAddActionWithAccel g a (Just "<Control>Return")
+  a `on` actionActivated $ withBuiltColl tv False $ addToPlaylist False
+
+  a <- actionNew "replace-playlist" "_Replace playlist" Nothing Nothing
+  actionGroupAddActionWithAccel g a (Just "<Control><Shift>Return")
+  a `on` actionActivated $ withBuiltColl tv False $ addToPlaylist True
+
+  a <- actionNew "copy" "_Copy" Nothing (Just stockCopy)
+  actionGroupAddActionWithAccel g a (Just "<Control>c")
+  a `on` actionActivated $ withBuiltColl tv False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ copyIds ids
+
+  a <- actionNew "select-all" "_Select all" Nothing (Just stockSelectAll)
+  actionGroupAddActionWithAccel g a (Just "<Control>a")
+  a `on` actionActivated $ selectAll $ tSel tv
+
+  a <- actionNew "invert-selection" "_Invert selection" Nothing (Just stockSelectAll)
+  actionGroupAddActionWithAccel g a (Just "<Control><Shift>a")
+  a `on` actionActivated $ invertSelection $ tSel tv
+
+  a <- actionNew "edit-properties" "_Edit properties" Nothing (Just stockEdit)
+  actionGroupAddActionWithAccel g a (Just "<Alt>Return")
+  a `on` actionActivated $ withBuiltColl tv False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyEditor ids
+
+  a <- actionNew "export-properties" "E_xport properties…" Nothing (Just stockSave)
+  actionGroupAddActionWithAccel g a (Just "")
+  a `on` actionActivated $ withBuiltColl tv False $ \coll -> do
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyExport ids
+
+  a <- actionNew "save-collection" "_Save collection…" Nothing (Just stockSave)
+  actionGroupAddActionWithAccel g a (Just "<Control>s")
+  a `on` actionActivated $ withBuiltColl tv False saveCollection
+
+  let view  = tView tv
+  tag <- newUITag
+
+  view `on` focusInEvent $ do
+    liftIO $ mergeUI tag g (Just ui)
+    return False
+
+  view `onDestroy` (removeUI tag)
+
+  return ()
+
+ui =
+  [ ( "ui/view-popup/playlist-actions",
+      [ Just "add-to-playlist", Just "replace-playlist" ]
+    )
+  , ( "ui/view-popup/clipboard-actions",
+      [ Just "copy" ]
+    )
+  , ( "ui/view-popup/selection-actions",
+      [ Just "select-all", Just "invert-selection" ]
+    )
+  , ( "ui/view-popup/property-actions",
+      [ Just "edit-properties" ]
+    )
+  , ( "ui/view-popup/collection-actions",
+      [ Just "save-collection" ]
+    )
+  ]
