@@ -277,6 +277,10 @@ setupUI pf = do
       ids <- result
       liftIO $ showPropertyExport ids
 
+  a <- actionNew "save-collection" "_Save collection…" Nothing (Just stockSave)
+  actionGroupAddActionWithAccel g a (Just "<Control>s")
+  a `on` actionActivated $ withBuiltColl pf False saveCollection
+
   let view  = pView pf
   tag <- newUITag
 
@@ -300,5 +304,8 @@ ui =
     )
   , ( "ui/view-popup/property-actions",
       [ Just "edit-properties" ]
+    )
+  , ( "ui/view-popup/collection-actions",
+      [ Just "save-collection" ]
     )
   ]

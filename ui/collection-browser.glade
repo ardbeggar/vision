@@ -227,7 +227,7 @@
         <separator/>
         <placeholder name="property-actions"/>
         <separator/>
-        <menuitem action="save-collection"/>
+        <placeholder name="collection-actions"/>
       </popup>
     </ui>
   </object>
