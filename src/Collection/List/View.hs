@@ -25,10 +25,6 @@ module Collection.List.View
 
 import Prelude hiding (mapM_)
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TGVar
-
 import Control.Applicative
 import Control.Monad hiding (forM_, mapM_)
 import Control.Monad.Trans
@@ -121,15 +117,11 @@ mkListView = withModel $ do
             , vScroll  = scroll
             }
 
-  xcW <- atomically $ newTGWatch connectedV
-  tid <- forkIO $ forever $ do
-    void $ atomically $ watch xcW
-    postGUISync $ do
-      killNext v
-      writeIORef selSet Set.empty
-  view `onDestroy` (killThread tid)
-
-  setupUI v
+  g <- setupUI v
+  watchConnectionState view $ \conn -> postGUISync $ do
+    killNext v
+    writeIORef selSet Set.empty
+    actionGroupSetSensitive g conn
 
   widgetShowAll scroll
   return v
@@ -252,7 +244,7 @@ setupUI lv = do
 
   view `onDestroy` (removeUI $ Just tag)
 
-  return ()
+  return g
 
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )

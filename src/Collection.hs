@@ -21,17 +21,10 @@ module Collection
   ( browseCollection
   ) where
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TGVar
-
-import Control.Monad
-
 import Graphics.UI.Gtk hiding (selectAll, focus)
 
 import UI
 import Clipboard
-import XMMS
 import Properties
 import Builder
 import Environment
@@ -53,11 +46,7 @@ browseCollection _maybeName = withBuilder $ do
         ]
 
       ag <- getObject castToActionGroup "server-actions"
-      xcW <- atomically $ newTGWatch connectedV
-      tid <- forkIO $ forever $ do
-        conn <- atomically $ watch xcW
-        postGUISync $ actionGroupSetSensitive ag conn
-      window `onDestroy` (killThread tid)
+      watchConnectionState window (postGUISync . actionGroupSetSensitive ag)
 
       lv  <- mkListView
       box <- getObject castToVBox "views"
