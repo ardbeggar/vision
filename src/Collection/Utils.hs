@@ -36,9 +36,14 @@ module Collection.Utils
   , setNext
   , handleXMMSException
   , SetColl (..)
+  , watchConnectionState
   ) where
 
 import Prelude hiding (catch)
+
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TGVar
 
 import Control.Applicative
 import Control.Monad
@@ -202,3 +207,10 @@ handleXMMSException f = f `catch` handler
 
 class SetColl s where
   setColl :: s -> Coll -> IO ()
+
+watchConnectionState owner func = do
+  xcW <- atomically $ newTGWatch connectedV
+  tid <- forkIO $ forever $ do
+    conn <- atomically $ watch xcW
+    func conn
+  owner `onDestroy` (killThread tid)
