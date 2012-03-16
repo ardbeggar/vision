@@ -36,6 +36,7 @@ import Control.Concurrent.STM.TGVar
 import qualified Data.Map as Map
 import Data.Typeable
 import Data.Env
+import Data.Maybe
 
 import Graphics.UI.Gtk hiding (add, remove)
 
@@ -96,13 +97,13 @@ makeVolumeControl = do
   return view
 
 handleVolume adj cId = do
-  vol <- catchResult 0 (maximum . Map.elems)
+  vol <- catchResult 0 (maybe 0 (maximum . Map.elems))
   liftIO $ withoutVolumeChange cId $
     adjustmentSetValue adj $ fromIntegral vol
 
 setVolume vol =
   playbackVolumeGet xmms >>* do
-    vols <- catchResult Map.empty id
+    vols <- catchResult Map.empty (fromMaybe Map.empty)
     liftIO $ mapM_ (flip (playbackVolumeSet xmms) vol) $ Map.keys vols
 
 withoutVolumeChange cId =
