@@ -237,7 +237,7 @@ mkFilter prop list = do
 
 setupUI pf = do
   g <- actionGroupNew "view-actions"
-  addActions g [defSelectAll pf ,defInvertSelection pf]
+  addActions g [defSelectAll pf, defInvertSelection pf]
   as <- addActions g
         [ defAddToPlaylist pf
         , defReplacePlaylist pf

@@ -234,7 +234,7 @@ instance FocusChild TrackView where
 
 setupUI tv = do
   g <- actionGroupNew "view-actions"
-  addActions g [defSelectAll tv ,defInvertSelection tv]
+  addActions g [defSelectAll tv, defInvertSelection tv]
   as <- addActions g
         [ defAddToPlaylist tv
         , defReplacePlaylist tv

@@ -183,7 +183,7 @@ instance ViewItem ListView where
 setupUI lv = do
   g <- actionGroupNew "view-actions"
 
-  addActions g [defSelectAll lv ,defInvertSelection lv]
+  addActions g [defSelectAll lv, defInvertSelection lv]
   as <- addActions g
         [ defAddToPlaylist lv
         , defReplacePlaylist lv
