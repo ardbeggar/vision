@@ -235,47 +235,7 @@ instance FocusChild TrackView where
 
 setupUI tv = do
   g <- actionGroupNew "view-actions"
-
-  a <- actionNew "add-to-playlist" "_Add to playlist" Nothing (Just stockAdd)
-  actionGroupAddActionWithAccel g a (Just "<Control>Return")
-  a `on` actionActivated $ withBuiltColl tv False $ addToPlaylist False
-
-  a <- actionNew "replace-playlist" "_Replace playlist" Nothing Nothing
-  actionGroupAddActionWithAccel g a (Just "<Control><Shift>Return")
-  a `on` actionActivated $ withBuiltColl tv False $ addToPlaylist True
-
-  a <- actionNew "copy" "_Copy" Nothing (Just stockCopy)
-  actionGroupAddActionWithAccel g a (Just "<Control>c")
-  a `on` actionActivated $ withBuiltColl tv False $ \coll -> do
-    collQueryIds xmms coll [] 0 0 >>* do
-      ids <- result
-      liftIO $ copyIds ids
-
-  a <- actionNew "select-all" "_Select all" Nothing (Just stockSelectAll)
-  actionGroupAddActionWithAccel g a (Just "<Control>a")
-  a `on` actionActivated $ selectAll $ tSel tv
-
-  a <- actionNew "invert-selection" "_Invert selection" Nothing (Just stockSelectAll)
-  actionGroupAddActionWithAccel g a (Just "<Control><Shift>a")
-  a `on` actionActivated $ invertSelection $ tSel tv
-
-  a <- actionNew "edit-properties" "_Edit properties" Nothing (Just stockEdit)
-  actionGroupAddActionWithAccel g a (Just "<Alt>Return")
-  a `on` actionActivated $ withBuiltColl tv False $ \coll -> do
-    collQueryIds xmms coll [] 0 0 >>* do
-      ids <- result
-      liftIO $ showPropertyEditor ids
-
-  a <- actionNew "export-properties" "E_xport properties…" Nothing (Just stockSave)
-  actionGroupAddActionWithAccel g a (Just "")
-  a `on` actionActivated $ withBuiltColl tv False $ \coll -> do
-    collQueryIds xmms coll [] 0 0 >>* do
-      ids <- result
-      liftIO $ showPropertyExport ids
-
-  a <- actionNew "save-collection" "_Save collection…" Nothing (Just stockSave)
-  actionGroupAddActionWithAccel g a (Just "<Control>s")
-  a `on` actionActivated $ withBuiltColl tv False saveCollection
+  addActions g $ actions tv
 
   let view  = tView tv
   tag <- newUITag
@@ -287,6 +247,83 @@ setupUI tv = do
   view `onDestroy` (removeUI $ Just tag)
 
   return ()
+
+
+actions tv =
+  [ ActionEntry
+    { actionEntryName        = "add-to-playlist"
+    , actionEntryLabel       = "_Add to playlist"
+    , actionEntryStockId     = Just stockAdd
+    , actionEntryAccelerator = Just "<Control>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = withBuiltColl tv False $ addToPlaylist False
+    }
+  , ActionEntry
+    { actionEntryName        = "replace-playlist"
+    , actionEntryLabel       = "_Replace playlist"
+    , actionEntryStockId     = Nothing
+    , actionEntryAccelerator = Just "<Control><Shift>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = withBuiltColl tv False $ addToPlaylist True
+    }
+  , ActionEntry
+    { actionEntryName        = "copy"
+    , actionEntryLabel       = "_Copy"
+    , actionEntryStockId     = Just stockCopy
+    , actionEntryAccelerator = Just "<Control>c"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = withBuiltColl tv False $ \coll ->
+      collQueryIds xmms coll [] 0 0 >>* do
+        ids <- result
+        liftIO $ copyIds ids
+    }
+  , ActionEntry
+    { actionEntryName        = "select-all"
+    , actionEntryLabel       = "_Select all"
+    , actionEntryStockId     = Just stockSelectAll
+    , actionEntryAccelerator = Just "<Control>a"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = selectAll $ tSel tv
+    }
+  , ActionEntry
+    { actionEntryName        = "invert-selection"
+    , actionEntryLabel       = "_Invert selection"
+    , actionEntryStockId     = Just stockSelectAll
+    , actionEntryAccelerator = Just "<Control><Shift>a"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = invertSelection $ tSel tv
+    }
+  , ActionEntry
+    { actionEntryName        = "edit-properties"
+    , actionEntryLabel       = "_Edit properties"
+    , actionEntryStockId     = Just stockEdit
+    , actionEntryAccelerator = Just "<Alt>Return"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = withBuiltColl tv False $ \coll ->
+      collQueryIds xmms coll [] 0 0 >>* do
+        ids <- result
+        liftIO $ showPropertyEditor ids
+    }
+  , ActionEntry
+    { actionEntryName        = "export-properties"
+    , actionEntryLabel       = "E_xport properties"
+    , actionEntryStockId     = Just stockSave
+    , actionEntryAccelerator = Just ""
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = withBuiltColl tv False $ \coll ->
+      collQueryIds xmms coll [] 0 0 >>* do
+        ids <- result
+        liftIO $ showPropertyExport ids
+    }
+  , ActionEntry
+    { actionEntryName        = "save-collection"
+    , actionEntryLabel       = "_Save collection…"
+    , actionEntryStockId     = Just stockSave
+    , actionEntryAccelerator = Just "<Control>s"
+    , actionEntryTooltip     = Nothing
+    , actionEntryCallback    = withBuiltColl tv False saveCollection
+    }
+  ]
 
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )

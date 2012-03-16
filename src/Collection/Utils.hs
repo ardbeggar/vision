@@ -37,6 +37,7 @@ module Collection.Utils
   , handleXMMSException
   , SetColl (..)
   , watchConnectionState
+  , addActions
   ) where
 
 import Prelude hiding (catch)
@@ -214,3 +215,14 @@ watchConnectionState owner func = do
     conn <- atomically $ watch xcW
     func conn
   owner `onDestroy` (killThread tid)
+
+addActions :: ActionGroup -> [ActionEntry] -> IO [Action]
+addActions g es = forM es $ \e -> do
+  a <- actionNew
+       (actionEntryName e)
+       (actionEntryLabel e)
+       (actionEntryTooltip e)
+       (actionEntryStockId e)
+  actionGroupAddActionWithAccel g a $ actionEntryAccelerator e
+  a `on` actionActivated $ actionEntryCallback e
+  return a
