@@ -254,7 +254,7 @@ setupUI tv = do
   tag <- newUITag
 
   view `on` focusInEvent $ do
-    liftIO $ mergeUI tag g (Just ui)
+    liftIO $ mergeUI tag [g] (Just ui)
     return False
 
   view `onDestroy` (removeUI $ Just tag)

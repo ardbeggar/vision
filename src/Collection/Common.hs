@@ -54,7 +54,7 @@ data Com
         , eScroll :: ScrolledWindow
         , eSAdj   :: Adjustment
         , eUITag  :: IORef Integer
-        , eUIRef  :: IORef (Maybe (Integer, ActionGroup, Maybe MergeId))
+        , eUIRef  :: IORef (Maybe (Integer, [ActionGroup], Maybe MergeId))
         }
 
 coms = ($ ?_Collection_Common)
@@ -139,26 +139,25 @@ instance UIDefClass [(String, [Maybe String])] where
           add mergeId path Nothing =
             uiManagerAddUi uiManager mergeId path "" Nothing [UiManagerAuto] False
 
-mergeUI tag ag ui = do
-  mui <- readIORef (coms eUIRef)
-  withJust mui $ \(_, ag, mmid) -> do
-    uiManagerRemoveActionGroup uiManager ag
-    withJust mmid $ \mid ->
-      uiManagerRemoveUi uiManager mid
-  uiManagerInsertActionGroup uiManager ag 0
+mergeUI tag ags ui = modifyUI Nothing $ do
+  forM_ ags $ \ag ->
+    uiManagerInsertActionGroup uiManager ag 0
   mid <- case ui of
     Just def -> Just <$> mergeUIDef uiManager def
     Nothing  -> return Nothing
-  writeIORef (coms eUIRef) $ Just (tag, ag, mid)
+  return $ Just (tag, ags, mid)
 
-removeUI tag = do
+removeUI tag =
+  modifyUI tag (return Nothing)
+
+modifyUI tag f = do
   mui <- readIORef (coms eUIRef)
-  withJust mui $ \(tag', ag, mmid) -> do
+  withJust mui $ \(tag', ags, mmid) ->
     when (fromMaybe tag' tag == tag') $ do
-      uiManagerRemoveActionGroup uiManager ag
+      mapM_ (uiManagerRemoveActionGroup uiManager) ags
       withJust mmid $ \mid ->
         uiManagerRemoveUi uiManager mid
-      writeIORef (coms eUIRef) Nothing
+  writeIORef (coms eUIRef) =<< f
 
 newUITag = do
   tag <- readIORef (coms eUITag)
