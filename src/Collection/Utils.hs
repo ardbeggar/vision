@@ -38,6 +38,14 @@ module Collection.Utils
   , SetColl (..)
   , watchConnectionState
   , addActions
+  , defAddToPlaylist
+  , defReplacePlaylist
+  , defCopy
+  , defSelectAll
+  , defInvertSelection
+  , defEditProperties
+  , defExportProperties
+  , defSaveCollection
   ) where
 
 import Prelude hiding (catch)
@@ -61,6 +69,8 @@ import XMMS
 import Utils
 import UI
 import Compound
+import Properties
+import Clipboard
 
 import Collection.Common
 
@@ -226,3 +236,92 @@ addActions g es = forM es $ \e -> do
   actionGroupAddActionWithAccel g a $ actionEntryAccelerator e
   a `on` actionActivated $ actionEntryCallback e
   return a
+
+defAddToPlaylist v =
+  ActionEntry
+  { actionEntryName        = "add-to-playlist"
+  , actionEntryLabel       = "_Add to playlist"
+  , actionEntryStockId     = Just stockAdd
+  , actionEntryAccelerator = Just "<Control>Return"
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = withBuiltColl v False $ addToPlaylist False
+  }
+
+defReplacePlaylist v =
+  ActionEntry
+  { actionEntryName        = "replace-playlist"
+  , actionEntryLabel       = "_Replace playlist"
+  , actionEntryStockId     = Nothing
+  , actionEntryAccelerator = Just "<Control><Shift>Return"
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = withBuiltColl v False $ addToPlaylist True
+  }
+
+defCopy v =
+  ActionEntry
+  { actionEntryName        = "copy"
+  , actionEntryLabel       = "_Copy"
+  , actionEntryStockId     = Just stockCopy
+  , actionEntryAccelerator = Just "<Control>c"
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = withBuiltColl v False $ \coll ->
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ copyIds ids
+  }
+
+defSelectAll v =
+  ActionEntry
+  { actionEntryName        = "select-all"
+  , actionEntryLabel       = "_Select all"
+  , actionEntryStockId     = Just stockSelectAll
+  , actionEntryAccelerator = Just "<Control>a"
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = selectAll $ snd $ treeViewSel v
+  }
+
+defInvertSelection v =
+  ActionEntry
+  { actionEntryName        = "invert-selection"
+  , actionEntryLabel       = "_Invert selection"
+  , actionEntryStockId     = Just stockSelectAll
+  , actionEntryAccelerator = Just "<Control><Shift>a"
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = invertSelection $ snd $ treeViewSel v
+  }
+
+defEditProperties v =
+  ActionEntry
+  { actionEntryName        = "edit-properties"
+  , actionEntryLabel       = "_Edit properties"
+  , actionEntryStockId     = Just stockEdit
+  , actionEntryAccelerator = Just "<Alt>Return"
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = withBuiltColl v False $ \coll ->
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyEditor ids
+  }
+
+defExportProperties v =
+  ActionEntry
+  { actionEntryName        = "export-properties"
+  , actionEntryLabel       = "E_xport properties"
+  , actionEntryStockId     = Just stockSave
+  , actionEntryAccelerator = Just ""
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = withBuiltColl v False $ \coll ->
+    collQueryIds xmms coll [] 0 0 >>* do
+      ids <- result
+      liftIO $ showPropertyExport ids
+  }
+
+defSaveCollection v =
+  ActionEntry
+  { actionEntryName        = "save-collection"
+  , actionEntryLabel       = "_Save collection…"
+  , actionEntryStockId     = Just stockSave
+  , actionEntryAccelerator = Just "<Control>s"
+  , actionEntryTooltip     = Nothing
+  , actionEntryCallback    = withBuiltColl v False saveCollection
+  }

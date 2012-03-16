@@ -48,7 +48,6 @@ import Index hiding (getInfo)
 import qualified Index
 import Medialib
 import Compound
-import Clipboard
 
 import Collection.Common
 import Collection.Utils
@@ -248,81 +247,15 @@ setupUI tv = do
 
   return ()
 
-
-actions tv =
-  [ ActionEntry
-    { actionEntryName        = "add-to-playlist"
-    , actionEntryLabel       = "_Add to playlist"
-    , actionEntryStockId     = Just stockAdd
-    , actionEntryAccelerator = Just "<Control>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl tv False $ addToPlaylist False
-    }
-  , ActionEntry
-    { actionEntryName        = "replace-playlist"
-    , actionEntryLabel       = "_Replace playlist"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Just "<Control><Shift>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl tv False $ addToPlaylist True
-    }
-  , ActionEntry
-    { actionEntryName        = "copy"
-    , actionEntryLabel       = "_Copy"
-    , actionEntryStockId     = Just stockCopy
-    , actionEntryAccelerator = Just "<Control>c"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl tv False $ \coll ->
-      collQueryIds xmms coll [] 0 0 >>* do
-        ids <- result
-        liftIO $ copyIds ids
-    }
-  , ActionEntry
-    { actionEntryName        = "select-all"
-    , actionEntryLabel       = "_Select all"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = selectAll $ tSel tv
-    }
-  , ActionEntry
-    { actionEntryName        = "invert-selection"
-    , actionEntryLabel       = "_Invert selection"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control><Shift>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = invertSelection $ tSel tv
-    }
-  , ActionEntry
-    { actionEntryName        = "edit-properties"
-    , actionEntryLabel       = "_Edit properties"
-    , actionEntryStockId     = Just stockEdit
-    , actionEntryAccelerator = Just "<Alt>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl tv False $ \coll ->
-      collQueryIds xmms coll [] 0 0 >>* do
-        ids <- result
-        liftIO $ showPropertyEditor ids
-    }
-  , ActionEntry
-    { actionEntryName        = "export-properties"
-    , actionEntryLabel       = "E_xport properties"
-    , actionEntryStockId     = Just stockSave
-    , actionEntryAccelerator = Just ""
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl tv False $ \coll ->
-      collQueryIds xmms coll [] 0 0 >>* do
-        ids <- result
-        liftIO $ showPropertyExport ids
-    }
-  , ActionEntry
-    { actionEntryName        = "save-collection"
-    , actionEntryLabel       = "_Save collection…"
-    , actionEntryStockId     = Just stockSave
-    , actionEntryAccelerator = Just "<Control>s"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl tv False saveCollection
-    }
+actions v =
+  [ defAddToPlaylist v
+  , defReplacePlaylist v
+  , defCopy v
+  , defSelectAll v
+  , defInvertSelection v
+  , defEditProperties v
+  , defExportProperties v
+  , defSaveCollection v
   ]
 
 ui =

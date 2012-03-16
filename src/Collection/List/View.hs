@@ -43,11 +43,8 @@ import Graphics.UI.Gtk hiding (selectAll)
 
 import XMMS2.Client
 
-import XMMS
 import Utils
 import Compound
-import Clipboard
-import Properties
 
 import Collection.Common
 import Collection.Utils
@@ -198,87 +195,22 @@ setupUI lv = do
 
   return g
 
-actions lv =
-  [ ActionEntry
-    { actionEntryName        = "add-to-playlist"
-    , actionEntryLabel       = "_Add to playlist"
-    , actionEntryStockId     = Just stockAdd
-    , actionEntryAccelerator = Just "<Control>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl lv False $ addToPlaylist False
-    }
-  , ActionEntry
-    { actionEntryName        = "replace-playlist"
-    , actionEntryLabel       = "_Replace playlist"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Just "<Control><Shift>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl lv False $ addToPlaylist True
-    }
-  , ActionEntry
-    { actionEntryName        = "copy"
-    , actionEntryLabel       = "_Copy"
-    , actionEntryStockId     = Just stockCopy
-    , actionEntryAccelerator = Just "<Control>c"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl lv False $ \coll ->
-      collQueryIds xmms coll [] 0 0 >>* do
-        ids <- result
-        liftIO $ copyIds ids
-    }
-  , ActionEntry
-    { actionEntryName        = "select-all"
-    , actionEntryLabel       = "_Select all"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = selectAll $ vSel lv
-    }
-  , ActionEntry
-    { actionEntryName        = "invert-selection"
-    , actionEntryLabel       = "_Invert selection"
-    , actionEntryStockId     = Just stockSelectAll
-    , actionEntryAccelerator = Just "<Control><Shift>a"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = invertSelection $ vSel lv
-    }
-  , ActionEntry
-    { actionEntryName        = "edit-properties"
-    , actionEntryLabel       = "_Edit properties"
-    , actionEntryStockId     = Just stockEdit
-    , actionEntryAccelerator = Just "<Alt>Return"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl lv False $ \coll ->
-      collQueryIds xmms coll [] 0 0 >>* do
-        ids <- result
-        liftIO $ showPropertyEditor ids
-    }
-  , ActionEntry
-    { actionEntryName        = "export-properties"
-    , actionEntryLabel       = "E_xport properties"
-    , actionEntryStockId     = Just stockSave
-    , actionEntryAccelerator = Just ""
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl lv False $ \coll ->
-      collQueryIds xmms coll [] 0 0 >>* do
-        ids <- result
-        liftIO $ showPropertyExport ids
-    }
-  , ActionEntry
-    { actionEntryName        = "save-collection"
-    , actionEntryLabel       = "_Save collection…"
-    , actionEntryStockId     = Just stockSave
-    , actionEntryAccelerator = Just "<Control>s"
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withBuiltColl lv False saveCollection
-    }
+actions v =
+  [ defAddToPlaylist v
+  , defReplacePlaylist v
+  , defCopy v
+  , defSelectAll v
+  , defInvertSelection v
+  , defEditProperties v
+  , defExportProperties v
+  , defSaveCollection v
   , ActionEntry
     { actionEntryName        = "rename-collection"
     , actionEntryLabel       = "Rena_me collection…"
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withNames lv renameCollection
+    , actionEntryCallback    = withNames v renameCollection
     }
   , ActionEntry
     { actionEntryName        = "delete-collections"
@@ -286,7 +218,7 @@ actions lv =
     , actionEntryStockId     = Nothing
     , actionEntryAccelerator = Nothing
     , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withNames lv deleteCollections
+    , actionEntryCallback    = withNames v deleteCollections
     }
   ]
 
