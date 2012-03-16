@@ -234,7 +234,21 @@ instance FocusChild TrackView where
 
 setupUI tv = do
   g <- actionGroupNew "view-actions"
-  addActions g $ actions tv
+  addActions g [defSelectAll tv ,defInvertSelection tv]
+  as <- addActions g
+        [ defAddToPlaylist tv
+        , defReplacePlaylist tv
+        , defCopy tv
+        , defEditProperties tv
+        , defExportProperties tv
+        , defSaveCollection tv
+        ]
+
+  let update = do
+        s <- treeSelectionCountSelectedRows $ tSel tv
+        mapM_ (`actionSetSensitive` (s > 0)) as
+  (tSel tv) `on` treeSelectionSelectionChanged $ update
+  update
 
   let view  = tView tv
   tag <- newUITag
@@ -246,17 +260,6 @@ setupUI tv = do
   view `onDestroy` (removeUI $ Just tag)
 
   return ()
-
-actions v =
-  [ defAddToPlaylist v
-  , defReplacePlaylist v
-  , defCopy v
-  , defSelectAll v
-  , defInvertSelection v
-  , defEditProperties v
-  , defExportProperties v
-  , defSaveCollection v
-  ]
 
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )

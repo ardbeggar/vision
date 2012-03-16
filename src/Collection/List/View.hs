@@ -182,7 +182,45 @@ instance ViewItem ListView where
 
 setupUI lv = do
   g <- actionGroupNew "view-actions"
-  addActions g $ actions lv
+
+  addActions g [defSelectAll lv ,defInvertSelection lv]
+  as <- addActions g
+        [ defAddToPlaylist lv
+        , defReplacePlaylist lv
+        , defCopy lv
+        , defEditProperties lv
+        , defExportProperties lv
+        , defSaveCollection lv
+        ]
+  [d] <- addActions g
+         [ ActionEntry
+          { actionEntryName        = "delete-collections"
+          , actionEntryLabel       = "_Delete collections"
+          , actionEntryStockId     = Nothing
+          , actionEntryAccelerator = Nothing
+          , actionEntryTooltip     = Nothing
+          , actionEntryCallback    = withNames lv deleteCollections
+          }
+         ]
+  [r] <- addActions g
+         [ ActionEntry
+           { actionEntryName        = "rename-collection"
+           , actionEntryLabel       = "Rena_me collection…"
+           , actionEntryStockId     = Nothing
+           , actionEntryAccelerator = Nothing
+           , actionEntryTooltip     = Nothing
+           , actionEntryCallback    = withNames lv renameCollection
+           }
+         ]
+
+  let update = do
+        s <- treeSelectionCountSelectedRows (vSel lv)
+        a <- treeSelectionPathIsSelected (vSel lv) [0]
+        mapM_ (`actionSetSensitive` (s > 0)) as
+        actionSetSensitive d $ s > 0 && not a
+        actionSetSensitive r $ s == 1 && not a
+  (vSel lv) `on` treeSelectionSelectionChanged $ update
+  update
 
   let view  = vView lv
   tag <- newUITag
@@ -194,33 +232,6 @@ setupUI lv = do
   view `onDestroy` (removeUI $ Just tag)
 
   return g
-
-actions v =
-  [ defAddToPlaylist v
-  , defReplacePlaylist v
-  , defCopy v
-  , defSelectAll v
-  , defInvertSelection v
-  , defEditProperties v
-  , defExportProperties v
-  , defSaveCollection v
-  , ActionEntry
-    { actionEntryName        = "rename-collection"
-    , actionEntryLabel       = "Rena_me collection…"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withNames v renameCollection
-    }
-  , ActionEntry
-    { actionEntryName        = "delete-collections"
-    , actionEntryLabel       = "_Delete collections"
-    , actionEntryStockId     = Nothing
-    , actionEntryAccelerator = Nothing
-    , actionEntryTooltip     = Nothing
-    , actionEntryCallback    = withNames v deleteCollections
-    }
-  ]
 
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )

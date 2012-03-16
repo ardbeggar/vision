@@ -22,7 +22,7 @@ module Collection.PropFlt
   , mkPropFlt
   ) where
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, mapM_)
 
 import Control.Applicative
 import Control.Monad (when, unless)
@@ -237,7 +237,21 @@ mkFilter prop list = do
 
 setupUI pf = do
   g <- actionGroupNew "view-actions"
-  addActions g $ actions pf
+  addActions g [defSelectAll pf ,defInvertSelection pf]
+  as <- addActions g
+        [ defAddToPlaylist pf
+        , defReplacePlaylist pf
+        , defCopy pf
+        , defEditProperties pf
+        , defExportProperties pf
+        , defSaveCollection pf
+        ]
+
+  let update = do
+        s <- treeSelectionCountSelectedRows $ pSel pf
+        mapM_ (`actionSetSensitive` (s > 0)) as
+  (pSel pf) `on` treeSelectionSelectionChanged $ update
+  update
 
   let view  = pView pf
   tag <- newUITag
@@ -249,17 +263,6 @@ setupUI pf = do
   view `onDestroy` (removeUI $ Just tag)
 
   return ()
-
-actions v =
-  [ defAddToPlaylist v
-  , defReplacePlaylist v
-  , defCopy v
-  , defSelectAll v
-  , defInvertSelection v
-  , defEditProperties v
-  , defExportProperties v
-  , defSaveCollection v
-  ]
 
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )
