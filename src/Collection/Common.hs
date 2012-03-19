@@ -24,18 +24,13 @@ module Collection.Common
   , coms
   , withCommon
   , addView
-  , mergeUI
-  , removeUI
-  , newUITag
   , FocusChild (..)
   , withSelectedView
   ) where
 
-import Control.Applicative
 import Control.Monad
 
 import Data.IORef
-import Data.Maybe
 
 import Graphics.UI.Gtk hiding (focus)
 
@@ -53,8 +48,6 @@ data Com
         , eCModel :: ListStore ComboItem
         , eScroll :: ScrolledWindow
         , eSAdj   :: Adjustment
-        , eUITag  :: IORef Integer
-        , eUIRef  :: IORef (Maybe (Integer, [ActionGroup], Maybe MergeId))
         }
 
 coms = ($ ?_Collection_Common)
@@ -91,17 +84,12 @@ withCommon' w = do
 
   containerAdd scroll $ outer sbox
 
-  uiTag <- newIORef 0
-  uiRef <- newIORef Nothing
-
   let ?_Collection_Common =
         Com { eSBox   = sbox
             , eVPopup = vpopup
             , eCModel = cmodel
             , eScroll = scroll
             , eSAdj   = adj
-            , eUITag  = uiTag
-            , eUIRef  = uiRef
             }
 
   unWrap w
@@ -120,46 +108,3 @@ withSelectedView combo f = do
   withJust iter $ \iter -> do
     v <- listStoreGetValue (coms eCModel) $ listStoreIterToIndex iter
     f v
-
-
-class UIDefClass def where
-  mergeUIDef :: UIManager -> def -> IO MergeId
-
-instance UIDefClass String where
-  mergeUIDef = uiManagerAddUiFromString
-
-instance UIDefClass [(String, [Maybe String])] where
-  mergeUIDef uiManager list = do
-    mergeId <- uiManagerNewMergeId uiManager
-    forM_ list $ \(path, actions) ->
-      forM_ actions $ add mergeId path
-    return mergeId
-    where add mergeId path (Just action) =
-            uiManagerAddUi uiManager mergeId path action (Just action) [UiManagerAuto] False
-          add mergeId path Nothing =
-            uiManagerAddUi uiManager mergeId path "" Nothing [UiManagerAuto] False
-
-mergeUI tag ags ui = modifyUI Nothing $ do
-  forM_ ags $ \ag ->
-    uiManagerInsertActionGroup uiManager ag 0
-  mid <- case ui of
-    Just def -> Just <$> mergeUIDef uiManager def
-    Nothing  -> return Nothing
-  return $ Just (tag, ags, mid)
-
-removeUI tag =
-  modifyUI tag (return Nothing)
-
-modifyUI tag f = do
-  mui <- readIORef (coms eUIRef)
-  withJust mui $ \(tag', ags, mmid) ->
-    when (fromMaybe tag' tag == tag') $ do
-      mapM_ (uiManagerRemoveActionGroup uiManager) ags
-      withJust mmid $ \mid ->
-        uiManagerRemoveUi uiManager mid
-  writeIORef (coms eUIRef) =<< f
-
-newUITag = do
-  tag <- readIORef (coms eUITag)
-  writeIORef (coms eUITag) $ tag + 1
-  return tag

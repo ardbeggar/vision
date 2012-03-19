@@ -45,6 +45,7 @@ import XMMS2.Client
 
 import Utils
 import Compound
+import UI
 
 import Collection.Common
 import Collection.Utils

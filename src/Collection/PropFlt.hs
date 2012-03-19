@@ -46,6 +46,7 @@ import Properties hiding (lookup)
 import XMMS
 import Utils
 import Compound
+import UI
 
 import Collection.Common
 import Collection.Utils

@@ -30,9 +30,13 @@ module UI
   , setWindowTitle
   , informUser
   , withUIGlobal
+  , mergeUI
+  , removeUI
+  , newUITag
   ) where
 
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans
 
 import Control.Concurrent.STM
@@ -40,11 +44,13 @@ import Control.Concurrent.STM
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.IORef
 
 import Graphics.UI.Gtk
 
 import About
 import Builder
+import Utils
 
 
 type WithUI a = (?_UI :: UI) => a
@@ -57,6 +63,8 @@ data UI
        , uWindowGroup :: WindowGroup
        , uInfoBar     :: InfoBar
        , uInfoText    :: Label
+       , _UITagRef    :: IORef Integer
+       , _UIRef       :: IORef (Maybe (Integer, [ActionGroup], Maybe MergeId))
        }
 
 window        = uWindow ?_UI
@@ -65,6 +73,8 @@ uiManager     = uManager ?_UI
 windowGroup   = uWindowGroup ?_UI
 infoBar       = uInfoBar ?_UI
 infoText      = uInfoText ?_UI
+uiTagRef      = _UITagRef ?_UI
+uiRef         = _UIRef ?_UI
 
 setWindowTitle title =
   windowSetTitle window title
@@ -107,6 +117,8 @@ makeUI = do
   uiActionGroup       <- getObject castToActionGroup "ui-actions"
   windowGroup         <- windowGroupNew
   (infoBar, infoText) <- makeInfoBar
+  uiTagRef            <- newIORef 0
+  uiRef               <- newIORef Nothing
   return UI { uWindow      = window
             , uContents    = contents
             , uManager     = uiManager
@@ -114,6 +126,8 @@ makeUI = do
             , uWindowGroup = windowGroup
             , uInfoBar     = infoBar
             , uInfoText    = infoText
+            , _UITagRef    = uiTagRef
+            , _UIRef       = uiRef
             }
 
 informUser t m = do
@@ -165,3 +179,46 @@ mkWindowRole h = do
     writeTVar (_roles ?_UI_Global) m'
     return $! maybe 1 (+ 1) n
   return $ h ++ "#" ++ show n
+
+
+class UIDefClass def where
+  mergeUIDef :: UIManager -> def -> IO MergeId
+
+instance UIDefClass String where
+  mergeUIDef = uiManagerAddUiFromString
+
+instance UIDefClass [(String, [Maybe String])] where
+  mergeUIDef uiManager list = do
+    mergeId <- uiManagerNewMergeId uiManager
+    forM_ list $ \(path, actions) ->
+      forM_ actions $ add mergeId path
+    return mergeId
+    where add mergeId path (Just action) =
+            uiManagerAddUi uiManager mergeId path action (Just action) [UiManagerAuto] False
+          add mergeId path Nothing =
+            uiManagerAddUi uiManager mergeId path "" Nothing [UiManagerAuto] False
+
+mergeUI tag ags ui = modifyUI Nothing $ do
+  forM_ ags $ \ag ->
+    uiManagerInsertActionGroup uiManager ag 0
+  mid <- case ui of
+    Just def -> Just <$> mergeUIDef uiManager def
+    Nothing  -> return Nothing
+  return $ Just (tag, ags, mid)
+
+removeUI tag =
+  modifyUI tag (return Nothing)
+
+modifyUI tag f = do
+  mui <- readIORef uiRef
+  withJust mui $ \(tag', ags, mmid) ->
+    when (fromMaybe tag' tag == tag') $ do
+      mapM_ (uiManagerRemoveActionGroup uiManager) ags
+      withJust mmid $ \mid ->
+        uiManagerRemoveUi uiManager mid
+  writeIORef uiRef =<< f
+
+newUITag = do
+  tag <- readIORef uiTagRef
+  writeIORef uiTagRef $ tag + 1
+  return tag

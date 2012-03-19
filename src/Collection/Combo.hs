@@ -26,6 +26,8 @@ import Graphics.UI.Gtk
 
 import Properties.Property
 
+import UI
+
 import Collection.Common
 import Collection.ComboModel
 

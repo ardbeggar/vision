@@ -48,6 +48,7 @@ import Index hiding (getInfo)
 import qualified Index
 import Medialib
 import Compound
+import UI
 
 import Collection.Common
 import Collection.Utils
