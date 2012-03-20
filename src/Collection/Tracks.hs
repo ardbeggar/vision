@@ -110,6 +110,7 @@ mkTrackView coll = do
   order <- makeOrderView undefined $ do
     f <- readIORef funcRef
     f
+  containerSetBorderWidth (outer order) 0
   panedPack2 paned (outer order) False True
 
   let tv = TV { tStore   = store
