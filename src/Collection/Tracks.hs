@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE TupleSections #-}
+
 module Collection.Tracks
   ( TrackView (..)
   , mkTrackView
@@ -49,6 +51,7 @@ import qualified Index
 import Medialib
 import Compound
 import UI
+import Editor (getData, setData)
 
 import Collection.Common
 import Collection.Utils
@@ -60,10 +63,11 @@ data TrackView
        , tSelSet  :: IORef (Set MediaId)
        , tView    :: TreeView
        , tSel     :: TreeSelection
-       , tScroll  :: ScrolledWindow
+       , tPaned   :: VPaned
        , tNextRef :: IORef VI
        , tCollRef :: IORef Coll
        , tSetColl :: TrackView -> Coll -> IO ()
+       , tOrder   :: PropertyView Bool
        }
 
 instance CollBuilder TrackView where
@@ -99,17 +103,27 @@ mkTrackView coll = do
   scrolledWindowSetShadowType scroll ShadowIn
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
+  paned   <- vPanedNew
+  panedPack1 paned scroll True False
+
+  funcRef <- newIORef (return ())
+  order <- makeOrderView undefined $ do
+    f <- readIORef funcRef
+    f
+  panedPack2 paned (outer order) False True
+
   let tv = TV { tStore   = store
               , tIndex   = index
               , tSelSet  = selSet
               , tView    = view
               , tSel     = sel
-              , tScroll  = scroll
+              , tPaned   = paned
               , tNextRef = nextRef
               , tCollRef = collRef
               , tSetColl = doSetColl
+              , tOrder   = order
               }
-  setupView tv
+  setupView tv funcRef
   setupUI tv
   loadTracks tv
   return tv
@@ -117,7 +131,7 @@ mkTrackView coll = do
 instance ViewItem TrackView where
   nextVIRef = tNextRef
 
-setupView tv = do
+setupView tv funcRef = do
   let view  = tView tv
       sel   = tSel tv
       popup = coms eVPopup
@@ -128,8 +142,14 @@ setupView tv = do
 
   view `onDestroy` (killIndex $ tIndex tv)
 
-  setColumns tv False =<< loadConfig
-  widgetShowAll $ tScroll tv
+  props <- loadConfig
+  setData (tOrder tv) $ map (, False) props
+  setColumns tv False props
+  writeIORef funcRef $ do
+    props <- map fst <$> getData (tOrder tv)
+    setColumns tv True props
+
+  widgetShowAll $ tPaned tv
 
 instance SetColl TrackView where
   setColl tv coll = tSetColl tv tv coll
@@ -225,8 +245,8 @@ populateModel tv ids = do
         index = tIndex tv
 
 instance CompoundWidget TrackView where
-  type Outer TrackView = ScrolledWindow
-  outer = tScroll
+  type Outer TrackView = VPaned
+  outer = tPaned
 
 instance FocusChild TrackView where
   type Focus TrackView = TreeView
