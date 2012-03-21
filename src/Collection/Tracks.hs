@@ -103,7 +103,8 @@ mkTrackView coll = do
   scrolledWindowSetShadowType scroll ShadowIn
   scrolledWindowSetPolicy scroll PolicyNever PolicyAutomatic
   containerAdd scroll view
-  paned   <- vPanedNew
+
+  paned <- vPanedNew
   panedPack1 paned scroll True False
 
   funcRef <- newIORef (return ())
@@ -112,6 +113,16 @@ mkTrackView coll = do
     f
   containerSetBorderWidth (outer order) 0
   panedPack2 paned (outer order) False True
+
+  paned `on` buttonPressEvent $ tryEvent $ do
+    LeftButton  <- eventButton
+    DoubleClick <- eventClick
+    ew          <- eventWindow
+    liftIO $ do
+      hw <- panedGetHandleWindow paned
+      when (hw == ew) $ void $ flip timeoutAdd 250 $ do
+        paned `set` [ panedPosition :=> paned `get` panedMaxPosition ]
+        return False
 
   let tv = TV { tStore   = store
               , tIndex   = index
