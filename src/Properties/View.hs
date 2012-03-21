@@ -120,6 +120,7 @@ makePropertyView make _ notify = do
 
   left <- treeViewNewWithModel filter
   treeViewSetHeadersVisible left False
+  treeViewSetRulesHint left True
 
   sel <- treeViewGetSelection left
   treeSelectionSetMode sel SelectionMultiple
@@ -146,6 +147,7 @@ makePropertyView make _ notify = do
   right <- treeViewNewWithModel store
   treeViewSetHeadersVisible right False
   treeViewSetReorderable right True
+  treeViewSetRulesHint right True
 
   sel <- treeViewGetSelection right
   treeSelectionSetMode sel SelectionMultiple
