@@ -24,11 +24,14 @@ module Playlist.UI
   ) where
 
 import Control.Monad
+import Control.Monad.Trans
 
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TWatch
 import Control.Concurrent.STM.TGVar
+
+import Data.IORef
 
 import System.IO.Unsafe
 
@@ -62,6 +65,7 @@ setupUI = do
   setupWindowTitle
   withVolume $ withPlaytime setupPlaybar
   withClipboard  setupActions
+  setupOrderView
 
   popup <- getWidget castToMenu "ui/playlist-popup"
   setupTreeViewPopup playlistView popup
@@ -212,6 +216,48 @@ setupPlaybar = do
 
   return ()
 
+setupOrderView = do
+  paned <- getObject castToVPaned "main-paned"
+
+  funcRef <- newIORef (return ())
+  order <- makeOrderView window $ join $ readIORef funcRef
+  writeIORef funcRef $ do
+    let f (p, True)  = '-' : propKey p
+        f (p, False) = propKey p
+    cfg <- getData order
+    void $ playlistSort xmms Nothing $ map f cfg
+  containerSetBorderWidth (outer order) 0
+  panedPack2 paned (outer order) False True
+
+  testRef <- newIORef False
+  pposRef <- newIORef 0
+
+  paned `on` buttonReleaseEvent $ liftIO $ do
+    doit <- readIORef testRef
+    writeIORef testRef False
+    when doit $ do
+      pos <- paned `get` panedPosition
+      max <- paned `get` panedMaxPosition
+      if pos == max
+        then do
+        pos <- readIORef pposRef
+        paned `set` [ panedPosition := if pos == 0 then max - 200 else pos ]
+        else do
+        writeIORef pposRef pos
+        paned `set` [ panedPosition := 100000 ]
+    return False
+
+  paned `on` buttonPressEvent $ do
+    eb <- eventButton
+    ec <- eventClick
+    ew <- eventWindow
+    liftIO $ do
+      hw <- panedGetHandleWindow paned
+      writeIORef testRef $
+        eb == LeftButton && ec == DoubleClick && ew == hw
+    return False
+
+  paned `set` [ panedPosition := 100000 ]
 
 
 data URLEntry =
