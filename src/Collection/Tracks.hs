@@ -114,15 +114,35 @@ mkTrackView coll = do
   containerSetBorderWidth (outer order) 0
   panedPack2 paned (outer order) False True
 
-  paned `on` buttonPressEvent $ tryEvent $ do
-    LeftButton  <- eventButton
-    DoubleClick <- eventClick
-    ew          <- eventWindow
+  testRef <- newIORef False
+  pposRef <- newIORef 0
+
+  paned `on` buttonReleaseEvent $ liftIO $ do
+    doit <- readIORef testRef
+    writeIORef testRef False
+    when doit $ do
+      pos <- paned `get` panedPosition
+      max <- paned `get` panedMaxPosition
+      if pos == max
+        then do
+        pos <- readIORef pposRef
+        paned `set` [ panedPosition := if pos == 0 then max - 200 else pos ]
+        else do
+        writeIORef pposRef pos
+        paned `set` [ panedPosition := 100000 ]
+    return False
+
+  paned `on` buttonPressEvent $ do
+    eb <- eventButton
+    ec <- eventClick
+    ew <- eventWindow
     liftIO $ do
       hw <- panedGetHandleWindow paned
-      when (hw == ew) $ void $ flip timeoutAdd 250 $ do
-        paned `set` [ panedPosition :=> paned `get` panedMaxPosition ]
-        return False
+      writeIORef testRef $
+        eb == LeftButton && ec == DoubleClick && ew == hw
+    return False
+
+  paned `set` [ panedPosition := 100000 ]
 
   let tv = TV { tStore   = store
               , tIndex   = index
