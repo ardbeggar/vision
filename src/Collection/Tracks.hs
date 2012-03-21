@@ -67,7 +67,7 @@ data TrackView
        , tNextRef :: IORef VI
        , tCollRef :: IORef Coll
        , tSetColl :: TrackView -> Coll -> IO ()
-       , tOrder   :: PropertyView Bool
+       , tColCfg  :: PropertyView ()
        }
 
 instance CollBuilder TrackView where
@@ -108,11 +108,9 @@ mkTrackView coll = do
   panedPack1 paned scroll True False
 
   funcRef <- newIORef (return ())
-  order <- makeOrderView undefined $ do
-    f <- readIORef funcRef
-    f
-  containerSetBorderWidth (outer order) 0
-  panedPack2 paned (outer order) False True
+  colCfg <- makePropertyView (, ()) undefined $ join $ readIORef funcRef
+  containerSetBorderWidth (outer colCfg) 0
+  panedPack2 paned (outer colCfg) False True
 
   testRef <- newIORef False
   pposRef <- newIORef 0
@@ -153,7 +151,7 @@ mkTrackView coll = do
               , tNextRef = nextRef
               , tCollRef = collRef
               , tSetColl = doSetColl
-              , tOrder   = order
+              , tColCfg  = colCfg
               }
   setupView tv funcRef
   setupUI tv
@@ -175,10 +173,10 @@ setupView tv funcRef = do
   view `onDestroy` (killIndex $ tIndex tv)
 
   props <- loadConfig
-  setData (tOrder tv) $ map (, False) props
+  setData (tColCfg tv) $ map (, ()) props
   setColumns tv False props
   writeIORef funcRef $ do
-    props <- map fst <$> getData (tOrder tv)
+    props <- map fst <$> getData (tColCfg tv)
     setColumns tv True props
 
   widgetShowAll $ tPaned tv
