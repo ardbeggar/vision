@@ -47,7 +47,6 @@ data Com
         , eVPopup :: Menu
         , eCModel :: ListStore ComboItem
         , eScroll :: ScrolledWindow
-        , eSAdj   :: Adjustment
         }
 
 coms = ($ ?_Collection_Common)
@@ -89,7 +88,6 @@ withCommon' w = do
             , eVPopup = vpopup
             , eCModel = cmodel
             , eScroll = scroll
-            , eSAdj   = adj
             }
 
   unWrap w
