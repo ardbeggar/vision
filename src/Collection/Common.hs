@@ -28,22 +28,19 @@ module Collection.Common
   , withSelectedView
   ) where
 
-import Control.Monad
-
-import Data.IORef
-
 import Graphics.UI.Gtk hiding (focus)
 
 import UI
 import Utils
 import Compound
 
-import Collection.ScrollBox
+import Widgets.ColumnView
+
 import Collection.ComboModel
 
 
 data Com
-  = Com { eSBox   :: ScrollBox
+  = Com { eCV     :: ColumnView
         , eVPopup :: Menu
         , eCModel :: ListStore ComboItem
         , eScroll :: ScrolledWindow
@@ -57,34 +54,18 @@ withCommon    = withCommon' . Wrap
 withCommon' w = do
   vpopup <- getWidget castToMenu "ui/view-popup"
 
-  sbox   <- mkScrollBox
+  cv     <- columnViewNew
   cmodel <- mkModel
 
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetShadowType scroll ShadowNone
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyNever
   adj <- scrolledWindowGetHAdjustment scroll
-
-  fcRef <- newIORef Nothing
-
-  let scrollIn mfc = void $ withJust mfc $ \fc ->
-        flip idleAdd priorityLow $ do
-          Rectangle x _ w _ <- widgetGetAllocation fc
-          adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
-          return False
-
-  adj `afterAdjChanged` do
-    mfc <- readIORef fcRef
-    scrollIn mfc
-
-  (sBox sbox) `on` setFocusChild $ \mfc -> do
-    writeIORef fcRef mfc
-    scrollIn mfc
-
-  containerAdd scroll $ outer sbox
+  columnViewSetupFocusScroll cv adj
+  containerAdd scroll $ outer cv
 
   let ?_Collection_Common =
-        Com { eSBox   = sbox
+        Com { eCV     = cv
             , eVPopup = vpopup
             , eCModel = cmodel
             , eScroll = scroll
@@ -94,7 +75,7 @@ withCommon' w = do
 
 
 addView w = do
-  scrollBoxAdd (coms eSBox) $ outer w
+  columnViewAdd (coms eCV) $ outer w
   widgetGrabFocus $ focus w
 
 class FocusChild f where

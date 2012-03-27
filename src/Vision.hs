@@ -37,7 +37,6 @@ import Playlist
 import Registry
 import UI
 
-import Widgets.ColumnView
 
 main = do
   initGUI
