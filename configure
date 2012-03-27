@@ -1665,7 +1665,7 @@ if test "${with_gcc+set}" = set; then :
 fi
 
 
-ac_config_files="$ac_config_files Makefile ui/Makefile src/Makefile src/Properties/Makefile src/Properties/Editor/Makefile src/Playlist/Makefile src/Playlist/Format/Makefile src/Location/Makefile src/Collection/Makefile src/Collection/List/Makefile src/Control/Makefile src/Control/Concurrent/Makefile src/Control/Concurrent/STM/Makefile src/Data/Makefile"
+ac_config_files="$ac_config_files Makefile ui/Makefile src/Makefile src/Properties/Makefile src/Properties/Editor/Makefile src/Playlist/Makefile src/Playlist/Format/Makefile src/Location/Makefile src/Collection/Makefile src/Collection/List/Makefile src/Control/Makefile src/Control/Concurrent/Makefile src/Control/Concurrent/STM/Makefile src/Widgets/Makefile src/Data/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -2397,6 +2397,7 @@ do
     "src/Control/Makefile") CONFIG_FILES="$CONFIG_FILES src/Control/Makefile" ;;
     "src/Control/Concurrent/Makefile") CONFIG_FILES="$CONFIG_FILES src/Control/Concurrent/Makefile" ;;
     "src/Control/Concurrent/STM/Makefile") CONFIG_FILES="$CONFIG_FILES src/Control/Concurrent/STM/Makefile" ;;
+    "src/Widgets/Makefile") CONFIG_FILES="$CONFIG_FILES src/Widgets/Makefile" ;;
     "src/Data/Makefile") CONFIG_FILES="$CONFIG_FILES src/Data/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;

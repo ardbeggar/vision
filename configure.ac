@@ -17,5 +17,6 @@ AC_CONFIG_FILES(Makefile
                 src/Control/Makefile
                 src/Control/Concurrent/Makefile
                 src/Control/Concurrent/STM/Makefile
+                src/Widgets/Makefile
                 src/Data/Makefile)
 AC_OUTPUT

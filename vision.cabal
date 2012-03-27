@@ -33,6 +33,7 @@ extra-source-files: configure.ac,
                     src/Collection/Makefile.in,
                     src/Data/Makefile.in,
                     src/Location/Makefile.in,
+                    src/Widgets/Makefile.in,
                     Makefile.in,
                     ui/Makefile.in
 data-files:         ui/*.xml,
@@ -106,7 +107,8 @@ executable vision
                     Control.Concurrent.STM.TWatch,
                     Control.Concurrent.STM.TGVar,
                     Control.Concurrent.STM.Watch,
-                    Data.Env
+                    Data.Env,
+                    Widgets.ColumnView
   hs-source-dirs:   src
   build-depends:    base >= 4 && < 5, xmms2-client >= 0.0.7.0,
                     xmms2-client-glib >= 0.0.7.0,
