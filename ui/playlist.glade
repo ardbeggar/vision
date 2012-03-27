@@ -37,6 +37,11 @@
           </object>
         </child>
         <child>
+          <object class="GtkAction" id="browse-library">
+            <property name="label">_Browse Library</property>
+          </object>
+        </child>
+        <child>
           <object class="GtkAction" id="playlist">
             <property name="label">_Playlist</property>
           </object>
@@ -220,6 +225,7 @@
             <menuitem action="invert-selection"/>
           </menu>
           <menu action="browse">
+            <menuitem action="browse-library"/>
             <menuitem action="browse-location"/>
             <menuitem action="browse-collection"/>
           </menu>

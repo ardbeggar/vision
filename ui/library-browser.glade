@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="2.20"/>
+  <!-- interface-naming-policy toplevel-contextual -->
+  <object class="GtkUIManager" id="ui-manager">
+    <child>
+      <object class="GtkActionGroup" id="ui-actions">
+        <child>
+          <object class="GtkAction" id="collection">
+            <property name="label">_Collection</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="close">
+            <property name="label">_Close window</property>
+            <property name="stock_id">gtk-close</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="quit">
+            <property name="label">_Quit</property>
+            <property name="stock_id">gtk-quit</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="edit">
+            <property name="label">_Edit</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="view">
+            <property name="label">_View</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="properties">
+            <property name="label">P_roperties</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="manage-properties">
+            <property name="label">_Manage properties…</property>
+            <property name="stock_id">gtk-preferences</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="help">
+            <property name="label">_Help</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkAction" id="about">
+            <property name="label">_About</property>
+            <property name="stock_id">gtk-about</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkActionGroup" id="server-actions">
+        <child>
+          <object class="GtkAction" id="import-properties">
+            <property name="label">_Import properties…</property>
+            <property name="stock_id">gtk-open</property>
+          </object>
+          <accelerator/>
+        </child>
+      </object>
+    </child>
+    <ui>
+      <menubar name="menubar">
+        <placeholder name="entries">
+          <menu action="collection">
+            <placeholder name="playlist-actions"/>
+            <separator/>
+            <placeholder name="collection-actions"/>
+            <separator/>
+            <menuitem action="close"/>
+            <menuitem action="quit"/>
+          </menu>
+          <menu action="edit">
+            <placeholder name="clipboard-actions"/>
+            <separator/>
+            <placeholder name="selection-actions"/>
+          </menu>
+          <menu action="properties">
+            <placeholder name="property-actions"/>
+            <menuitem action="import-properties"/>
+            <separator/>
+            <menuitem action="manage-properties"/>
+          </menu>
+          <menu action="help">
+            <menuitem action="about"/>
+          </menu>
+        </placeholder>
+      </menubar>
+      <popup action="view-popup">
+        <placeholder name="playlist-actions"/>
+        <separator/>
+        <placeholder name="clipboard-actions"/>
+        <separator/>
+        <placeholder name="selection-actions"/>
+        <separator/>
+        <placeholder name="property-actions"/>
+        <separator/>
+        <placeholder name="collection-actions"/>
+      </popup>
+    </ui>
+  </object>
+  <object class="GtkWindow" id="main-window">
+    <child>
+      <object class="GtkVBox" id="contents">
+        <property name="visible">True</property>
+        <child>
+          <object class="GtkMenuBar" constructor="ui-manager" id="menubar">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="views">
+            <property name="visible">True</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkInfoBar" id="info-bar"/>
+          <packing>
+            <property name="position">2</property>
+            <property name="expand">False</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

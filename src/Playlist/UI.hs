@@ -48,6 +48,7 @@ import Utils
 import Clipboard
 import Location
 import Collection
+import Library
 import Compound
 import Editor
 import Properties hiding (showPropertyEditor, showPropertyExport)
@@ -101,6 +102,7 @@ setupActions = do
     , ("invert-selection",   editInvertSelection)
     , ("browse-location",    browseLocation SortAscending Nothing)
     , ("browse-collection",  browseCollection Nothing)
+    , ("browse-library",     browseLibrary)
     , ("add-media",          runURLEntryDialog urlEntryDialog)
     , ("clear-playlist",     clearPlaylist)
     , ("sort-by",            showOrderDialog orderDialog getOrder setOrder)

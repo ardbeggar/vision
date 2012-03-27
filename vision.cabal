@@ -88,6 +88,7 @@ executable vision
                     Collection.Select,
                     Collection.Utils,
                     Collection.Common,
+                    Library,
                     Playlist,
                     Playlist.Model,
                     Playlist.View,
