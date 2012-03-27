@@ -20,15 +20,20 @@
 module Widgets.ColumnView
   ( ColumnView
   , columnViewNew
+  , columnViewSetupFocusScroll
   , columnViewAdd
   ) where
 
+import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans
+
+import Data.IORef
 
 import Graphics.UI.Gtk
 
 import Compound
+import Utils
 
 
 data ColumnView
@@ -59,6 +64,22 @@ columnViewAdd cv widget = do
   setupResize handle widget
   boxPackStart (_box cv) widget PackNatural 0
   boxPackStart (_box cv) handle PackNatural 0
+
+columnViewSetupFocusScroll cv adj = do
+  fcRef <- newIORef Nothing
+  let scrollIn mfc = void $ withJust mfc $ \fc ->
+        flip idleAdd priorityLow $ do
+          Rectangle x _ w _ <- widgetGetAllocation fc
+          adjustmentClampPage adj (fromIntegral x) (fromIntegral (x + w))
+          return False
+
+  adj `afterAdjChanged` (readIORef fcRef >>= scrollIn)
+
+  (_box cv) `on` setFocusChild $ \mfc -> do
+    writeIORef fcRef mfc
+    scrollIn mfc
+
+  return ()
 
 setupResize handle widget = do
   handle `after` realize $ do
