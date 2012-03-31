@@ -91,6 +91,7 @@ executable vision
                     Collection.Common,
                     Library,
                     Library.Filter,
+                    Library.Coll,
                     Playlist,
                     Playlist.Model,
                     Playlist.View,
