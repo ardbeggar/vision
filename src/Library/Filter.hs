@@ -114,3 +114,35 @@ match = do
   lexeme1 $ string "match"
   val <- value
   return $ Fmatch sel val
+
+data UnOp = UOnot deriving (Show)
+data BinOp = BOand | BOor deriving (Show)
+data Expr = Efilter Filter | UO UnOp Expr | BO BinOp Expr Expr deriving (Show)
+
+test_expr = parseTest expr
+
+expr :: Parser Expr
+expr = do
+  s <- single
+  binOpAnd s <|> binOpOr s <|> (eof >> return s)
+
+binOpAnd :: Expr -> Parser Expr
+binOpAnd ex = do
+  lexeme1 $ string "and"
+  BO BOand ex <$> expr
+
+binOpOr :: Expr -> Parser Expr
+binOpOr ex = do
+  lexeme1 $ string "or"
+  BO BOor ex <$> expr
+
+single :: Parser Expr
+single = enot <|> efilter
+
+efilter :: Parser Expr
+efilter = Efilter <$> filter
+
+enot :: Parser Expr
+enot = do
+  lexeme1 $ string "not"
+  UO UOnot <$> single
