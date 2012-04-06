@@ -21,6 +21,7 @@
 
 module Clipboard
   ( initClipboard
+  , WithClipboard
   , withClipboard
   , clipboard
   , clipboardTargets
@@ -37,6 +38,8 @@ import Data.Typeable
 
 import Graphics.UI.Gtk
 
+import XMMS2.Client (MediaId)
+
 import Registry
 import Atoms (xmms2MlibIdTarget)
 
@@ -50,12 +53,17 @@ data C = C { _targets   :: TVar [TargetTag]
 clipboardEnv :: Extract Ix C
 clipboardEnv = Extract
 
-clipboard        = _clipboard ?_Clipboard
+clipboard :: WithClipboard => Clipboard
+clipboard = _clipboard ?_Clipboard
+
+clipboardTargets :: WithClipboard => TVar [TargetTag]
 clipboardTargets = _targets ?_Clipboard
 
+getClipboardTargets :: WithClipboard => IO [TargetTag]
 getClipboardTargets =
   readTVarIO clipboardTargets
 
+copyIds :: WithClipboard => [MediaId] -> IO ()
 copyIds ids = do
   clipboardSetWithData clipboard
     [(xmms2MlibIdTarget, 0)]
@@ -63,9 +71,11 @@ copyIds ids = do
     (return ())
   return ()
 
+updateClipboardTargets :: WithClipboard => Maybe [TargetTag] -> IO ()
 updateClipboardTargets ts =
   atomically $ writeTVar clipboardTargets $ fromMaybe [] ts
 
+initClipboard :: WithRegistry => IO ()
 initClipboard = do
   c <- makeC
   addEnv Ix c
@@ -73,13 +83,15 @@ initClipboard = do
   timeoutAdd checkClipboard 0
   return ()
 
-newtype Wrap a = Wrap { unWrap :: (?_Clipboard :: C) => a }
+type WithClipboard = ?_Clipboard :: C
 
-withClipboard    = withClipboard' . Wrap
-withClipboard' w = do
+withClipboard :: WithRegistry => (WithClipboard => IO a) -> IO a
+withClipboard func = do
   Just (Env c) <- getEnv clipboardEnv
-  let ?_Clipboard = c in unWrap w
+  let ?_Clipboard = c
+  func
 
+makeC :: IO C
 makeC = do
   targets   <- newTVarIO []
   clipboard <- clipboardGet selectionClipboard
@@ -87,6 +99,7 @@ makeC = do
            , _clipboard = clipboard
            }
 
+checkClipboard :: WithClipboard => IO Bool
 checkClipboard = do
   clipboardRequestTargets clipboard $ \targets -> do
     updateClipboardTargets targets
