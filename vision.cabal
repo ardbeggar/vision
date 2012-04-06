@@ -119,7 +119,8 @@ executable vision
                     FlexibleContexts, FlexibleInstances,
                     TypeFamilies, ScopedTypeVariables,
                     PatternGuards, StandaloneDeriving,
-                    GeneralizedNewtypeDeriving
+                    GeneralizedNewtypeDeriving,
+                    ConstraintKinds
   ghc-options:      -W
 
 
