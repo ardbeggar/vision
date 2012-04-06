@@ -65,8 +65,8 @@ import XMMS
 data Ix = Ix deriving (Typeable)
 
 data Impex
-  = Impex { _export :: WithUI ([MediaId] -> IO ())
-          , _import :: WithUI (IO ())
+  = Impex { _export :: WithUI => [MediaId] -> IO ()
+          , _import :: WithUI => IO ()
           }
     deriving (Typeable)
 

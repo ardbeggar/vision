@@ -53,7 +53,7 @@ import Builder
 import Utils
 
 
-type WithUI a = (?_UI :: UI) => a
+type WithUI = ?_UI :: UI
 
 data UI
   = UI { uWindow      :: Window

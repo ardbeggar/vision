@@ -52,7 +52,7 @@ import Properties.Model
 data Ix = Ix deriving (Typeable)
 
 data Manager
-  = Manager { _showPropertyManager :: WithUI (IO ()) }
+  = Manager { _showPropertyManager :: WithUI => IO () }
     deriving (Typeable)
 
 initPropertyManager = do

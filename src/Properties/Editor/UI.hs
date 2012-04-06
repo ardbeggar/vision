@@ -60,7 +60,7 @@ data UI
 data Ix = Ix deriving (Typeable)
 
 data UIE
-  = UIE { _showPropertyEditor :: WithUI ([MediaId] -> IO ()) }
+  = UIE { _showPropertyEditor :: WithUI => [MediaId] -> IO () }
   deriving (Typeable)
 
 showPropertyEditor ids = do
