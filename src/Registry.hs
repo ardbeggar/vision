@@ -29,7 +29,8 @@
              Rank2Types #-}
 
 module Registry
-  ( withRegistry
+  ( WithRegistry
+  , withRegistry
   , addEnv
   , getEnv
   ) where
@@ -47,21 +48,22 @@ deriving instance Typeable2 Env
 
 type EnvMap = TVar (Map TypeRep Dynamic)
 
-newtype Wrap a = Wrap { unWrap :: (?_Registry :: EnvMap) => a }
+type WithRegistry = ?_Registry :: EnvMap
 
-withRegistry    = withRegistry' . Wrap
-withRegistry' w = do
+withRegistry :: (WithRegistry => IO a) -> IO a
+withRegistry func = do
   registry <- newTVarIO Map.empty
-  let ?_Registry = registry in unWrap w
+  let ?_Registry = registry
+  func
 
-addEnv :: (?_Registry :: EnvMap, Typeable ix, Typeable r) => ix -> r -> IO ()
+addEnv :: (WithRegistry, Typeable ix, Typeable r) => ix -> r -> IO ()
 addEnv ix r = do
   let val = mkEnv ix r
   atomically $ do
     map <- readTVar ?_Registry
     writeTVar ?_Registry $ Map.insert (typeOf val) (toDyn val) map
 
-getEnv :: (?_Registry :: EnvMap, Typeable ix, Typeable r) => Extract ix r -> IO (Maybe (Env ix r))
+getEnv :: (WithRegistry, Typeable ix, Typeable r) => Extract ix r -> IO (Maybe (Env ix r))
 getEnv spec = atomically $ do
   map <- readTVar ?_Registry
   case Map.lookup (typeOf $ env spec) map of
