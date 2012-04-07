@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 22 Jun. 2010
 --
---  Copyright (C) 2010, 2011 Oleg Belozeorov
+--  Copyright (C) 2010, 2011, 2012 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -22,6 +22,7 @@
 module Volume
   ( initVolume
   , volumeEnv
+  , WithVolume
   , withVolume
   , makeVolumeControl
   ) where
@@ -53,6 +54,7 @@ deriving instance Typeable Adjustment
 volumeEnv :: Extract Ix Adjustment
 volumeEnv = Extract
 
+initVolume :: WithRegistry => IO ()
 initVolume = withXMMS $ do
   adj <- adjustmentNew 0 0 100 5 5 0
   addEnv Ix adj
@@ -75,13 +77,15 @@ initVolume = withXMMS $ do
 
   return ()
 
-newtype Wrap a = Wrap { unWrap :: (?_Volume :: Adjustment) => a }
+type WithVolume = ?_Volume :: Adjustment
 
-withVolume    = withVolume' . Wrap
-withVolume' w = do
+withVolume :: WithRegistry => (WithVolume => IO a) -> IO a
+withVolume func = do
   Just (Env v) <- getEnv volumeEnv
-  let ?_Volume = v in unWrap w
+  let ?_Volume = v
+  func
 
+makeVolumeControl :: (WithXMMS, WithVolume) => IO HScale
 makeVolumeControl = do
   view <- hScaleNew ?_Volume
   scaleSetDrawValue view False
@@ -96,15 +100,18 @@ makeVolumeControl = do
 
   return view
 
+handleVolume :: Adjustment -> ConnectId Adjustment -> ResultM c (Maybe (Dict Int32)) ()
 handleVolume adj cId = do
   vol <- catchResult 0 (maybe 0 (maximum . Map.elems))
   liftIO $ withoutVolumeChange cId $
     adjustmentSetValue adj $ fromIntegral vol
 
+setVolume :: WithXMMS => Int -> IO ()
 setVolume vol =
   playbackVolumeGet xmms >>* do
     vols <- catchResult Map.empty (fromMaybe Map.empty)
     liftIO $ mapM_ (flip (playbackVolumeSet xmms) vol) $ Map.keys vols
 
+withoutVolumeChange :: ConnectId Adjustment -> IO a -> IO a
 withoutVolumeChange cId =
   bracket_ (signalBlock cId) (signalUnblock cId)
