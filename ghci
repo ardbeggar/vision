@@ -1,0 +1,15 @@
+#! /bin/sh
+
+ghci -isrc \
+     -idist/build/autogen \
+     -XTypeFamilies \
+     -XFlexibleInstances \
+     -XDatatypeContexts \
+     -XImplicitParams \
+     -XNoMonomorphismRestriction \
+     -XStandaloneDeriving \
+     -XGeneralizedNewtypeDeriving \
+     -XScopedTypeVariables \
+     -XFlexibleContexts \
+     -XConstraintKinds \
+     $@
