@@ -28,5 +28,5 @@ import Properties.Editor.UI
 
 
 initPropertyEditor =
-  withEditorModel $ withEditorView initEditorUI
+  withModel $ withEditorView initEditorUI
 
