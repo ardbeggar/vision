@@ -22,11 +22,16 @@ module Properties.Editor
   , showPropertyEditor
   ) where
 
-import Properties.Editor.Model
-import Properties.Editor.View
-import Properties.Editor.UI
+import Environment (WithEnvironment)
+import Registry (WithRegistry)
+import XMMS (WithXMMS)
 
+import Properties.Model (WithModel)
 
-initPropertyEditor =
-  withModel $ withView initEditorUI
+import Properties.Editor.Model (withModel)
+import Properties.Editor.View (withView)
+import Properties.Editor.UI (initUI, showPropertyEditor)
+
+initPropertyEditor :: (WithEnvironment, WithRegistry, WithXMMS, WithModel) => IO ()
+initPropertyEditor = withModel $ withView initUI
 
