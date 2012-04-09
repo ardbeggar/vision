@@ -20,7 +20,8 @@
 {-# LANGUAGE Rank2Types #-}
 
 module Properties.Editor.View
-  ( withEditorView
+  ( WithView
+  , withView
   , view
   , resetView
   , onPropertyEdited
@@ -39,20 +40,27 @@ data View
          , _valCell :: CellRendererText
          }
 
-view    = _view ?_Properties_Editor_View
-valCol  = _valCol ?_Properties_Editor_View
+type WithView = ?_Properties_Editor_View :: View
+
+view :: WithView => TreeView
+view = _view ?_Properties_Editor_View
+
+valCol :: WithView => TreeViewColumn
+valCol = _valCol ?_Properties_Editor_View
+
+valCell :: WithView => CellRendererText
 valCell = _valCell ?_Properties_Editor_View
 
+onPropertyEdited :: WithView => (TreePath -> String -> IO ()) -> IO (ConnectId CellRendererText)
 onPropertyEdited = valCell `on` edited
 
+resetView :: WithView => IO ()
 resetView = do
   treeViewSetCursor view [0] $ Just (valCol, False)
   widgetGrabFocus view
 
-newtype Wrap a = Wrap { unWrap :: (?_Properties_Editor_View :: View) => a }
-
-withEditorView    = withEditorView' . Wrap
-withEditorView' w = do
+withView :: (WithXMMS, WithModel) => (WithView => IO a) -> IO a
+withView func = do
   ev <- mkView
   let ?_Properties_Editor_View = ev
 
@@ -78,8 +86,9 @@ withEditorView' w = do
       return $ c && not (propReadOnly prop)
     ]
 
-  unWrap w
+  func
 
+mkView :: WithModel => IO View
 mkView = do
   view    <- treeViewNewWithModel store
   valCol  <- treeViewColumnNew
