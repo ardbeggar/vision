@@ -21,6 +21,7 @@
 
 module Playtime
   ( initPlaytime
+  , WithPlaytime
   , withPlaytime
   , makeSeekControl
   , playtimeEnv
@@ -37,6 +38,7 @@ import Control.Monad.Trans
 import Control.Monad.State
 
 import Data.Maybe
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Typeable
 import Data.Env
@@ -60,9 +62,18 @@ data Playtime
              }
     deriving (Typeable)
 
-adj        = _adj ?_Playtime
+type WithPlaytime = ?_Playtime :: Playtime
+
+adj :: WithPlaytime => Adjustment
+adj = _adj ?_Playtime
+
+currentIdV :: WithPlaytime => TVar (Maybe MediaId)
 currentIdV = _currentIdV ?_Playtime
-playtimeV  = _playtimeV ?_Playtime
+
+playtimeV :: WithPlaytime => TVar Int
+playtimeV = _playtimeV ?_Playtime
+
+seekCountV :: WithPlaytime => TVar (Maybe Int)
 seekCountV = _seekCountV ?_Playtime
 
 
@@ -71,6 +82,7 @@ data Ix = Ix deriving (Typeable)
 playtimeEnv :: Extract Ix Playtime
 playtimeEnv = Extract
 
+initPlaytime :: WithRegistry => IO ()
 initPlaytime = withXMMS $ withMedialib $ withPlayback $ do
   pt <- makePlaytime
   addEnv Ix pt
@@ -94,14 +106,13 @@ initPlaytime = withXMMS $ withMedialib $ withPlayback $ do
 
   return ()
 
-
-newtype Wrap a = Wrap { unWrap :: (?_Playtime :: Playtime) => a }
-
-withPlaytime    = withPlaytime' . Wrap
-withPlaytime' w = do
+withPlaytime :: WithRegistry => (WithPlaytime => IO a) -> IO a
+withPlaytime func = do
   Just (Env pt) <- getEnv playtimeEnv
-  let ?_Playtime = pt in unWrap w
+  let ?_Playtime = pt
+  func
 
+makePlaytime :: IO Playtime
 makePlaytime = do
   adj        <- adjustmentNew 0 0 0 5000 5000 0
   currentIdV <- newTVarIO Nothing
@@ -113,6 +124,7 @@ makePlaytime = do
                     , _seekCountV = seekCountV
                     }
 
+requestPlaytime :: (WithXMMS, WithPlaytime) => IO a
 requestPlaytime = forever $ do
   checkSeekCount
   playbackPlaytime xmms >>* do
@@ -120,27 +132,32 @@ requestPlaytime = forever $ do
     liftIO $ atomically $ writeTVar playtimeV pt
   threadDelay 1000000
 
+checkSeekCount :: WithPlaytime => IO ()
 checkSeekCount = atomically $ do
   rc <- readTVar seekCountV
   if rc == Just 0
     then return ()
     else retry
 
+modSeekCount :: WithPlaytime => (Int -> Int) -> IO ()
 modSeekCount op = atomically $ do
   rc <- readTVar seekCountV
   withJust rc $ \rc ->
     writeTVar seekCountV $ Just $ op rc
 
+handleCurrentId :: WithPlaytime => ResultM c MediaId ()
 handleCurrentId = do
   ci <- catchResult Nothing Just
   liftIO $ atomically $ writeTVar currentIdV ci
 
+setupSeek :: (WithXMMS, WithPlaytime) => IO (ConnectId Adjustment)
 setupSeek =  adj `onValueChanged` do
   modSeekCount (+ 1)
   v <- adjustmentGetValue adj
   playbackSeekMs xmms (round v) SeekSet >>* do
     liftIO $ modSeekCount $ \n -> n - 1
 
+makeSeekControl :: (WithPlayback, WithPlaytime) => IO HScale
 makeSeekControl = do
   view <- hScaleNew adj
   scaleSetDrawValue view False
@@ -164,6 +181,7 @@ data S =
     , sCi :: ConnectId Adjustment
     }
 
+mkS :: Maybe MediaId -> ConnectId Adjustment -> S
 mkS id cId =
   S { sPt = 0
     , sId = id
@@ -172,9 +190,12 @@ mkS id cId =
     , sCi = cId
     }
 
-evalPTM cId f =
-  evalStateT f (mkS Nothing cId)
+type PTM = StateT S IO
 
+evalPTM :: ConnectId Adjustment -> PTM a -> IO a
+evalPTM cId f = evalStateT f (mkS Nothing cId)
+
+withoutSeek :: IO a -> PTM a
 withoutSeek f = do
   cId <- gets sCi
   liftIO $ bracket_
@@ -188,6 +209,7 @@ data Msg
   | MI (MediaId, Stamp, MediaInfo)
   | PS (Maybe PlaybackStatus)
 
+dispatch :: (WithXMMS, WithMedialib, WithPlayback, WithPlaytime) => PTM ()
 dispatch = do
   (miC, ciW, psW, ptW) <- liftIO $ do
     playbackCurrentId xmms >>*
@@ -213,6 +235,7 @@ dispatch = do
       MI mi -> handleMI mi
       PS ps -> handlePS $ fromMaybe StatusStop ps
 
+handlePT :: WithPlaytime => Int -> PTM ()
 handlePT pt = do
   s <- get
   unless (sPs s == StatusStop) $ do
@@ -220,6 +243,7 @@ handlePT pt = do
     unless (sTd s == 0) $
       withoutSeek $ adjustmentSetValue adj $ fromIntegral pt
 
+handleCI :: (WithPlaytime, WithMedialib) => Maybe MediaId -> PTM ()
 handleCI id = do
   modify $ \s ->
     s { sPt = 0
@@ -231,6 +255,7 @@ handleCI id = do
     adjustmentSetUpper adj 0
   liftIO $ withJust id $ requestInfo Current
 
+handleMI :: WithPlaytime => (MediaId, Stamp, Map String Property) -> PTM ()
 handleMI (id, _, info) = do
   s <- get
   when (sId s == Just id) $
@@ -243,6 +268,7 @@ handleMI (id, _, info) = do
             adjustmentSetValue adj $ fromIntegral $ sPt s
       _ -> return ()
 
+handlePS :: WithPlaytime => PlaybackStatus -> PTM ()
 handlePS StatusStop = do
   modify $ \s ->
     s { sPs = StatusStop
