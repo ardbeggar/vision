@@ -20,7 +20,8 @@
 {-# LANGUAGE Rank2Types #-}
 
 module Properties.Editor.Model
-  ( withModel
+  ( WithModel
+  , withModel
   , store
   , populateModel
   , resetModel
