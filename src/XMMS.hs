@@ -21,6 +21,7 @@
 
 module XMMS
   ( initXMMS
+  , WithXMMS
   , withXMMS
   , xmms
   , connected
@@ -51,10 +52,18 @@ data XMMS
          }
     deriving (Typeable)
 
-xmms       = _xmms ?_XMMS
+type WithXMMS = ?_XMMS :: XMMS
+
+xmms :: WithXMMS => Connection
+xmms = _xmms ?_XMMS
+
+connectedV :: WithXMMS => TGVar Bool
 connectedV = _connected ?_XMMS
+
+connected :: WithXMMS => IO Bool
 connected  = readTGVarIO connectedV
 
+initXMMS :: (WithRegistry, WithEnvironment) => IO ()
 initXMMS = do
   xmms <- mkXMMS
   addEnv Ix xmms
@@ -62,14 +71,13 @@ initXMMS = do
   scheduleTryConnect 100
   return ()
 
-newtype Wrap a = Wrap { unWrap :: (?_XMMS :: XMMS) => a }
-
-withXMMS    = withXMMS' . Wrap
-withXMMS' w = do
+withXMMS :: WithRegistry => (WithXMMS => IO a) -> IO a
+withXMMS func = do
   Just (Env xmms) <- getEnv (Extract :: Extract Ix XMMS)
   let ?_XMMS = xmms
-  unWrap w
+  func
 
+mkXMMS :: IO XMMS
 mkXMMS = do
   xmms      <- XMMS2.Client.init "Vision"
   connected <- atomically $ newTGVar False
@@ -77,9 +85,11 @@ mkXMMS = do
               , _connected = connected
               }
 
+scheduleTryConnect :: (WithEnvironment, WithXMMS) => Int -> IO HandlerId
 scheduleTryConnect =
   timeoutAdd tryConnect
 
+tryConnect :: (WithEnvironment, WithXMMS) => IO Bool
 tryConnect = do
   success <- connect xmms xmmsPath
   if success
@@ -93,11 +103,13 @@ tryConnect = do
     scheduleTryConnect 1000
     return False
 
+disconnectCallback :: (WithEnvironment, WithXMMS) => IO ()
 disconnectCallback = do
   setConnected False
   yield
   scheduleTryConnect 1000
   return ()
 
+setConnected :: WithXMMS => Bool -> IO ()
 setConnected =
   atomically . writeTGVar connectedV

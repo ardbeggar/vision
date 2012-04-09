@@ -37,6 +37,7 @@ import Control.Monad.Trans
 import Control.Concurrent.MVar
 
 import Data.Char
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.List
@@ -65,24 +66,27 @@ import XMMS
 data Ix = Ix deriving (Typeable)
 
 data Impex
-  = Impex { _export :: WithUI ([MediaId] -> IO ())
-          , _import :: WithUI (IO ())
+  = Impex { _export :: WithUI => [MediaId] -> IO ()
+          , _import :: WithUI => IO ()
           }
     deriving (Typeable)
 
-
+showPropertyImport :: (WithRegistry, WithUI) => IO ()
 showPropertyImport = do
   Just (Env impex) <- getEnv (Extract :: Extract Ix Impex)
   _import impex
 
+showPropertyExport :: (WithRegistry, WithUI) => [MediaId] -> IO ()
 showPropertyExport ids = do
   Just (Env impex) <- getEnv (Extract :: Extract Ix Impex)
   _export impex ids
 
+initImpex :: (WithMedialib, WithXMMS, WithRegistry) => IO ()
 initImpex = do
   impex <- mkImpex
   addEnv Ix impex
 
+mkImpex :: (WithMedialib, WithXMMS) => IO Impex
 mkImpex = do
   exportDlg <- unsafeInterleaveIO makeExportDlg
   importDlg <- unsafeInterleaveIO makeImportDlg
@@ -90,9 +94,11 @@ mkImpex = do
                , _import = runChooser importDlg importProps
                }
 
+makeExportDlg :: IO Chooser
 makeExportDlg =
   makeChooser "Export properties" FileChooserActionSave stockSave
 
+exportProps :: (WithMedialib, WithUI) => [MediaId] -> String -> IO (IO ())
 exportProps ids file =
   retrieveProperties ids $ either (const $ return ()) $ \list -> do
     let base = dropFileName $ decodeString file
@@ -101,6 +107,10 @@ exportProps ids file =
       informUser MessageError $ "Property export failed: " ++
       (decodeString file) ++ ": " ++ ioeGetErrorString e
 
+exConv ::
+     String
+  -> Map String X.Property
+  -> ((String, String), Map String X.Property)
 exConv base info = ((url', args), Map.difference info readOnlyProps)
   where url'             = stripBase $ decodeURL path
         (path, args)     = break (== '?') url
@@ -110,6 +120,7 @@ exConv base info = ((url', args), Map.difference info readOnlyProps)
           , Just tail <- stripPrefix base path = tail
           | otherwise = url
 
+readOnlyProps :: Map String X.Property
 readOnlyProps =
   Map.fromList $ map (, undefined)
   [ "added", "bitrate", "chain", "channels", "duration"
@@ -117,9 +128,11 @@ readOnlyProps =
   , "samplerate", "size", "status", "timesplayed", "url"
   , "startms", "stopms", "isdir", "intsort" ]
 
+makeImportDlg :: IO Chooser
 makeImportDlg =
   makeChooser "Import properties" FileChooserActionOpen stockOpen
 
+importProps :: (WithXMMS, WithUI) => String -> IO ()
 importProps name =
   importAll `catch` (erep . ioeGetErrorString)
   where importAll = do
@@ -131,6 +144,11 @@ importProps name =
         decn = decodeString name
         erep = informUser MessageError . (("Property import failed: " ++ decn ++ ": ") ++)
 
+importOne ::
+  WithXMMS
+  => FilePath
+  -> ((String, String), Map String X.Property)
+  -> IO ()
 importOne base ((url, args), props) =
   medialibAddEntryEncoded xmms enc >>* do
     liftIO $ medialibGetIdEncoded xmms enc >>* do
@@ -141,10 +159,10 @@ importOne base ((url, args), props) =
         url' | isInfixOf "://" url = url
              | otherwise           = "file://" ++ joinPath [base, url]
 
+setProps :: WithXMMS => MediaId -> Map String X.Property -> IO ()
 setProps id props = mapM_ set $ Map.toList props
   where set (k, v) = medialibEntryPropertySet xmms id src k v
         src        = Just "client/generic/override/vision"
-
 
 
 data Chooser
@@ -152,6 +170,7 @@ data Chooser
             , cChooser :: FileChooserDialog
             }
 
+makeChooser :: String -> FileChooserAction -> String -> IO Chooser
 makeChooser title action stockId = do
   lock    <- newMVar ()
   chooser <- fileChooserDialogNew
@@ -177,6 +196,7 @@ makeChooser title action stockId = do
                  , cChooser = chooser
                  }
 
+runChooser :: WithUI => Chooser -> (FilePath -> IO b) -> IO ()
 runChooser Chooser { cLock = lock, cChooser = chooser } onAccept = do
   locked <- isJust <$> tryTakeMVar lock
   when locked $ do

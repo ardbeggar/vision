@@ -71,30 +71,36 @@ instance EditorWidget (PropertyView a) where
   getState      = propertyViewGetState
   resetModified = propertyViewResetModified
 
-propertyViewGetData =
-  listStoreToList . propertyViewStore
+propertyViewGetData :: PropertyView a -> IO [(Property, a)]
+propertyViewGetData = listStoreToList . propertyViewStore
 
+propertyViewSetData :: PropertyView a -> [(Property, a)] -> IO ()
 propertyViewSetData v d = do
   listStoreClear $ propertyViewStore v
   mapM_ (listStoreAppend $ propertyViewStore v) d
   writeIORef (vSelected v) $ Set.fromList $ map (propName . fst) d
   treeModelFilterRefilter (vFilter v)
 
-propertyViewClearData =
-  flip propertyViewSetData []
+propertyViewClearData :: PropertyView a -> IO ()
+propertyViewClearData = flip propertyViewSetData []
 
-propertyViewSetupView pm =
-  treeViewSetCursor (vLeft pm) [0] Nothing
+propertyViewSetupView :: PropertyView a -> IO ()
+propertyViewSetupView pm = treeViewSetCursor (vLeft pm) [0] Nothing
 
-propertyViewFocusView =
-  widgetGrabFocus . vLeft
+propertyViewFocusView :: PropertyView a -> IO ()
+propertyViewFocusView = widgetGrabFocus . vLeft
 
-propertyViewGetState =
-  liftM (True, ) . readIORef . vModified
+propertyViewGetState :: PropertyView a -> IO (Bool, Bool)
+propertyViewGetState = liftM (True, ) . readIORef . vModified
 
-propertyViewResetModified =
-  flip writeIORef False . vModified
+propertyViewResetModified :: PropertyView a -> IO ()
+propertyViewResetModified = flip writeIORef False . vModified
 
+makePropertyView :: WithModel
+  => (Property -> (Property, a))
+  -> t
+  -> IO ()
+  -> IO (PropertyView a)
 makePropertyView make _ notify = do
   selected <- newIORef Set.empty
 
@@ -216,6 +222,7 @@ makePropertyView make _ notify = do
                       , vSelected         = selected
                       }
 
+setupLeftDnD :: TreeView -> IO [Property] -> IO ()
 setupLeftDnD left takeProps = do
   targetList <- targetListNew
   targetListAdd targetList propertyNameListTarget [TargetSameApp] 0
@@ -237,7 +244,12 @@ setupLeftDnD left takeProps = do
 
   return ()
 
-
+setupRightDnD :: WithModel
+  => ListStore (Property, a)
+  -> TreeView
+  -> (Property -> (Property, a))
+  -> ((Set String -> Set String -> Set String) -> [Property] -> IO ())
+  -> IO ()
 setupRightDnD store view make updFilter = do
   targetList <- targetListNew
   targetListAdd targetList indexListTarget [TargetSameApp] 0
@@ -272,7 +284,13 @@ setupRightDnD store view make updFilter = do
   view `on` dragDataDelete $ const $
     deleteSelectedRows store view updFilter
 
+  return ()
 
+deleteSelectedRows ::
+     ListStore (Property, a)
+  -> TreeView
+  -> ((Set String -> Set String -> Set String) -> [Property] -> IO ())
+  -> IO ()
 deleteSelectedRows store view updFilter = do
   sel    <- treeViewGetSelection view
   rows   <- map head <$> treeSelectionGetSelectedRows sel

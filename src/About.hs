@@ -43,11 +43,12 @@ data About
   = About { _about :: MVar (Maybe AboutDialog) }
     deriving (Typeable)
 
-
+initAbout :: WithRegistry => IO ()
 initAbout = do
   about <- newMVar Nothing
   addEnv Ix About { _about = about }
 
+showAbout :: (WithRegistry, WindowClass w) => w -> IO ()
 showAbout window = do
   Just (Env e) <- getEnv (Extract :: Extract Ix About)
   tryModifyMVar_ (_about e) $ \maybeAbout ->
@@ -75,10 +76,11 @@ showAbout window = do
         widgetShowAll about
         return $ Just about
 
-
+authors :: [String]
 authors =
   [ "Oleg Belozeorov <upwawet@gmail.com>" ]
 
+license :: String
 license =
   "Vision is free software; you can redistribute it and/or \
   \modify it under the terms of the GNU General Public License \

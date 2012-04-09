@@ -1,0 +1,3 @@
+#! /bin/sh
+
+./ghci src/Vision.hs

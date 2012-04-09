@@ -17,6 +17,8 @@
 --  General Public License for more details.
 --
 
+{-# LANGUAGE Rank2Types #-}
+
 module Properties
   ( PropertyType (..)
   , Property (..)
@@ -24,6 +26,7 @@ module Properties
   , showValue
   , lookup
   , initProperties
+  , WithProperties
   , withProperties
   , property
   , showPropertyManager
@@ -38,6 +41,9 @@ module Properties
 import Prelude hiding (lookup)
 
 import XMMS
+import Registry
+import Environment
+import Medialib
 
 import Properties.Property
 import Properties.Model
@@ -48,8 +54,12 @@ import Properties.Impex
 import Properties.Order
 
 
+type WithProperties = WithModel
+
+withProperties :: WithRegistry => (WithProperties => IO a) -> IO a
 withProperties = withModel
 
+initProperties :: (WithEnvironment, WithRegistry, WithMedialib) => IO ()
 initProperties = withXMMS $ do
   initModel
   withModel $ do

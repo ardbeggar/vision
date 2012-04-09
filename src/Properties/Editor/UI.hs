@@ -21,7 +21,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 module Properties.Editor.UI
-  ( initEditorUI
+  ( initUI
   , showPropertyEditor
   ) where
 
@@ -40,7 +40,8 @@ import XMMS2.Client (MediaId)
 
 import Registry
 import Utils
-import UI
+import UI (window)
+import qualified UI
 import XMMS
 import Medialib
 import Properties.Editor.Model
@@ -57,36 +58,53 @@ data UI
        , _cancel  :: IORef (Maybe (IO ()))
        }
 
+type WithUI = ?_Properties_Editor_UI :: UI
+
 data Ix = Ix deriving (Typeable)
 
 data UIE
-  = UIE { _showPropertyEditor :: WithUI ([MediaId] -> IO ()) }
+  = UIE { _showPropertyEditor :: UI.WithUI => [MediaId] -> IO () }
   deriving (Typeable)
 
+showPropertyEditor :: (WithRegistry, UI.WithUI) => [MediaId] -> IO ()
 showPropertyEditor ids = do
   Just (Env uie) <- getEnv (Extract :: Extract Ix UIE)
   _showPropertyEditor uie ids
 
+tryLock :: WithUI => IO a -> IO Bool
 tryLock f =
   maybe (return False) (const $ f >> return True)
   =<< tryTakeMVar (_lock ?_Properties_Editor_UI)
-unlock  = tryPutMVar (_lock ?_Properties_Editor_UI) () >> return ()
 
+unlock :: WithUI => IO ()
+unlock = tryPutMVar (_lock ?_Properties_Editor_UI) () >> return ()
+
+dialog :: WithUI => Dialog
 dialog = _dialog ?_Properties_Editor_UI
 
+prevB :: WithUI => Button
 prevB = _prevB ?_Properties_Editor_UI
-nextB = _nextB ?_Properties_Editor_UI
-ptrkB = _ptrkB ?_Properties_Editor_UI
-pBar  = _pBar  ?_Properties_Editor_UI
 
+nextB :: WithUI => Button
+nextB = _nextB ?_Properties_Editor_UI
+
+ptrkB :: WithUI => ToggleButton
+ptrkB = _ptrkB ?_Properties_Editor_UI
+
+pBar :: WithUI => ProgressBar
+pBar = _pBar  ?_Properties_Editor_UI
+
+setRetrievalCancel :: WithUI => IO () -> IO ()
 setRetrievalCancel = writeIORef (_cancel ?_Properties_Editor_UI) . Just
-cancelRetrieval    = do
+
+cancelRetrieval :: WithUI => IO ()
+cancelRetrieval = do
   cancel' <- readIORef (_cancel ?_Properties_Editor_UI)
   withJust cancel' id
   writeIORef (_cancel ?_Properties_Editor_UI) Nothing
 
-
-initEditorUI = withMedialib $ do
+initUI :: (WithRegistry, WithXMMS, WithModel, WithView) => IO ()
+initUI = withMedialib $ do
   ui <- mkUI
   let ?_Properties_Editor_UI = ui
 
@@ -172,17 +190,20 @@ initEditorUI = withMedialib $ do
   addEnv Ix UIE { _showPropertyEditor = doShowPropertyEditor }
   return ()
 
+doWriteProperties :: (WithXMMS, WithModel, WithUI) => IO ()
 doWriteProperties = do
   dialogSetResponseSensitive dialog ResponseApply False
   dialogSetResponseSensitive dialog ResponseOk False
   writeProperties
   updateTitle False False
 
+hideEditor :: (WithModel, WithUI) => IO ()
 hideEditor = do
   widgetHide dialog
   resetModel
   unlock
 
+updateTitle :: (WithXMMS, WithUI) => Bool -> Bool -> IO ()
 updateTitle m r = do
   c <- connected
   windowSetTitle dialog $ case c of
@@ -191,6 +212,7 @@ updateTitle m r = do
     _    | r -> "Edit properties (retrieving)"
     _        -> "Edit properties"
 
+doShowPropertyEditor :: (WithXMMS, WithMedialib, UI.WithUI, WithModel, WithView, WithUI) => [MediaId] -> IO ()
 doShowPropertyEditor ids = do
   retr <- tryLock $ do
     dialogSetResponseSensitive dialog ResponseApply False
@@ -220,6 +242,7 @@ doShowPropertyEditor ids = do
   updateTitle False retr
   windowPresent dialog
 
+mkUI :: IO UI
 mkUI = do
   lock   <- newMVar ()
   dialog <- dialogNew
@@ -237,6 +260,7 @@ mkUI = do
             , _cancel = cancel
             }
 
+updateNavButtons :: (WithModel, WithUI) => IO ()
 updateNavButtons = do
   (ep, en) <- getNavEnables
   widgetSetSensitive prevB ep

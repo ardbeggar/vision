@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 20 Jun. 2010
 --
---  Copyright (C) 2010, 2011 Oleg Belozeorov
+--  Copyright (C) 2010, 2011, 2012 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -21,6 +21,7 @@
 
 module Playback
   ( initPlayback
+  , WithPlayback
   , withPlayback
   , currentTrack
   , getPlaybackStatus
@@ -62,16 +63,21 @@ data Playback
              }
     deriving (Typeable)
 
+type WithPlayback = ?_Playback :: Playback
+
+playbackStatus :: WithPlayback => TVar (Maybe PlaybackStatus)
 playbackStatus = _playbackStatus ?_Playback
-currentTrack   = _currentTrack ?_Playback
 
-getPlaybackStatus =
-  atomically $ readTVar playbackStatus
+currentTrack :: WithPlayback => TVar (Maybe (Int, String))
+currentTrack = _currentTrack ?_Playback
 
-getCurrentTrack =
-  atomically $ readTVar currentTrack
+getPlaybackStatus :: WithPlayback => IO (Maybe PlaybackStatus)
+getPlaybackStatus = atomically $ readTVar playbackStatus
 
+getCurrentTrack :: WithPlayback => IO (Maybe (Int, String))
+getCurrentTrack = atomically $ readTVar currentTrack
 
+initPlayback :: WithRegistry => IO ()
 initPlayback = withXMMS $ do
   playback <- mkPlayback
   addEnv Ix playback
@@ -93,14 +99,13 @@ initPlayback = withXMMS $ do
 
   return ()
 
-
-newtype Wrap a = Wrap { unWrap :: (?_Playback :: Playback) => a }
-
-withPlayback    = withPlayback' . Wrap
-withPlayback' w = do
+withPlayback :: WithRegistry => (WithPlayback => IO a) -> IO a
+withPlayback func = do
   Just (Env playback) <- getEnv (Extract :: Extract Ix Playback)
-  let ?_Playback = playback in unWrap w
+  let ?_Playback = playback
+  func
 
+mkPlayback :: IO Playback
 mkPlayback = do
   playbackStatus <- atomically $ newTVar Nothing
   currentTrack   <- atomically $ newTVar Nothing
@@ -108,23 +113,27 @@ mkPlayback = do
                   , _currentTrack   = currentTrack
                   }
 
+resetState :: WithPlayback => IO ()
 resetState = atomically $ do
   writeTVar playbackStatus Nothing
   writeTVar currentTrack Nothing
 
-setStatus s = atomically $
-  writeTVar playbackStatus s
+setStatus :: WithPlayback => Maybe PlaybackStatus -> IO ()
+setStatus s = atomically $ writeTVar playbackStatus s
 
+requestStatus :: (WithPlayback, WithXMMS) => IO ()
 requestStatus =
   XC.playbackStatus xmms >>* do
     status <- result
     liftIO . setStatus $ Just status
 
+requestCurrentTrack :: (WithPlayback, WithXMMS) => IO ()
 requestCurrentTrack =
   playlistCurrentPos xmms Nothing >>* do
     new <- catchResult Nothing (Just . first fromIntegral)
     liftIO $ atomically $ writeTVar currentTrack new
 
+startPlayback :: (WithPlayback, WithXMMS) => Bool -> IO ()
 startPlayback False = do
   playbackStart xmms
   return ()
@@ -141,24 +150,29 @@ startPlayback True = do
       playbackStart xmms
   return ()
 
+pausePlayback :: WithXMMS => IO ()
 pausePlayback = do
   playbackPause xmms
   return ()
 
+stopPlayback :: WithXMMS => IO ()
 stopPlayback = do
   playbackStop xmms
   return ()
 
+nextTrack :: WithXMMS => IO ()
 nextTrack = do
   playlistSetNextRel xmms 1
   playbackTickle xmms
   return ()
 
+prevTrack :: WithXMMS => IO ()
 prevTrack = do
   playlistSetNextRel xmms (-1)
   playbackTickle xmms
   return ()
 
+restartPlayback :: WithXMMS => IO ()
 restartPlayback = do
   playbackTickle xmms
   return ()

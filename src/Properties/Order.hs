@@ -34,18 +34,26 @@ import Graphics.UI.Gtk
 import UI
 import Editor
 import Properties.Property
+import Properties.Model
 import Properties.View
 
 
 type OrderDialog = EditorDialog (PropertyView Bool)
 
-
+showOrderDialog ::
+  WithUI
+  => OrderDialog
+  -> IO [(Property, Bool)]
+  -> ([(Property, Bool)] -> IO ())
+  -> IO ()
 showOrderDialog dialog getOrder setOrder =
   runEditorDialog dialog getOrder setOrder False window
 
+makeOrderDialog :: WithModel => (OrderDialog -> IO a) -> IO OrderDialog
 makeOrderDialog =
   makeEditorDialog [(stockApply, ResponseApply)] makeOrderView
 
+makeOrderView :: WithModel => t -> IO () -> IO (PropertyView Bool)
 makeOrderView parent onState = do
   view <- makePropertyView (, False) parent onState
   let store = propertyViewStore view
@@ -75,11 +83,14 @@ makeOrderView parent onState = do
 
   return view
 
+dirToString :: Bool -> String
 dirToString False = "Ascending"
 dirToString True  = "Descending"
 
+stringToDir :: String -> Bool
 stringToDir = ("Descending" ==)
 
+encodeOrder :: [(Property, Bool)] -> [String]
 encodeOrder = map enc
   where enc (prop, False) = propKey prop
         enc (prop, True)  = '-' : propKey prop

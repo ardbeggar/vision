@@ -52,7 +52,7 @@ class CompoundWidget w => EditorWidget w where
   focusView = const $ return ()
 
 
-data EditorWidget e => EditorDialog e
+data EditorDialog e
   = EditorDialog
     { eLock   :: MVar ()
     , eDialog :: Dialog
@@ -63,7 +63,12 @@ instance EditorWidget e => CompoundWidget (EditorDialog e) where
   type Outer (EditorDialog e) = Dialog
   outer = eDialog
 
-
+makeEditorDialog ::
+  (WidgetClass (Outer e), EditorWidget e)
+  => [(String, ResponseId)]
+  -> (Dialog -> IO () -> IO e)
+  -> (EditorDialog e -> IO a)
+  -> IO (EditorDialog e)
 makeEditorDialog buttons makeEditor setup = do
   lock <- newMVar ()
 
@@ -89,6 +94,14 @@ makeEditorDialog buttons makeEditor setup = do
   setup e
   return e
 
+runEditorDialog ::
+  (WindowClass window, EditorWidget w)
+  => EditorDialog w
+  -> IO (Data w)
+  -> (Data w -> IO ())
+  -> Bool
+  -> window
+  -> IO ()
 runEditorDialog e get set modal parent = do
   let dialog = eDialog e
       editor = eEditor e
@@ -132,7 +145,7 @@ runEditorDialog e get set modal parent = do
 
   windowPresent dialog
 
-
+updateState :: (DialogClass self, EditorWidget w) => self -> w -> IO ()
 updateState dialog editor = postGUIAsync $ do
   (valid, modified) <- getState editor
   dialogSetResponseSensitive dialog ResponseOk valid

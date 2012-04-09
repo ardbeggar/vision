@@ -22,6 +22,7 @@
 module Properties.Model
   ( lookup
   , initModel
+  , WithModel
   , withModel
   , property
   , propertyMap
@@ -45,6 +46,7 @@ import Graphics.UI.Gtk
 
 import Config
 import Registry
+import Environment
 import Properties.Property
 
 
@@ -57,24 +59,31 @@ data Model
           }
     deriving (Typeable)
 
-propertyMap          = _map ?_Properties_Model
-propertyStore        = _store ?_Properties_Model
+type WithModel = ?_Properties_Model :: Model
+
+propertyMap :: WithModel => MVar (Map String Property)
+propertyMap = _map ?_Properties_Model
+
+propertyStore :: WithModel => ListStore Property
+propertyStore = _store ?_Properties_Model
+
+propertiesGeneration :: WithModel => TVar Integer
 propertiesGeneration = _generation ?_Properties_Model
 
-newtype Wrap a = Wrap { unWrap :: (?_Properties_Model :: Model) => a }
-
-withModel    = withModel' . Wrap
-withModel' w = do
+withModel :: WithRegistry => (WithModel => IO a) -> IO a
+withModel func = do
   Just (Env model) <- getEnv (Extract :: Extract Ix Model)
   let ?_Properties_Model = model
-  unWrap w
+  func
 
+initModel :: (WithRegistry, WithEnvironment) => IO ()
 initModel = do
   model <- mkModel
   let ?_Properties_Model = model
   loadProperties
   addEnv Ix model
 
+mkModel :: IO Model
 mkModel = do
   map        <- newMVar $ mkMap builtinProperties
   store      <- listStoreNewDND [] Nothing Nothing
@@ -84,9 +93,10 @@ mkModel = do
                , _generation = generation
                }
 
-property name =
-  withMVar propertyMap $ return . Map.lookup name
+property :: WithModel => String -> IO (Maybe Property)
+property name = withMVar propertyMap $ return . Map.lookup name
 
+loadProperties :: (WithEnvironment, WithModel) => IO ()
 loadProperties = do
   props  <- config "properties.conf" []
   mapM_ (listStoreAppend propertyStore) =<<
@@ -95,9 +105,11 @@ loadProperties = do
       let m' = Map.union m $ mkMap props in
       return (m', Map.elems m'))
 
+getProperties :: WithModel => IO [Property]
 getProperties =
   withMVar propertyMap $ return . Map.elems
 
+setProperties :: (WithEnvironment, WithModel) => [Property] -> IO ()
 setProperties props = do
   listStoreClear propertyStore
   mapM_ (listStoreAppend propertyStore) =<<
@@ -110,5 +122,5 @@ setProperties props = do
     g <- readTVar propertiesGeneration
     writeTVar propertiesGeneration $ g + 1
 
-
+mkMap :: [Property] -> Map String Property
 mkMap = Map.fromList . map (\p -> (propName p, p))

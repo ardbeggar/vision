@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 18 Jun. 2010
 --
---  Copyright (C) 2010, 2011 Oleg Belozeorov
+--  Copyright (C) 2010, 2011, 2012 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -24,6 +24,7 @@ module Medialib
   , MediaInfo
   , RequestPriority (..)
   , initMedialib
+  , WithMedialib
   , withMedialib
   , requestInfo
   , retrieveProperties
@@ -74,11 +75,11 @@ data Cache
           , cNextStamp :: Stamp
           }
 
+emptyCache :: Cache
 emptyCache =
   Cache { cEntries   = IntMap.empty
         , cNextStamp = 1
         }
-
 
 data Ix = Ix deriving (Typeable)
 
@@ -89,10 +90,18 @@ data MLib
          }
     deriving (Typeable)
 
-cache         = _cache ?_Medialib
-reqQ          = _reqQ ?_Medialib
+type WithMedialib = ?_Medialib :: MLib
+
+cache :: WithMedialib => TVar (Maybe Cache)
+cache = _cache ?_Medialib
+
+reqQ :: WithMedialib => TVar (PSQ MediaId RequestPriority)
+reqQ = _reqQ ?_Medialib
+
+mediaInfoChan :: WithMedialib => TChan (MediaId, Stamp, MediaInfo)
 mediaInfoChan = _mediaInfoChan ?_Medialib
 
+initMedialib :: WithRegistry => IO ()
 initMedialib = withXMMS $ do
   mlib <- mkMLib
   addEnv Ix mlib
@@ -126,14 +135,13 @@ initMedialib = withXMMS $ do
 
   return ()
 
-newtype Wrap a = Wrap { unWrap :: (?_Medialib :: MLib) => a }
-
-withMedialib    = withMedialib' . Wrap
-withMedialib' w = do
+withMedialib :: WithRegistry => (WithMedialib => IO a) -> IO a
+withMedialib func = do
   Just (Env mlib) <- getEnv (Extract :: Extract Ix MLib)
   let ?_Medialib = mlib
-  unWrap w
+  func
 
+requestInfo :: WithMedialib => RequestPriority -> MediaId -> IO ()
 requestInfo prio id = atomically $ do
   cc <- readTVar cache
   withJust cc $ \cc ->
@@ -154,6 +162,7 @@ requestInfo prio id = atomically $ do
         writeBroadcastTChan mediaInfoChan (id, s, i)
       _ -> return ()
 
+mkMLib :: IO MLib
 mkMLib = do
   cache         <- newTVarIO Nothing
   mediaInfoChan <- newTChanIO
@@ -163,6 +172,7 @@ mkMLib = do
               , _reqQ          = reqQ
               }
 
+retrieveProperties ::WithMedialib => [MediaId] -> (Either Double [(MediaId, MediaInfo)] -> IO ()) -> IO (IO ())
 retrieveProperties ids f = do
   let ids'       = IntSet.fromList $ map fromIntegral ids
       len        = IntSet.size ids'
@@ -192,6 +202,7 @@ retrieveProperties ids f = do
 
   return $ killThread tid
 
+infoReqJob :: (WithXMMS, WithMedialib) => IO a
 infoReqJob = do
   tv <- newTVarIO 0
   forever $ do

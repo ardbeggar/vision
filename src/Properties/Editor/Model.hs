@@ -20,7 +20,8 @@
 {-# LANGUAGE Rank2Types #-}
 
 module Properties.Editor.Model
-  ( withEditorModel
+  ( WithModel
+  , withModel
   , store
   , populateModel
   , resetModel
@@ -59,8 +60,10 @@ import XMMS
 import Config
 import Utils
 import Medialib
+import Environment
 import Properties.Property
-import Properties.Model
+import Properties.Model hiding (WithModel, withModel)
+import qualified Properties.Model as PM
 
 
 type Entry = (MediaInfo, MediaInfo)
@@ -74,6 +77,7 @@ data State
           , sPerTrack :: Bool
           }
 
+makeState :: [(X.MediaId, MediaInfo)] -> State
 makeState list =
   let size    = length list
       ids     = array (0, size - 1) $ zip [0 .. ] $ map fst list
@@ -93,15 +97,24 @@ data Model
           , _store :: ListStore Property
           }
 
+type WithModel = ?_Properties_Editor_Model :: Model
+
+state :: WithModel => MVar (Maybe State)
 state = _state ?_Properties_Editor_Model
+
+store :: WithModel => ListStore Property
 store = _store ?_Properties_Editor_Model
 
+setupState :: WithModel => [(X.MediaId, MediaInfo)] -> IO ()
 setupState list =
   modifyMVar_ state . const . return . Just $ makeState list
 
-resetState =
-  modifyMVar_ state . const $ return Nothing
+resetState :: WithModel => IO ()
+resetState = modifyMVar_ state . const $ return Nothing
 
+type MSM = StateT State IO
+
+withState :: WithModel => a -> MSM a -> IO a
 withState d f =
   modifyMVar state $ \state ->
     case state of
@@ -111,10 +124,8 @@ withState d f =
       Nothing ->
         return (Nothing, d)
 
-newtype Wrap a = Wrap { unWrap :: (?_Properties_Editor_Model :: Model) => a }
-
-withEditorModel    = withEditorModel' . Wrap
-withEditorModel' w = do
+withModel :: (WithEnvironment, WithXMMS, PM.WithModel) => (WithModel => IO a) -> IO a
+withModel func = do
   model <- mkModel
   let ?_Properties_Editor_Model = model
 
@@ -133,9 +144,9 @@ withEditorModel' w = do
       touchAll
 
   loadConfig
+  func
 
-  unWrap w
-
+mkModel :: IO Model
 mkModel = do
   state <- newMVar Nothing
   store <- listStoreNew []
@@ -143,49 +154,61 @@ mkModel = do
                , _store = store
                }
 
+loadConfig :: (WithEnvironment, PM.WithModel, WithModel) => IO ()
 loadConfig = do
   cfg <- mapM property =<< config configFile []
   populateStore cfg
 
+saveConfig :: (WithEnvironment, WithModel) => IO ()
 saveConfig = do
   names <- map propName <$> listStoreToList store
   writeConfig configFile names
   return ()
 
+updateProperties :: (PM.WithModel, WithModel) => IO ()
 updateProperties = do
   cur <- mapM (property . propName) =<< listStoreToList store
   listStoreClear store
   populateStore cur
 
+populateStore :: (PM.WithModel, WithModel) => [Maybe Property] -> IO ()
 populateStore cur = do
   all <- getProperties
   mapM_ (listStoreAppend store) $
     unionBy (eqBy propName) (catMaybes cur) all
 
+configFile :: String
 configFile = "property-editor.conf"
 
+populateModel :: WithModel => [(X.MediaId, MediaInfo)] -> IO ()
 populateModel list = do
   setupState list
   touchAll
 
-resetModel =
-  resetState
+resetModel :: WithModel => IO ()
+resetModel = resetState
 
+propertyText :: WithModel => Property -> IO String
 propertyText prop = withState "" $ do
   (b, c) <- gets sCurrent
   let key = propKey prop
       val = Map.lookup key c `mplus` Map.lookup key b
   return $ maybe "" (showValue prop) val
 
+getNavEnables :: WithModel => IO (Bool, Bool)
 getNavEnables = withState (False, False) $ do
   t <- gets sPerTrack
   p <- gets sPos
   s <- gets sSize
   return (t && p > 0, t && p < s - 1)
 
+prevTrack :: WithModel => IO ()
 prevTrack = stepTrack (-1)
+
+nextTrack :: WithModel => IO ()
 nextTrack = stepTrack 1
 
+stepTrack :: WithModel => Int -> IO ()
 stepTrack inc = do
   withState () $ modify $ \s ->
     let e = Map.insert (sIds s ! sPos s) (sCurrent s) (sEntries s)
@@ -197,14 +220,17 @@ stepTrack inc = do
       }
   touchAll
 
+touchAll :: WithModel => IO ()
 touchAll = do
   s <- listStoreGetSize store
   mapM_ touch [0 .. s - 1]
 
+touch :: WithModel => Int -> IO ()
 touch n = do
   Just iter <- treeModelGetIter store [n]
   treeModelRowChanged store [n] iter
 
+togglePerTrack :: WithModel => IO ()
 togglePerTrack = do
   withState () $ modify $ \s ->
     if sPerTrack s
@@ -225,6 +251,7 @@ togglePerTrack = do
            }
   touchAll
 
+common :: [(Map String X.Property, Map String X.Property)] -> Map String X.Property
 common e =
   let (c, i)     = foldl g (h, h) t
       f a b      = if a == b then Just a else Nothing
@@ -232,6 +259,7 @@ common e =
       (h : t)    = map (uncurry $ flip Map.union) e
   in Map.intersection c i
 
+changeProperty :: WithModel => Int -> Property -> String -> IO Bool
 changeProperty n prop text = do
   maybeVal <- case trim text of
     [] -> return . Just $ X.PropString ""
@@ -248,17 +276,20 @@ changeProperty n prop text = do
         liftIO $ touch n
       return res
 
+writeProperties :: (WithXMMS, WithModel) => IO ()
 writeProperties = do
   changes <- withState [] extractChanges
   mapM_ writeForId changes
   where writeForId (id, cs) =
           mapM_ (writeProperty id) cs
 
-writeProperty id (key, val) =
+writeProperty :: WithXMMS => X.MediaId -> (String, X.Property) -> IO ()
+writeProperty id (key, val) = void $
   X.medialibEntryPropertySet xmms id
   (Just "client/generic/override")
   key val
 
+extractChanges :: MSM [(X.MediaId, [(String, X.Property)])]
 extractChanges = do
   s <- get
   let c = sCurrent s

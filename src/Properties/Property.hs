@@ -37,6 +37,7 @@ import Control.Monad
 import Control.Exception
 
 import Data.Maybe
+import Data.Map (Map)
 import qualified Data.Map as Map
 
 import Text.Printf
@@ -85,6 +86,7 @@ instance JSON Property where
   showJSON p = showJSON (propName p, propKey p, propType p, propReadOnly p)
   readJSON v = mk <$> readJSON v `mplus` fail "Unable to read Property"
 
+mk :: (String, String, PropertyType, Bool) -> Property
 mk (pn, pk, pt, pr) =
   case Map.lookup pk builtinPropertyMap of
     Just prop ->
@@ -99,29 +101,29 @@ mk (pn, pk, pt, pr) =
                , propReadValue = Nothing
                , propShowValue = Nothing }
 
-
-
-
+readValue :: Property -> String -> IO (Maybe X.Property)
 readValue p s  = liftM Just read `catch` \(_ :: SomeException) -> return Nothing
   where read   = fromMaybe rdef (propReadValue p) s
         rdef s = case (propType p) of
                    PropertyInt    -> X.PropInt32 <$> readIO s
                    PropertyString -> return $ X.PropString s
 
+showValue :: Property -> X.Property -> String
 showValue p v = fromMaybe sdef (propShowValue p) v
   where sdef (X.PropInt32  n) = show n
         sdef (X.PropString s) = s
 
-
+lookup :: Property -> Map String X.Property -> Maybe String
 lookup p m = do
   res <- showValue p <$> Map.lookup (propKey p) m
   when (null res) mzero
   return res
 
-
+builtinPropertyMap :: Map String Property
 builtinPropertyMap =
   Map.fromList $ map (\p -> (propKey p, p)) builtinProperties
 
+builtinProperties :: [Property]
 builtinProperties =
   map (\(pn, pk, pt, ro, pr, ps) ->
          Property { propName      = pn
@@ -168,8 +170,8 @@ builtinProperties =
       , ("Channel", "channel",
          PropertyString, False, Nothing, Nothing) ]
 
-
-showDuration (X.PropInt32  n) =
+showDuration :: X.Property -> [Char]
+showDuration (X.PropInt32 n) =
   if h == 0 then mss else show h ++ (':' : mss)
   where d   = n `div` 1000
         h   = d `div` 3600
@@ -177,4 +179,5 @@ showDuration (X.PropInt32  n) =
         s   = d - h * 3600 - m * 60
         mss = printf "%02d:%02d" m s
 
+showURL :: X.Property -> String
 showURL (X.PropString u) = decodeURL u

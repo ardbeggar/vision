@@ -20,7 +20,8 @@
 {-# LANGUAGE Rank2Types #-}
 
 module Environment
-  ( withEnvironment
+  ( WithEnvironment
+  , withEnvironment
   , homeDir
   , dataDir
   , uiFilePath
@@ -45,14 +46,25 @@ data Environment
                 , _XMMSPath :: Maybe String
                 }
 
-homeDir   = _homeDir ?_Environment
-dataDir   = _dataDir ?_Environment
-xmmsPath  = _XMMSPath ?_Environment
+type WithEnvironment = ?_Environment :: Environment
 
-newtype Wrap a = Wrap { unWrap :: (?_Environment :: Environment) => a }
+homeDir :: WithEnvironment => Maybe FilePath
+homeDir = _homeDir ?_Environment
 
-withEnvironment    = withEnvironment' . Wrap
-withEnvironment' w = do
+dataDir :: WithEnvironment => FilePath
+dataDir = _dataDir ?_Environment
+
+uiFilePath :: WithEnvironment => String -> FilePath
+uiFilePath name = dataDir </> "ui" </> name <.> "xml"
+
+gladeFilePath :: WithEnvironment => String -> FilePath
+gladeFilePath name = dataDir </> "ui" </> name <.> "glade"
+
+xmmsPath :: WithEnvironment => Maybe String
+xmmsPath = _XMMSPath ?_Environment
+
+withEnvironment :: (WithEnvironment => IO a) -> IO a
+withEnvironment func = do
   homeDir  <- maybeGetEnv "HOME"
   dataDir  <- getDataDir
   xmmsPath <- maybeGetEnv "XMMS_PATH"
@@ -61,11 +73,8 @@ withEnvironment' w = do
                     , _dataDir  = dataDir
                     , _XMMSPath = xmmsPath
                     }
-  unWrap w
+  func
 
+maybeGetEnv :: String -> IO (Maybe String)
 maybeGetEnv var =
   (Just <$> getEnv var) `catch` \(_ :: SomeException) -> return Nothing
-
-uiFilePath name = dataDir </> "ui" </> name <.> "xml"
-gladeFilePath name = dataDir </> "ui" </> name <.> "glade"
-
