@@ -44,6 +44,7 @@ import Utils
 import Compound
 import Registry
 import UI
+import Environment
 import Editor
 import Properties.Property
 import Properties.Model
@@ -55,6 +56,7 @@ data Manager
   = Manager { _showPropertyManager :: WithUI => IO () }
     deriving (Typeable)
 
+initPropertyManager :: (WithEnvironment, WithRegistry, WithModel) => IO ()
 initPropertyManager = do
   manager <- unsafeInterleaveIO $ makeEditorDialog
              [(stockApply, ResponseApply)]
@@ -68,6 +70,7 @@ initPropertyManager = do
                          False window
                     }
 
+showPropertyManager :: (WithRegistry, WithUI) => IO ()
 showPropertyManager = do
   Just (Env manager) <- getEnv (Extract :: Extract Ix Manager)
   _showPropertyManager manager
@@ -95,9 +98,10 @@ instance EditorWidget PropertyManager where
   getState      = propertyManagerGetState
   resetModified = propertyManagerResetModified
 
-propertyManagerGetData =
-  listStoreToList . pStore
+propertyManagerGetData :: PropertyManager -> IO [Property]
+propertyManagerGetData = listStoreToList . pStore
 
+propertyManagerSetData :: PropertyManager -> [Property] -> IO ()
 propertyManagerSetData pm props = do
   let store = pStore pm
   listStoreClear store
@@ -107,22 +111,24 @@ propertyManagerSetData pm props = do
               return $ Set.insert (propName prop) names
           ) Set.empty props
 
+propertyManagerClearData :: PropertyManager -> IO ()
 propertyManagerClearData pm = do
   listStoreClear $ pStore pm
   writeIORef (pNames pm) Set.empty
 
-propertyManagerSetupView pm =
-  treeViewSetCursor (pView pm) [0] Nothing
+propertyManagerSetupView :: PropertyManager -> IO ()
+propertyManagerSetupView pm = treeViewSetCursor (pView pm) [0] Nothing
 
-propertyManagerFocusView =
-  widgetGrabFocus . pView
+propertyManagerFocusView :: PropertyManager -> IO ()
+propertyManagerFocusView = widgetGrabFocus . pView
 
-propertyManagerGetState =
-  liftM (True, ) . readIORef . pChanged
+propertyManagerGetState :: PropertyManager -> IO (Bool, Bool)
+propertyManagerGetState = liftM (True, ) . readIORef . pChanged
 
-propertyManagerResetModified =
-  flip writeIORef False . pChanged
+propertyManagerResetModified :: PropertyManager -> IO ()
+propertyManagerResetModified = flip writeIORef False . pChanged
 
+makePropertyManager :: WindowClass window => window -> IO () -> IO PropertyManager
 makePropertyManager parent notify = do
   names <- newIORef Set.empty
 
@@ -257,12 +263,14 @@ instance EditorWidget PropertyEntry where
   getState      = propertyEntryGetState
   resetModified = const $ return ()
 
+propertyEntrySetData :: PropertyEntry -> Property -> IO ()
 propertyEntrySetData e p = do
   entrySetText (eName e) (propName p)
   entrySetText (eKey e) (propKey p)
   comboSet (eType e) Nothing (propType p)
   comboSet (eRO e) Nothing (propReadOnly p)
 
+propertyEntryGetData :: PropertyEntry -> IO Property
 propertyEntryGetData e = do
   pname  <- entryGetText $ eName e
   pkey   <- entryGetText $ eKey e
@@ -277,18 +285,21 @@ propertyEntryGetData e = do
                   , propShowValue = Nothing
                   }
 
-propertyEntryFocusView =
-  widgetGrabFocus . eName
+propertyEntryFocusView :: PropertyEntry -> IO ()
+propertyEntryFocusView = widgetGrabFocus . eName
 
+propertyEntryGetState :: PropertyEntry -> IO (Bool, Bool)
 propertyEntryGetState e = do
   name <- trim <$> entryGetText (eName e)
   key  <- trim <$> entryGetText (eKey e)
   (, True) <$> propertyEntryValid (eExists e) name key
 
+propertyEntryValid :: (String -> IO Bool) -> String -> String -> IO Bool
 propertyEntryValid exists name key = do
   e <- exists name
   return . not $ e || null name || null key
 
+makePropertyEntry :: (String -> IO Bool) -> t -> IO () -> IO PropertyEntry
 makePropertyEntry exists _ notify = do
   table <- tableNew 4 2 False
   containerSetBorderWidth table 7
@@ -357,7 +368,7 @@ makePropertyEntry exists _ notify = do
                        , eExists = exists
                        }
 
-
+nullProperty :: Property
 nullProperty =
   Property { propName      = ""
            , propKey       = ""
@@ -368,18 +379,18 @@ nullProperty =
            , propShowValue = Nothing
            }
 
-
-comboGet combo =
-  toEnum <$> comboBoxGetActive combo
+comboGet :: Enum a => ComboBox -> IO a
+comboGet combo = toEnum <$> comboBoxGetActive combo
 
 comboSet ::
-  Enum a                     =>
-  ComboBox                   ->
-  Maybe (ConnectId ComboBox) ->
-  a                          ->
-  IO ()
+  Enum a
+  => ComboBox
+  -> Maybe (ConnectId ComboBox)
+  -> a
+  -> IO ()
 comboSet combo cid =
   maybe id withSignalBlocked cid . comboBoxSetActive combo . fromEnum
 
+setupCombo :: Enum a => ComboBox -> IORef a -> IO (ConnectId ComboBox)
 setupCombo combo ref =
   combo `on` changed $ (writeIORef ref =<< comboGet combo)
