@@ -29,6 +29,7 @@ module UI
   , windowGroup
   , setWindowTitle
   , informUser
+  , WithUIGlobal
   , withUIGlobal
   , mergeUI
   , removeUI
@@ -50,10 +51,9 @@ import Graphics.UI.Gtk
 
 import About
 import Builder
+import Registry
 import Utils
 
-
-type WithUI = ?_UI :: UI
 
 data UI
   = UI { uWindow      :: Window
@@ -67,34 +67,51 @@ data UI
        , _UIRef       :: IORef (Maybe (Integer, [ActionGroup], Maybe MergeId))
        }
 
-window        = uWindow ?_UI
-contents      = uContents ?_UI
-uiManager     = uManager ?_UI
-windowGroup   = uWindowGroup ?_UI
-infoBar       = uInfoBar ?_UI
-infoText      = uInfoText ?_UI
-uiTagRef      = _UITagRef ?_UI
-uiRef         = _UIRef ?_UI
+type WithUI = ?_UI :: UI
 
-setWindowTitle title =
-  windowSetTitle window title
+window :: WithUI => Window
+window = uWindow ?_UI
 
-maybeGetWidget cast name =
-  fmap cast <$> uiManagerGetWidget uiManager name
+contents :: WithUI => VBox
+contents = uContents ?_UI
 
-getWidget cast name =
-  fromJust <$> maybeGetWidget cast name
+uiManager :: WithUI => UIManager
+uiManager = uManager ?_UI
 
+windowGroup :: WithUI => WindowGroup
+windowGroup = uWindowGroup ?_UI
 
-newtype Wrap a = Wrap { unWrap :: (?_UI :: UI) => a }
+infoBar :: WithUI => InfoBar
+infoBar = uInfoBar ?_UI
 
-withUI  r   = withUI' r . Wrap
-withUI' r w = do
+infoText :: WithUI => Label
+infoText = uInfoText ?_UI
+
+uiTagRef :: WithUI => IORef Integer
+uiTagRef = _UITagRef ?_UI
+
+uiRef :: WithUI => IORef (Maybe (Integer, [ActionGroup], Maybe MergeId))
+uiRef = _UIRef ?_UI
+
+setWindowTitle :: WithUI => String -> IO ()
+setWindowTitle title = windowSetTitle window title
+
+maybeGetWidget :: WithUI => (Widget -> a) -> String -> IO (Maybe a)
+maybeGetWidget cast name = fmap cast <$> uiManagerGetWidget uiManager name
+
+getWidget :: WithUI => (Widget -> a) -> String -> IO a
+getWidget cast name = fromJust <$> maybeGetWidget cast name
+
+withUI ::
+  (WithBuilder, WithRegistry, WithUIGlobal)
+  => String
+  -> (WithUI => IO a)
+  -> IO a
+withUI role func = do
   ui <- makeUI
   let ?_UI = ui
 
-  role <- mkWindowRole r
-  windowSetRole window role
+  windowSetRole window =<< mkWindowRole role
 
   mapM_ (uncurry maybeBindAction)
     [ ("close", widgetDestroy window)
@@ -107,9 +124,9 @@ withUI' r w = do
     "Escape" <- eventKeyName
     liftIO $ infoBarEmitResponse infoBar dismiss
 
-  unWrap w
+  func
 
-
+makeUI :: WithBuilder => IO UI
 makeUI = do
   window              <- getObject castToWindow "main-window"
   contents            <- getObject castToVBox "contents"
@@ -130,12 +147,14 @@ makeUI = do
             , _UIRef       = uiRef
             }
 
+informUser :: WithUI => MessageType -> Markup -> IO ()
 informUser t m = do
   infoBar `set` [ infoBarMessageType := t ]
   labelSetMarkup infoText m
   widgetSetNoShowAll infoBar False
   widgetShowAll infoBar
 
+makeInfoBar :: WithBuilder => IO (InfoBar, Label)
 makeInfoBar = do
   infoBar <- getObject castToInfoBar "info-bar"
 
@@ -153,6 +172,7 @@ makeInfoBar = do
 
   return (infoBar, infoText)
 
+dismiss :: Int
 dismiss = 0
 
 
@@ -160,25 +180,27 @@ data UIGlobal
   = UIGlobal
     { _roles :: TVar (Map String Int) }
 
+type WithUIGlobal = ?_UI_Global :: UIGlobal
+
+mkUIGlobal :: IO UIGlobal
 mkUIGlobal = do
   roles <- newTVarIO Map.empty
   return UIGlobal { _roles = roles }
 
-newtype WrapG a = WrapG { unWrapG :: (?_UI_Global :: UIGlobal) => a }
-
-withUIGlobal    = withUIGlobal' . WrapG
-withUIGlobal' w = do
+withUIGlobal :: (WithUIGlobal => IO a) -> IO a
+withUIGlobal func = do
   uiGlobal <- mkUIGlobal
   let ?_UI_Global = uiGlobal
-  unWrapG w
+  func
 
-mkWindowRole h = do
+mkWindowRole :: WithUIGlobal => String -> IO String
+mkWindowRole role = do
   n <- atomically $ do
     m <- readTVar $ _roles ?_UI_Global
-    let (n, m') = Map.insertLookupWithKey (\_ _ o -> o + 1) h 1 m
+    let (n, m') = Map.insertLookupWithKey (\_ _ o -> o + 1) role 1 m
     writeTVar (_roles ?_UI_Global) m'
     return $! maybe 1 (+ 1) n
-  return $ h ++ "#" ++ show n
+  return $ role ++ "#" ++ show n
 
 
 class UIDefClass def where
@@ -198,6 +220,12 @@ instance UIDefClass [(String, [Maybe String])] where
           add mergeId path Nothing =
             uiManagerAddUi uiManager mergeId path "" Nothing [UiManagerAuto] False
 
+mergeUI ::
+  (WithUI, UIDefClass def)
+  => Integer
+  -> [ActionGroup]
+  -> Maybe def
+  -> IO ()
 mergeUI tag ags ui = modifyUI Nothing $ do
   forM_ ags $ \ag ->
     uiManagerInsertActionGroup uiManager ag 0
@@ -206,9 +234,15 @@ mergeUI tag ags ui = modifyUI Nothing $ do
     Nothing  -> return Nothing
   return $ Just (tag, ags, mid)
 
+removeUI :: WithUI => Maybe Integer -> IO ()
 removeUI tag =
   modifyUI tag (return Nothing)
 
+modifyUI ::
+  WithUI
+  => Maybe Integer
+  -> IO (Maybe (Integer, [ActionGroup], Maybe MergeId))
+  -> IO ()
 modifyUI tag f = do
   mui <- readIORef uiRef
   withJust mui $ \(tag', ags, mmid) ->
@@ -218,6 +252,7 @@ modifyUI tag f = do
         uiManagerRemoveUi uiManager mid
   writeIORef uiRef =<< f
 
+newUITag :: WithUI => IO Integer
 newUITag = do
   tag <- readIORef uiTagRef
   writeIORef uiTagRef $ tag + 1
