@@ -32,8 +32,7 @@ import Control.Concurrent.STM.Watch
 import Control.Monad
 
 
-data Eq a => TWatch a =
-  TWatch (TVar a) (TVar (Maybe a))
+data TWatch a = TWatch (TVar a) (TVar (Maybe a))
 
 newTWatch :: Eq a => TVar a -> a -> STM (TWatch a)
 newTWatch src = newTWatch' src . Just

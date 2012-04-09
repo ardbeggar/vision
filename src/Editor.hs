@@ -52,7 +52,7 @@ class CompoundWidget w => EditorWidget w where
   focusView = const $ return ()
 
 
-data EditorWidget e => EditorDialog e
+data EditorDialog e
   = EditorDialog
     { eLock   :: MVar ()
     , eDialog :: Dialog
