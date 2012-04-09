@@ -21,8 +21,9 @@
 
 module Collection.Common
   ( Com (..)
-  , coms
+  , WithCommon
   , withCommon
+  , coms
   , addView
   , FocusChild (..)
   , withSelectedView
@@ -33,6 +34,7 @@ import Graphics.UI.Gtk hiding (focus)
 import UI
 import Utils
 import Compound
+import Properties
 
 import Widgets.ColumnView
 
@@ -46,12 +48,13 @@ data Com
         , eScroll :: ScrolledWindow
         }
 
+type WithCommon = ?_Collection_Common :: Com
+
+coms :: WithCommon => (Com -> a) -> a
 coms = ($ ?_Collection_Common)
 
-newtype Wrap a = Wrap { unWrap :: (?_Collection_Common :: Com) => a }
-
-withCommon    = withCommon' . Wrap
-withCommon' w = do
+withCommon :: (WithUI, WithProperties) => (WithCommon => IO a) -> IO a
+withCommon func = do
   vpopup <- getWidget castToMenu "ui/view-popup"
 
   cv     <- columnViewNew
@@ -70,10 +73,15 @@ withCommon' w = do
             , eCModel = cmodel
             , eScroll = scroll
             }
+  func
 
-  unWrap w
-
-
+addView ::
+  ( WithCommon
+  , WidgetClass (Outer f)
+  , WidgetClass (Focus f)
+  , CompoundWidget f
+  , FocusChild f )
+  => f -> IO ()
 addView w = do
   columnViewAdd (coms eCV) $ outer w
   widgetGrabFocus $ focus w
@@ -82,6 +90,7 @@ class FocusChild f where
   type Focus f
   focus :: f -> Focus f
 
+withSelectedView :: WithCommon => ComboBox -> (ComboItem -> IO ()) -> IO ()
 withSelectedView combo f = do
   iter <- comboBoxGetActiveIter combo
   withJust iter $ \iter -> do
