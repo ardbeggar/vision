@@ -24,6 +24,7 @@ module Medialib
   , MediaInfo
   , RequestPriority (..)
   , initMedialib
+  , WithMedialib
   , withMedialib
   , requestInfo
   , retrieveProperties
