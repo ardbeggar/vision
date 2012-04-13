@@ -32,6 +32,7 @@ import Collection.Common
 import Collection.ComboModel
 
 
+mkCombo :: (WithUI, WithCommon) => IO ComboBox
 mkCombo = do
   let cmodel = coms eCModel
 
@@ -50,6 +51,7 @@ mkCombo = do
 
   return combo
 
+separator :: ComboItem -> Bool
 separator CISeparator = True
 separator _           = False
 
