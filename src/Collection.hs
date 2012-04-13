@@ -29,13 +29,22 @@ import Properties
 import Builder
 import Environment
 import Medialib
+import Registry
+import XMMS
 
 import Collection.Common
 import Collection.List
 import Collection.Select
 import Collection.Utils
 
-
+browseCollection ::
+  ( WithRegistry
+  , WithEnvironment
+  , WithXMMS
+  , WithUIGlobal
+  , WithProperties )
+  => Maybe String
+  -> IO ()
 browseCollection _maybeName = withBuilder $ do
   addFromFile $ gladeFilePath "collection-browser"
   withUI "Vision Collection Browser" $
