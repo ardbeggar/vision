@@ -68,32 +68,36 @@ import XMMS2.Client
 import XMMS
 import Utils
 import UI
+import Registry
 import Compound
 import Properties
 import Clipboard
 
 import Collection.Common
 
+selectAll :: TreeSelection -> IO ()
+selectAll = treeSelectionSelectAll
 
-selectAll =
-  treeSelectionSelectAll
-
+invertSelection :: TreeSelection -> IO ()
 invertSelection sel = do
   rows <- treeSelectionGetSelectedRows sel
   treeSelectionSelectAll sel
   mapM_ (treeSelectionUnselectPath sel) rows
 
+addToPlaylist :: WithXMMS => Bool -> Coll -> IO ()
 addToPlaylist replace coll = do
   when replace $ playlistClear xmms Nothing >> return ()
   playlistAddCollection xmms Nothing coll []
   return ()
 
+saveCollection :: (WithXMMS, WithUI) => Coll -> IO ()
 saveCollection coll = do
   res  <- runDlg "Save collection" False (const True) ""
   withJust res $ \name -> do
     collSave xmms coll name "Collections"
     return ()
 
+renameCollection :: (WithXMMS, WithUI) => [String] -> IO ()
 renameCollection [old] = do
   res <- runDlg "Rename collection" False (/= old) old
   withJust res $ \new -> do
@@ -101,9 +105,15 @@ renameCollection [old] = do
     return ()
 renameCollection _ = return ()
 
-deleteCollections =
-  mapM_ (\name -> collRemove xmms name "Collections")
+deleteCollections :: (WithXMMS) => [String] -> IO ()
+deleteCollections = mapM_ (\name -> collRemove xmms name "Collections")
 
+runDlg :: WithUI
+  => String
+  -> Bool
+  -> (String -> Bool)
+  -> String
+  -> IO (Maybe String)
 runDlg title enable isOk init = do
   dialog <- dialogNew
   windowSetTitle dialog title
@@ -156,7 +166,18 @@ class CollBuilder b where
   withNames     :: b -> ([String] -> IO ()) -> IO ()
   withNames _ = const $ return ()
 
-
+onCollBuilt ::
+  ( WithCommon
+  , WidgetClass (Outer f)
+  , WidgetClass (Focus f)
+  , CompoundWidget f
+  , FocusChild f
+  , ViewItem b
+  , ViewItem f
+  , CollBuilder b )
+  => b
+  -> (Coll -> IO f)
+  -> IO (ConnectId TreeView)
 onCollBuilt b f = do
   let (view, sel) = treeViewSel b
       doit = withBuiltColl b True $ \c -> do
@@ -208,6 +229,7 @@ setNext t n = do
   killNext t
   writeIORef (nextVIRef t) $ VI n
 
+handleXMMSException :: (WithUI, MonadCatchIO m) => m () -> m ()
 handleXMMSException f = f `catch` handler
   where handler (XMMSError "invalid collection structure") =
           return ()
@@ -219,6 +241,11 @@ handleXMMSException f = f `catch` handler
 class SetColl s where
   setColl :: s -> Coll -> IO ()
 
+watchConnectionState ::
+  (WithXMMS, WidgetClass w)
+  => w
+  -> (Bool -> IO ())
+  -> IO (ConnectId w)
 watchConnectionState owner func = do
   xcW <- atomically $ newTGWatch connectedV
   tid <- forkIO $ forever $ do
@@ -237,6 +264,7 @@ addActions g es = forM es $ \e -> do
   a `on` actionActivated $ actionEntryCallback e
   return a
 
+defAddToPlaylist :: (WithXMMS, CollBuilder b) => b -> ActionEntry
 defAddToPlaylist v =
   ActionEntry
   { actionEntryName        = "add-to-playlist"
@@ -247,6 +275,7 @@ defAddToPlaylist v =
   , actionEntryCallback    = withBuiltColl v False $ addToPlaylist False
   }
 
+defReplacePlaylist :: (WithXMMS, CollBuilder b) => b -> ActionEntry
 defReplacePlaylist v =
   ActionEntry
   { actionEntryName        = "replace-playlist"
@@ -257,6 +286,7 @@ defReplacePlaylist v =
   , actionEntryCallback    = withBuiltColl v False $ addToPlaylist True
   }
 
+defCopy :: (WithClipboard, WithXMMS, CollBuilder b) => b -> ActionEntry
 defCopy v =
   ActionEntry
   { actionEntryName        = "copy"
@@ -270,6 +300,7 @@ defCopy v =
       liftIO $ copyIds ids
   }
 
+defSelectAll :: CollBuilder b => b -> ActionEntry
 defSelectAll v =
   ActionEntry
   { actionEntryName        = "select-all"
@@ -280,6 +311,7 @@ defSelectAll v =
   , actionEntryCallback    = selectAll $ snd $ treeViewSel v
   }
 
+defInvertSelection :: CollBuilder b => b -> ActionEntry
 defInvertSelection v =
   ActionEntry
   { actionEntryName        = "invert-selection"
@@ -290,6 +322,10 @@ defInvertSelection v =
   , actionEntryCallback    = invertSelection $ snd $ treeViewSel v
   }
 
+defEditProperties ::
+  (WithRegistry, WithXMMS, WithUI, CollBuilder b)
+  => b
+  -> ActionEntry
 defEditProperties v =
   ActionEntry
   { actionEntryName        = "edit-properties"
@@ -303,6 +339,10 @@ defEditProperties v =
       liftIO $ showPropertyEditor ids
   }
 
+defExportProperties ::
+  (WithRegistry, WithXMMS, WithUI, CollBuilder b)
+  => b
+  -> ActionEntry
 defExportProperties v =
   ActionEntry
   { actionEntryName        = "export-properties"
@@ -316,6 +356,7 @@ defExportProperties v =
       liftIO $ showPropertyExport ids
   }
 
+defSaveCollection :: (WithXMMS, WithUI, CollBuilder b) => b -> ActionEntry
 defSaveCollection v =
   ActionEntry
   { actionEntryName        = "save-collection"
