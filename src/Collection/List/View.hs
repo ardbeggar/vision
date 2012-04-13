@@ -46,6 +46,9 @@ import XMMS2.Client
 import Utils
 import Compound
 import UI
+import Registry
+import XMMS
+import Clipboard
 
 import Collection.Common
 import Collection.Utils
@@ -62,6 +65,13 @@ data ListView
       , vScroll  :: ScrolledWindow
       }
 
+mkListView ::
+  ( WithRegistry
+  , WithClipboard
+  , WithXMMS
+  , WithUI
+  , WithCommon )
+  => IO ListView
 mkListView = withModel $ do
   let popup = coms eVPopup
 
@@ -129,6 +139,7 @@ instance CollBuilder ListView where
   treeViewSel lv       = (vView lv, vSel lv)
   withNames lv f       = withColls lv (f . map fst . catMaybes)
 
+withColls :: ListView -> ([Maybe (String, Coll)] -> IO ()) -> IO ()
 withColls lv f = do
   let store = vStore lv
       sel   = vSel lv
@@ -137,6 +148,12 @@ withColls lv f = do
     colls <- mapM (listStoreGetValue store . head) rows
     f colls
 
+withColl ::
+     ListView
+  -> Bool
+  -> (Coll -> IO ())
+  -> [Maybe (String, Coll)]
+  -> IO ()
 withColl v s f list = do
   when s $ do
     ix <- readIORef $ vIndex v
@@ -152,6 +169,7 @@ withColl v s f list = do
         treeModelRowChanged (vStore v) p iter
   withColl' f list
 
+withColl' :: (Coll -> IO ()) -> [Maybe (String, Coll)] -> IO ()
 withColl' _ []            = return ()
 withColl' f (Nothing : _) = f =<< fc =<< collUniverse
 withColl' f list = do
@@ -159,6 +177,7 @@ withColl' f list = do
   mapM_ (collAddOperand uni . snd) $ catMaybes list
   f =<< fc uni
 
+fc :: Coll -> IO Coll
 fc coll = do
   flt <- collNew TypeEquals
   collAddOperand flt =<< collUniverse
@@ -180,7 +199,13 @@ instance FocusChild ListView where
 instance ViewItem ListView where
   nextVIRef = vNextRef
 
-
+setupUI ::
+  ( WithRegistry
+  , WithClipboard
+  , WithXMMS
+  , WithUI )
+  => ListView
+  -> IO ActionGroup
 setupUI lv = do
   g <- actionGroupNew "view-actions"
 
@@ -234,6 +259,7 @@ setupUI lv = do
 
   return g
 
+ui :: [(String, [Maybe String])]
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )
   , ( "ui/menubar/entries/collection/playlist-actions", playlistActions)
