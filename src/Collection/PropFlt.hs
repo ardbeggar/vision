@@ -47,6 +47,8 @@ import XMMS
 import Utils
 import Compound
 import UI
+import Registry
+import Clipboard
 
 import Collection.Common
 import Collection.Utils
@@ -72,6 +74,15 @@ data PropFlt
 instance ViewItem PropFlt where
   nextVIRef = pNextRef
 
+mkPropFlt ::
+  ( WithRegistry
+  , WithClipboard
+  , WithUI
+  , WithXMMS
+  , WithCommon )
+  => Property
+  -> Coll
+  -> IO PropFlt
 mkPropFlt prop coll = do
   let popup = coms eVPopup
 
@@ -135,6 +146,7 @@ mkPropFlt prop coll = do
 instance SetColl PropFlt where
   setColl pf coll = pSetColl pf pf coll
 
+doSetColl :: (WithUI, WithXMMS) => PropFlt -> Coll -> IO ()
 doSetColl pf coll = do
   modifyIORef (pLoadRef pf) (+ 1)
   listStoreClear $ pStore pf
@@ -143,6 +155,7 @@ doSetColl pf coll = do
   writeIORef (pCollRef pf) coll
   loadColl pf
 
+loadColl :: (WithUI, WithXMMS) => PropFlt -> IO ()
 loadColl pf = do
   let key = propKey $ pProp pf
 
@@ -235,7 +248,13 @@ mkFilter prop list = do
           collAddOperand uni flt
           add uni t
 
-
+setupUI ::
+  ( WithRegistry
+  , WithClipboard
+  , WithUI
+  , WithXMMS )
+  => PropFlt
+  -> IO ()
 setupUI pf = do
   g <- actionGroupNew "view-actions"
   addActions g [defSelectAll pf, defInvertSelection pf]
@@ -265,6 +284,7 @@ setupUI pf = do
 
   return ()
 
+ui :: [(String, [Maybe String])]
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )
   , ( "ui/menubar/entries/collection/playlist-actions", playlistActions)
