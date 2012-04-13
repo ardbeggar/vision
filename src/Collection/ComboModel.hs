@@ -33,6 +33,7 @@ data ComboItem
   | CITracks
   | CISeparator
 
+mkModel :: WithModel => IO (ListStore ComboItem)
 mkModel = do
   props <- getProperties
   store <- listStoreNewDND (map CIProp props) Nothing Nothing
