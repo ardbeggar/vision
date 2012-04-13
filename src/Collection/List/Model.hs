@@ -21,6 +21,7 @@
 
 module Collection.List.Model
   ( initModel
+  , WithModel
   , withModel
   , store
   , index
@@ -56,21 +57,28 @@ data Model
           }
     deriving (Typeable)
 
+type WithModel = ?_Collection_List_Model :: Model
+
+store :: WithModel => ListStore (Maybe (String, Coll))
+store = _store ?_Collection_List_Model
+
+index :: WithModel => IORef (Map (Maybe String) TreeRowReference)
+index = _index ?_Collection_List_Model
+
 data Ix = Ix deriving (Typeable)
 
 modelEnv :: Extract Ix Model
 modelEnv = Extract
 
+initModel :: (WithRegistry, WithXMMS) => IO ()
 initModel = do
   model <- mkModel
   let ?_Collection_List_Model = model
   setupModel
   addEnv Ix model
 
-newtype Wrap a = Wrap { unWrap :: (?_Collection_List_Model :: Model) => a }
-
-withModel    = withModel' . Wrap
-withModel' w = do
+withModel :: (WithRegistry, WithXMMS) => (WithModel => IO a) -> IO a
+withModel func = do
   Env model <- do
     maybeME <- getEnv modelEnv
     case maybeME of
@@ -79,9 +87,9 @@ withModel' w = do
         initModel
         fromJust <$> getEnv modelEnv
   let ?_Collection_List_Model = model
-  unWrap w
+  func
 
-
+mkModel :: IO Model
 mkModel = do
   store <- listStoreNewDND [] Nothing Nothing
   index <- newIORef Map.empty
@@ -89,6 +97,7 @@ mkModel = do
                , _index = index
                }
 
+setupModel :: (WithXMMS, WithModel) => IO ThreadId
 setupModel = do
   xcW <- atomically $ newTGWatch connectedV
   forkIO $ forever $ do
@@ -102,6 +111,7 @@ setupModel = do
         return True
       listCollections
 
+listCollections :: (WithXMMS, WithModel) => IO ()
 listCollections =
   collList xmms "Collections" >>* do
     names <- result
@@ -109,18 +119,18 @@ listCollections =
       clearStore
       fillStore names
 
-store = _store ?_Collection_List_Model
-index = _index ?_Collection_List_Model
-
+clearStore :: WithModel => IO ()
 clearStore = do
   writeIORef index Map.empty
   listStoreClear store
 
+addRow :: WithModel => Maybe (String, Coll) -> IO ()
 addRow row = do
   n <- listStoreAppend store row
   Just r <- treeRowReferenceNew store [n]
   modifyIORef index $ Map.insert (fst <$> row) r
 
+fillStore :: (WithXMMS, WithModel) => [String] -> IO ()
 fillStore names = do
   addRow Nothing
   forM_ names $ \name ->
