@@ -38,7 +38,8 @@ import Data.Foldable
 
 import Graphics.UI.Gtk hiding (selectAll)
 
-import XMMS2.Client
+import XMMS2.Client hiding (Property)
+import qualified XMMS2.Client as X
 
 import XMMS
 import Utils
@@ -49,6 +50,11 @@ import qualified Index
 import Medialib
 import Compound
 import UI
+import Environment
+import Registry
+import Clipboard
+
+import Properties.Model
 
 import Collection.Common
 import Collection.Utils
@@ -86,7 +92,17 @@ instance CollBuilder TrackView where
       f ils
   treeViewSel tv = (tView tv, tSel tv)
 
-
+mkTrackView ::
+  ( WithEnvironment
+  , WithRegistry
+  , WithClipboard
+  , WithUI
+  , WithXMMS
+  , WithMedialib
+  , WithModel
+  , WithCommon )
+  => Coll
+  -> IO TrackView
 mkTrackView coll = do
   store   <- listStoreNewDND [] Nothing Nothing
   index   <- makeIndex store return
@@ -117,6 +133,13 @@ mkTrackView coll = do
 instance ViewItem TrackView where
   nextVIRef = tNextRef
 
+setupView ::
+  ( WithEnvironment
+  , WithMedialib
+  , WithModel
+  , WithCommon )
+  => TrackView
+  -> IO ()
 setupView tv = do
   let view  = tView tv
       sel   = tSel tv
@@ -134,6 +157,7 @@ setupView tv = do
 instance SetColl TrackView where
   setColl tv coll = tSetColl tv tv coll
 
+doSetColl :: (WithUI, WithXMMS) => TrackView -> Coll -> IO ()
 doSetColl tv coll = do
   clearIndex $ tIndex tv
   listStoreClear $ tStore tv
@@ -141,6 +165,7 @@ doSetColl tv coll = do
   writeIORef (tCollRef tv) coll
   loadTracks tv
 
+loadTracks :: (WithUI, WithXMMS) => TrackView -> IO ()
 loadTracks tv = do
   coll <- readIORef $ tCollRef tv
   collQueryIds xmms coll [] 0 0 >>* do
@@ -148,6 +173,13 @@ loadTracks tv = do
       ids <- result
       liftIO $ populateModel tv ids
 
+setColumns ::
+  ( WithEnvironment
+  , WithMedialib )
+  => TrackView
+  -> Bool
+  -> [Property]
+  -> IO ()
 setColumns tv save props = do
   let view = tView tv
   mapM_ (treeViewRemoveColumn view) =<< treeViewGetColumns view
@@ -163,6 +195,7 @@ setColumns tv save props = do
   setupSearch tv props
   when save $ saveConfig props
 
+addColumn :: WithMedialib => TrackView -> Property -> IO ()
 addColumn tv prop = do
   let view  = tView tv
       store = tStore tv
@@ -179,6 +212,11 @@ addColumn tv prop = do
           Nothing   -> ""
     cell `set` [ cellText := text ]
 
+getInfoIfNeeded ::
+  WithMedialib
+  => TrackView
+  -> TreeIter
+  -> IO (Maybe MediaInfo)
 getInfoIfNeeded tv iter = do
   let n = listStoreIterToIndex iter
   mid <- listStoreGetValue (tStore tv) n
@@ -187,19 +225,22 @@ getInfoIfNeeded tv iter = do
     ([f], [t]) | n >= f && t >= n -> Visible
     _                             -> Background
 
+loadConfig :: (WithEnvironment, WithModel) => IO [Property]
 loadConfig =
   catMaybes <$> (mapM property =<< config configFile defaultConfig)
 
+saveConfig :: WithEnvironment => [Property] -> IO ()
 saveConfig props = do
   writeConfig configFile $ map propName props
   return ()
 
-configFile =
-  "collection-view.conf"
+configFile :: FilePath
+configFile = "collection-view.conf"
 
-defaultConfig =
-  ["Artist", "Album", "Track", "Title"]
+defaultConfig :: [String]
+defaultConfig = ["Artist", "Album", "Track", "Title"]
 
+setupSearch :: WithMedialib => TrackView -> [Property] -> IO ()
 setupSearch tv props = do
   let store = tStore tv
       view  = tView tv
@@ -208,14 +249,26 @@ setupSearch tv props = do
     mid <- listStoreGetValue store $ listStoreIterToIndex iter
     search (map toLower str) props <$> getInfo tv mid Search
 
+search ::
+     String
+  -> [Property]
+  -> Maybe (Dict X.Property)
+  -> Bool
 search _ _ Nothing = False
 search _ [] _ = False
 search str (prop:props) (Just info) =
   let ptext = map toLower $ fromMaybe "" $ lookup prop info in
   str `isInfixOf` ptext || search str props (Just info)
 
+getInfo ::
+  WithMedialib
+  => TrackView
+  -> MediaId
+  -> RequestPriority
+  -> IO (Maybe MediaInfo)
 getInfo tv = Index.getInfo (tIndex tv)
 
+populateModel :: TrackView -> [MediaId] -> IO ()
 populateModel tv ids = do
   mapM_ addOne ids
   where addOne id = do
@@ -232,7 +285,13 @@ instance FocusChild TrackView where
   type Focus TrackView = TreeView
   focus = tView
 
-
+setupUI ::
+  ( WithRegistry
+  , WithClipboard
+  , WithUI
+  , WithXMMS )
+  => TrackView
+  -> IO ()
 setupUI tv = do
   g <- actionGroupNew "view-actions"
   addActions g [defSelectAll tv, defInvertSelection tv]
@@ -262,6 +321,7 @@ setupUI tv = do
 
   return ()
 
+ui :: [(String, [Maybe String])]
 ui =
   [ ( "ui/view-popup/playlist-actions", playlistActions )
   , ( "ui/menubar/entries/collection/playlist-actions", playlistActions)
