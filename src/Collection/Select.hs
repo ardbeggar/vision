@@ -36,6 +36,14 @@ import XMMS2.Client
 
 import Compound
 import Utils
+import Environment
+import Registry
+import Clipboard
+import XMMS
+import Medialib
+import UI
+
+import Properties.Model
 
 import Collection.Common
 import Collection.Tracks
@@ -65,6 +73,17 @@ data Select
 instance ViewItem Select where
   nextVIRef = sNextRef
 
+mkSelect ::
+  ( WithEnvironment
+  , WithRegistry
+  , WithClipboard
+  , WithXMMS
+  , WithMedialib
+  , WithUI
+  , WithModel
+  , WithCommon )
+  => Coll
+  -> IO Select
 mkSelect coll = do
   nextRef <- newIORef None
   box     <- vBoxNew False 5
