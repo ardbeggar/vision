@@ -217,7 +217,7 @@ infoReqJob = do
           writeTVar tv $ c + 1
           return id
     medialibGetInfo xmms id >>* do
-      rawv <- resultRawValue
+      rawv <- result
       liftIO $ do
         info  <- valueGet =<< propdictToDict rawv []
         stamp <- atomically $ do

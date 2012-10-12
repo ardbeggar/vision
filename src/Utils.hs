@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 17 Jun. 2010
 --
---  Copyright (C) 2010, 2011 Oleg Belozeorov
+--  Copyright (C) 2010, 2011, 2012 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as
@@ -93,6 +93,7 @@ trd (_, _, c) = c
 
 trim = f . f where f = reverse . dropWhile isSpace
 
+catchResult :: ResultType a a => b -> (a -> b) -> ResultM c a b
 catchResult def conv =
   (conv <$> result) `catchXMMS_` return def
 
