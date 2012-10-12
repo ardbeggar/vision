@@ -4,7 +4,7 @@
 --  Author:  Oleg Belozeorov
 --  Created: 14 Jul. 2010
 --
---  Copyright (C) 2010, 2011 Oleg Belozeorov
+--  Copyright (C) 2010, 2011, 2012 Oleg Belozeorov
 --
 --  This program is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU General Public License as

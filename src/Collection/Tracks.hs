@@ -170,7 +170,7 @@ loadTracks tv = do
   coll <- readIORef $ tCollRef tv
   collQueryIds xmms coll [] 0 0 >>* do
     handleXMMSException $ do
-      ids <- result
+      ids :: [MediaId] <- result
       liftIO $ populateModel tv ids
 
 setColumns ::
