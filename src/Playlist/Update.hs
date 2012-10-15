@@ -112,7 +112,7 @@ handleChange = do
   change <- result
   liftIO $ do
     name <- fromMaybe "" <$> getPlaylistName
-    when (name == playlist change) $
+    when (name == playlist change) $ do
       case change of
         PlaylistRemove { position = p } -> do
           listStoreRemove playlistStore p
@@ -134,4 +134,6 @@ handleChange = do
           atomically $ modPlaylistSize $ const 0
         _ ->
           requestPlaylist name
+      requestCurrentTrack
+
   return True
